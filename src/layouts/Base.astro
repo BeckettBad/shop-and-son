@@ -7,10 +7,8 @@ import { withBase } from "../lib/url.ts";
 
 interface Props {
   title?: string;
-  /** Start in dusk (dark) mode. Defaults to dawn (light). */
-  dusk?: boolean;
 }
-const { title = `${site.brand} — independent design`, dusk = false } = Astro.props;
+const { title = `${site.brand} — independent design` } = Astro.props;
 ---
 <!doctype html>
 <html lang="en">
@@ -27,7 +25,7 @@ const { title = `${site.brand} — independent design`, dusk = false } = Astro.p
       rel="stylesheet"
     />
   </head>
-  <body class={dusk ? "dusk" : "dawn"}>
+  <body>
     <TopBar />
     <slot />
     <IndexOverlay />
@@ -50,14 +48,6 @@ const { title = `${site.brand} — independent design`, dusk = false } = Astro.p
       }
       setInterval(tick, 1000);
       tick();
-
-      // dusk / dawn toggle
-      const mb = document.getElementById("modeBtn");
-      mb?.addEventListener("click", () => {
-        const d = document.body.classList.toggle("dusk");
-        document.body.classList.toggle("dawn", !d);
-        mb.textContent = d ? "dawn" : "dusk";
-      });
 
       // index overlay
       const ib = document.getElementById("idxBtn");

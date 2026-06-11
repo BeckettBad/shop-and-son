@@ -12,7 +12,7 @@ const resolve = (href: string, external?: boolean) => (external ? href : withBas
     <!-- left: primary nav, some with hover dropdowns -->
     <ul class="nav-list nav-list--left">
       {left.map((item) => (
-        <li class={`nav-item${item.children ? " has-drop" : ""}`}>
+        <li class={`nav-item${item.children ? " has-drop" : ""}${item.label === "pre-order" ? " nav-item--preorder" : ""}`}>
           <a href={resolve(item.href, item.external)} {...ext(item.external)}>{item.label}</a>
           {item.children && (
             <ul class="nav-dropdown">
@@ -30,14 +30,12 @@ const resolve = (href: string, external?: boolean) => (external ? href : withBas
       <img src={withBase("/images/logo.gif")} alt="&son" />
     </a>
 
-    <!-- right: account / cart, then the homepage utilities -->
+    <!-- right: account / cart, then the on-site index toggle -->
     <ul class="nav-list nav-list--right">
       {right.map((item) => (
         <li class="nav-item"><a href={resolve(item.href, item.external)} {...ext(item.external)}>{item.label}</a></li>
       ))}
-      <li class="nav-item util"><span class="clock" id="clock"></span></li>
       <li class="nav-item util"><button id="idxBtn">+ index</button></li>
-      <li class="nav-item util"><button id="modeBtn">dusk</button></li>
     </ul>
 
   </nav>

@@ -1,72 +1,65 @@
-/* &son — global styles. Ported from the homepage mockup, unchanged in intent.
-   Theme is driven by CSS custom properties; `body.dusk` / `body.dawn` flip them. */
+/* &son — global styles.
+   Palette + header match shopandson.com and the preorders page exactly:
+   white paper, black ink, the brown accent. Single light scheme (no dark mode). */
 
 :root{
-  --paper:#ece9e2; --ink:#1a1815; --ink-soft:#6b655a; --rule:#b8b2a6; --tag:#f6f4ee;
-  --photo-tint:rgba(0,0,0,0); --accent:#7a2e22;
+  /* exact values from shopandson.com / the preorders page */
+  --paper:#ffffff; --paper-2:#eae9e7; --ink:#000000; --ink-soft:#666666;
+  --rule:rgba(0,0,0,.15); --line:#000000; --tag:#ffffff;
+  --photo-tint:rgba(0,0,0,0); --accent:#8a5234;
   /* type: mono is the system/catalog voice; serif is reserved for display titles */
   --mono:'Anonymous Pro',ui-monospace,'SFMono-Regular',Menlo,monospace;
   --serif:'EB Garamond','Cardo',Georgia,serif;
   --hh:80px; --hh-mob:60px;  /* header height, desktop / mobile */
 }
-body.dusk{
-  --paper:#15130f; --ink:#e9e2d2; --ink-soft:#9b9384; --rule:#4a4339; --tag:#1f1c16;
-  --photo-tint:rgba(10,6,2,.45); --accent:#e0a23c;
-}
 *{box-sizing:border-box; margin:0; padding:0}
 html{scroll-behavior:smooth}
 body{
-  font-family:var(--mono); font-size:15px; color:var(--ink);
-  background:var(--paper); transition:background .6s ease,color .6s ease;
+  font-family:var(--mono); font-size:15px; color:var(--ink); background:var(--paper);
   text-transform:lowercase;            /* the catalog register — matches shopandson.com */
   -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
 }
 /* serif italic is the one editorial stroke against the mono — display titles only */
 .title,.lede,.serif-it{font-family:var(--serif)}
 .serif-it{font-style:italic}
-/* ---- site header (ported from preorders) ---- */
+/* ---- site header — exact match to shopandson.com / preorders ---- */
 .site-header{
   position:fixed; top:0; left:0; right:0; height:var(--hh); z-index:80;
-  background:color-mix(in srgb,var(--paper) 90%,transparent);
-  backdrop-filter:blur(7px); border-bottom:1px solid var(--rule);
+  background:#ffffff;                  /* solid white, no border (live header has none) */
 }
 .site-nav{
   display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
-  height:100%; padding:0 clamp(18px,4vw,4rem);
+  height:100%; padding:0 4rem;
 }
 .nav-list{list-style:none; display:flex; align-items:center; gap:18px}
 .nav-list--right{justify-content:flex-end; gap:16px}
 .nav-item{position:relative}
 .nav-item > a,
 .nav-item button{
-  font-family:var(--mono); font-size:13px; letter-spacing:.02em;
-  color:var(--ink); opacity:.72; text-decoration:none; cursor:pointer;
-  background:none; border:none; padding:6px 0; display:block;
-  border-bottom:1px solid transparent; transition:opacity .2s,border-color .2s,color .2s;
+  font-family:var(--mono); font-size:13px; font-weight:400; letter-spacing:0;
+  color:var(--ink); text-decoration:none; cursor:pointer;
+  background:none; border:none; padding:6px 0; display:block; transition:color .2s;
 }
-.nav-item > a:hover,.nav-item button:hover,.nav-item button.on{opacity:1; color:var(--ink); border-bottom-color:var(--ink)}
-.nav-item.has-drop > a::after{content:' ·'; opacity:.4}
-/* center logo */
+.nav-item > a:hover,.nav-item button:hover,.nav-item button.on{color:var(--ink-soft)}
+/* pre-order link — subtle underline, exactly like the live nav */
+.nav-item--preorder > a{text-decoration:underline; text-underline-offset:3px}
+.nav-item--preorder > a:hover{color:var(--ink-soft); text-decoration:underline}
+/* center logo — fills the header height, as on the live site */
 .nav-logo{display:flex; justify-content:center; align-items:center; text-decoration:none}
-.nav-logo img{height:calc(var(--hh) - 26px); width:auto; display:block; mix-blend-mode:multiply}
-body.dusk .nav-logo img{mix-blend-mode:screen; filter:invert(1)}
-/* utilities cluster (clock / index / dusk) — slightly recessed */
-.nav-item.util > *{opacity:.6; font-size:12px}
-.nav-item.util .clock{font-variant-numeric:tabular-nums; padding:6px 0; display:block}
-/* hover dropdowns */
+.nav-logo img{height:var(--hh); width:auto; display:block}
+/* hover dropdowns — white, no border, soft shadow, square corners */
 .nav-dropdown{
-  list-style:none; position:absolute; top:100%; left:0; min-width:230px;
-  background:var(--paper); border:1px solid var(--rule);
-  box-shadow:0 10px 30px rgba(0,0,0,.18); padding:10px 0 12px;
-  opacity:0; visibility:hidden; pointer-events:none; transform:translateY(-4px);
-  transition:opacity .2s ease,visibility .2s ease,transform .2s ease; z-index:100;
+  list-style:none; position:absolute; top:100%; left:0; min-width:220px;
+  background:#ffffff; box-shadow:0 4px 16px rgba(0,0,0,.08); padding:12px 0 16px;
+  opacity:0; visibility:hidden; pointer-events:none;
+  transition:opacity .2s ease,visibility .2s ease; z-index:100;
 }
-.nav-item.has-drop:hover .nav-dropdown{opacity:1; visibility:visible; pointer-events:auto; transform:translateY(0)}
+.nav-item.has-drop:hover .nav-dropdown{opacity:1; visibility:visible; pointer-events:auto}
 .nav-dropdown li a{
   display:block; padding:6px 20px; font-family:var(--mono); font-size:13px;
-  color:var(--ink); opacity:.7; text-decoration:none; transition:opacity .15s,color .15s;
+  color:var(--ink); text-decoration:none; transition:color .15s;
 }
-.nav-dropdown li a:hover{opacity:1; color:var(--accent)}
+.nav-dropdown li a:hover{color:var(--ink-soft)}
 /* ---- block ---- */
 .block{display:grid; grid-template-columns:1fr 1fr; min-height:100vh; border-bottom:1px solid var(--rule)}
 .block:first-of-type{margin-top:var(--hh)}
@@ -76,8 +69,6 @@ body.dusk .nav-logo img{mix-blend-mode:screen; filter:invert(1)}
 .right{
   display:flex; flex-direction:column; justify-content:center;
   padding:8vh 7vw; position:relative; background:var(--paper);
-  background-image:radial-gradient(rgba(120,110,95,.06) 1px,transparent 1px);
-  background-size:4px 4px;
 }
 .kicker{font-size:11px; letter-spacing:.22em; text-transform:uppercase; opacity:.5; margin-bottom:22px}
 .title{font-size:clamp(34px,4.2vw,62px); font-style:italic; letter-spacing:.01em; margin-bottom:26px; font-weight:500}
@@ -178,6 +169,6 @@ body.dusk .nav-logo img{mix-blend-mode:screen; filter:invert(1)}
   .nav-list{gap:12px}
   .nav-item > a,.nav-item button{font-size:12px; padding:4px 0}
   .nav-dropdown{display:none}           /* TODO: proper mobile menu */
-  .nav-item.util{display:none}          /* hide clock/index/dusk on small screens for now */
+  .nav-item.util{display:none}          /* hide + index on small screens for now (needs mobile menu) */
   .nav-logo img{height:calc(var(--hh-mob) - 20px)}
 }
