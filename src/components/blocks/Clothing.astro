@@ -1,6 +1,7 @@
 ---
 import { clothing, site } from "../../data/content.ts";
 import { withBase } from "../../lib/url.ts";
+import ScrollCue from "../ScrollCue.astro";
 const { featured, designers } = clothing;
 const num = (i: number) => String(i + 1).padStart(2, "0");
 // every designer links out to their results on the live Shopify store
@@ -45,6 +46,7 @@ const searchUrl = (name: string) => `${site.shopUrl}/search?q=${encodeURICompone
         </a>
       ))}
     </div>
+    <ScrollCue />
   </div>
 </section>
 

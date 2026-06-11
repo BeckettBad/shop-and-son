@@ -1,0 +1,12 @@
+---
+// Sly scroll cue: a hairline with a single segment dropping through it.
+// `label` (e.g. "scroll") shows on the opening block; omit it elsewhere.
+interface Props {
+  label?: string;
+}
+const { label } = Astro.props;
+---
+<div class="scrollcue" aria-hidden="true">
+  {label && <span class="scrollcue__label">{label}</span>}
+  <span class="scrollcue__line"></span>
+</div>

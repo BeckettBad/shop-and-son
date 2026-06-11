@@ -1,6 +1,7 @@
 ---
 import { music } from "../../data/content.ts";
 import { withBase } from "../../lib/url.ts";
+import ScrollCue from "../ScrollCue.astro";
 const { nowPlaying, tracks } = music;
 const tn = (i: number) => String(i + 1).padStart(2, "0");
 ---
@@ -26,6 +27,7 @@ const tn = (i: number) => String(i + 1).padStart(2, "0");
       ))}
     </div>
     <div class="dispatch">{music.dispatch}</div>
+    <ScrollCue />
   </div>
 </section>
 

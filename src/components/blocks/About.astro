@@ -1,6 +1,7 @@
 ---
 import { about } from "../../data/content.ts";
 import { withBase } from "../../lib/url.ts";
+import ScrollCue from "../ScrollCue.astro";
 const { video, card } = about;
 ---
 <section class="block about">
@@ -42,12 +43,7 @@ const { video, card } = about;
         <div class="bc-foot" set:html={about.cardFoot} />
       </article>
     </div>
-  </div>
-
-  <!-- sly opening scroll cue: fades out once you start scrolling -->
-  <div class="scrollcue" id="scrollcue" aria-hidden="true">
-    <span class="scrollcue__label">scroll</span>
-    <span class="scrollcue__line"></span>
+    <ScrollCue label="scroll" />
   </div>
 </section>
 
@@ -73,13 +69,5 @@ const { video, card } = about;
       btn.classList.toggle("on", !v.muted);
       if (!v.muted) v.play().catch(() => {});
     });
-  }
-
-  // scroll cue: visible only at the very top, fades out as soon as you scroll
-  const cue = document.getElementById("scrollcue");
-  if (cue) {
-    const onScroll = () => cue.classList.toggle("hide", window.scrollY > 40);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
   }
 </script>

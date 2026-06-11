@@ -1,6 +1,7 @@
 ---
 import { objects } from "../../data/content.ts";
 import { withBase } from "../../lib/url.ts";
+import ScrollCue from "../ScrollCue.astro";
 const { featured, ledger } = objects;
 ---
 <section class="block" id="objects">
@@ -30,5 +31,6 @@ const { featured, ledger } = objects;
       ))}
     </div>
     <div class="meta">{objects.meta}</div>
+    <ScrollCue />
   </div>
 </section>
