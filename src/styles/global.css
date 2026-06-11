@@ -82,19 +82,23 @@ body{
   border-top:1px dotted var(--rule); padding-top:10px; font-style:normal;
 }
 .concept b{font-style:italic; font-weight:500; opacity:.9}
-/* ---- scroll arrow — bottom-centre of each section ---- */
-/* centred via left:0/right:0/text-align so the bob (translateY) doesn't fight a
-   centering transform; same visual as translateX(-50%), works on mobile too. */
-.panel__arrow{
-  position:absolute; bottom:28px; left:0; right:0; text-align:center;
-  color:var(--accent); font-size:22px; line-height:1; pointer-events:none;
+/* ---- scroll hint — bottom-centre of the right panel (as on preorders) ---- */
+.scroll-hint{
+  position:absolute; bottom:40px; left:50%; transform:translateX(-50%);
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+  font-family:var(--mono); font-size:12px; letter-spacing:.08em;
+  color:var(--ink-soft); white-space:nowrap; text-align:center; pointer-events:none;
+}
+/* container is centred via translateX; the arrow bobs via translateY — no clash */
+.scroll-hint__arrow{
+  display:inline-block; color:var(--accent); font-size:20px; line-height:1;
   animation:bob 1.8s ease-in-out infinite;
 }
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
 @media(max-width:768px){
-  .panel__arrow{position:static; margin-top:28px}
+  .scroll-hint{position:static; transform:none; margin:28px auto 0}
 }
-@media(prefers-reduced-motion:reduce){.panel__arrow{animation:none}}
+@media(prefers-reduced-motion:reduce){.scroll-hint__arrow{animation:none}}
 /* ---- about: hero video — show the whole frame (cinematic letterbox) ---- */
 .about .left{background:#000}
 .about-video{object-fit:contain; background:#000; filter:none}
