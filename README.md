@@ -51,6 +51,28 @@ npm run preview      # serve the build
 npm run astro check  # type-check
 ```
 
+## Branch workflow
+
+Two long-lived branches, mirroring the preorders repo:
+
+- **`dev`** — where features are built and tested **locally** (`npm run dev`,
+  `npm run build`, `npm run astro check`). Pushing `dev` does **not** deploy.
+- **`main`** — production. The GitHub Actions workflow builds and deploys to
+  GitHub Pages **only on push to `main`**.
+
+```sh
+git checkout dev                 # work here
+# ...edit, then verify locally...
+npm run astro check && npm run build
+git add -A && git commit -m "..."
+git push origin dev              # safe — no deploy
+
+# when it's verified and ready to ship:
+git checkout main
+git merge dev
+git push origin main             # → builds & deploys to Pages
+```
+
 ## Shopify
 
 Copy `.env.example` to `.env` and fill in your Storefront API token. Until then
