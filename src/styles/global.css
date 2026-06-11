@@ -82,6 +82,9 @@ body{
   border-top:1px dotted var(--rule); padding-top:10px; font-style:normal;
 }
 .concept b{font-style:italic; font-weight:500; opacity:.9}
+/* ---- about: hero video — show the whole frame (cinematic letterbox) ---- */
+.about .left{background:#000}
+.about-video{object-fit:contain; background:#000; filter:none}
 /* ---- about: video sound toggle ---- */
 .sound-toggle{
   position:absolute; bottom:18px; right:18px; z-index:4;
