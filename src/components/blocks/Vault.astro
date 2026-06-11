@@ -1,9 +1,10 @@
 ---
 import { vault } from "../../data/content.ts";
+import { withBase } from "../../lib/url.ts";
 ---
 <section class="block vault" id="vault">
   <div class="left" id="flashzone">
-    <img src="/images/blocks/vault.jpg" alt="the lower-level vault" />
+    <img src={withBase("/images/blocks/vault.jpg")} alt="the lower-level vault" />
     <div class="flash"></div>
     <div class="neon">{vault.neon}</div>
     <div class="rackhint">{vault.rackHint}</div>

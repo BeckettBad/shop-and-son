@@ -1,9 +1,10 @@
 ---
 import { about, site } from "../../data/content.ts";
+import { withBase } from "../../lib/url.ts";
 ---
 <section class="block">
   <div class="left">
-    <img src="/images/blocks/about.jpg" alt="&son storefront" />
+    <img src={withBase("/images/blocks/about.jpg")} alt="&son storefront" />
     <div class="tint"></div>
     {about.hotspots.map((h) => (
       <a class="hot" href={h.href} style={`left:${h.left};top:${h.top};width:${h.width};height:${h.height}`}>

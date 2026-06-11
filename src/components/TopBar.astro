@@ -1,11 +1,12 @@
 ---
 import { site } from "../data/content.ts";
+import { withBase } from "../lib/url.ts";
 ---
 <div class="topbar">
-  <a class="brand" href="/" set:html={site.brand} />
+  <a class="brand" href={withBase("/")} set:html={site.brand} />
   <div class="controls">
     {site.nav.map((item) => (
-      <a class="navlink" href={item.href} {...(item.external ? { target: "_blank", rel: "noopener" } : {})}>{item.label}</a>
+      <a class="navlink" href={item.external ? item.href : withBase(item.href)} {...(item.external ? { target: "_blank", rel: "noopener" } : {})}>{item.label}</a>
     ))}
     <span class="clock" id="clock"></span>
     <button id="idxBtn">+ index</button>

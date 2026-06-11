@@ -1,12 +1,13 @@
 ---
 import { clothing } from "../../data/content.ts";
+import { withBase } from "../../lib/url.ts";
 const { featured, designers } = clothing;
 // pad the running number to two digits, as in the index
 const num = (i: number) => String(i + 1).padStart(2, "0");
 ---
 <section class="block" id="clothing">
   <div class="left">
-    <img src="/images/blocks/clothing.jpg" alt="garments on the rack" />
+    <img src={withBase("/images/blocks/clothing.jpg")} alt="garments on the rack" />
     <div class="tint"></div>
     <div class="swingtag">
       <span class="punch"></span>

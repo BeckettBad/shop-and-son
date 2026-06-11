@@ -1,11 +1,12 @@
 ---
 import { music } from "../../data/content.ts";
+import { withBase } from "../../lib/url.ts";
 const { nowPlaying, tracks } = music;
 const tn = (i: number) => String(i + 1).padStart(2, "0");
 ---
 <section class="block" id="music">
   <div class="left">
-    <img src="/images/blocks/music.jpg" alt="the in-store speaker" />
+    <img src={withBase("/images/blocks/music.jpg")} alt="the in-store speaker" />
     <div class="tint"></div>
     <div class="woofer"></div>
     <div class="rackhint">{music.rackHint}</div>
