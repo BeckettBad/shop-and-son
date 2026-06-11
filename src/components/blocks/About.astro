@@ -1,23 +1,45 @@
 ---
-import { about, site } from "../../data/content.ts";
+import { about } from "../../data/content.ts";
 import { withBase } from "../../lib/url.ts";
+const { video, card } = about;
 ---
-<section class="block">
+<section class="block about">
   <div class="left">
-    <img src={withBase("/images/blocks/about.jpg")} alt="&son storefront" />
+    <video
+      class="about-video"
+      autoplay
+      muted
+      loop
+      playsinline
+      preload="metadata"
+      poster={withBase(video.poster)}
+    >
+      <source src={withBase(video.webm)} type="video/webm" />
+      <source src={withBase(video.src)} type="video/mp4" />
+    </video>
     <div class="tint"></div>
-    {about.hotspots.map((h) => (
-      <a class="hot" href={h.href} style={`left:${h.left};top:${h.top};width:${h.width};height:${h.height}`}>
-        <span class="lbl">{h.label}</span>
-      </a>
-    ))}
   </div>
+
   <div class="right">
-    <div class="kicker">{about.kicker}</div>
-    <div class="title" set:html={about.title} />
-    <p class="lede" set:html={about.ledeHtml} />
-    <div class="meta">
-      {site.address}<br />{site.email}<br /><span id="status">— open now</span>
+    <!-- letterpress business card -->
+    <div class="bizcard-wrap">
+      <span class="cm tl"></span><span class="cm tr"></span>
+      <span class="cm bl"></span><span class="cm br"></span>
+      <article class="bizcard">
+        <div class="bc-no">{about.kicker}</div>
+        <div class="bc-mark serif-it">{about.title}</div>
+        <div class="bc-tag">{about.tagline}</div>
+        <hr class="bc-rule" />
+        <dl class="bc-details">
+          {card.map((row) => (
+            <div class="bc-row">
+              <dt>{row.label}</dt>
+              <dd set:html={row.value} />
+            </div>
+          ))}
+        </dl>
+        <div class="bc-foot" set:html={about.cardFoot} />
+      </article>
     </div>
   </div>
 </section>

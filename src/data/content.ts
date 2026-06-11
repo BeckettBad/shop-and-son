@@ -101,17 +101,22 @@ export interface DetailRow {
   stamp?: boolean;
 }
 
-/** Block 01 — about. */
+/** Block 01 — about. The right side renders as a letterpress business card. */
 export const about = {
   kicker: "01 — about",
   title: "& son",
-  /** HTML allowed for the inline links. */
-  ledeHtml:
-    'independent design, sourced worldwide.<br>mostly <a href="#clothing">clothes</a>, some <a href="#objects">objects</a>, and a little <a href="#music">music</a>.',
-  hotspots: [
-    { href: "#clothing", label: "→ the clothing", left: "38%", top: "46%", width: "20%", height: "26%" },
-    { href: "#vault", label: "→ step inside", left: "60%", top: "50%", width: "16%", height: "34%" },
-  ],
+  tagline: "independent design · sourced worldwide",
+  /** Card detail rows — label / value, value may contain HTML for line breaks. */
+  card: [
+    { label: "studio", value: "138 sullivan street<br>new york · ny 10012" },
+    { label: "contact", value: '<a href="mailto:info@shopandson.com">info@shopandson.com</a>' },
+    { label: "hours", value: '<span id="status">open now</span>' },
+  ] as { label: string; value: string }[],
+  /** Footer line on the card. */
+  cardFoot:
+    'mostly <a href="#clothing">clothes</a> · some <a href="#objects">objects</a> · a little <a href="#music">music</a>',
+  /** Left-panel video. Drop the compressed file at public/videos/about.* — poster shows until then. */
+  video: { src: "/videos/about.mp4", webm: "/videos/about.webm", poster: "/images/blocks/about.jpg" },
 };
 
 /** Block 02 — clothing. The designer roster maps to Shopify vendors/collections. */

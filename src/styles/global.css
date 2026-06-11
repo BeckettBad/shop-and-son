@@ -64,7 +64,7 @@ body{
 .block{display:grid; grid-template-columns:1fr 1fr; min-height:100vh; border-bottom:1px solid var(--rule)}
 .block:first-of-type{margin-top:var(--hh)}
 .left{position:relative; overflow:hidden; background:#000}
-.left img{width:100%; height:100%; object-fit:cover; display:block; filter:saturate(.96)}
+.left img,.left video{width:100%; height:100%; object-fit:cover; display:block; filter:saturate(.96)}
 .left .tint{position:absolute; inset:0; background:var(--photo-tint); transition:background .6s; pointer-events:none}
 .right{
   display:flex; flex-direction:column; justify-content:center;
@@ -82,6 +82,33 @@ body{
   border-top:1px dotted var(--rule); padding-top:10px; font-style:normal;
 }
 .concept b{font-style:italic; font-weight:500; opacity:.9}
+/* ---- about: letterpress business card ---- */
+.about .right{align-items:center}                 /* center the card in the panel */
+.bizcard-wrap{position:relative; width:min(84%,420px)}
+/* corner registration brackets (crop marks) */
+.cm{position:absolute; width:13px; height:13px; pointer-events:none}
+.cm.tl{top:-13px; left:-13px; border-left:1px solid var(--ink); border-top:1px solid var(--ink)}
+.cm.tr{top:-13px; right:-13px; border-right:1px solid var(--ink); border-top:1px solid var(--ink)}
+.cm.bl{bottom:-13px; left:-13px; border-left:1px solid var(--ink); border-bottom:1px solid var(--ink)}
+.cm.br{bottom:-13px; right:-13px; border-right:1px solid var(--ink); border-bottom:1px solid var(--ink)}
+.bizcard{
+  position:relative; background:var(--paper); border:1px solid var(--ink);
+  padding:36px 34px 30px; text-align:center;
+}
+/* inner hairline frame — the double-rule letterpress look */
+.bizcard::after{content:''; position:absolute; inset:6px; border:1px solid var(--rule); pointer-events:none}
+.bc-no{font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:18px}
+.bc-mark{font-size:clamp(40px,5vw,56px); line-height:1; margin-bottom:12px}
+.bc-tag{font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-soft)}
+.bc-rule{border:none; border-top:1px solid var(--ink); margin:22px auto; width:34px}
+.bc-details{display:flex; flex-direction:column; gap:13px}
+.bc-row dt{font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:4px}
+.bc-row dd{font-size:13px; line-height:1.5}
+.bc-row dd a{color:var(--ink); text-decoration:none; border-bottom:1px solid var(--rule)}
+.bc-row dd a:hover{color:var(--accent); border-color:var(--accent)}
+.bc-foot{margin-top:22px; padding-top:16px; border-top:1px solid var(--rule); font-size:11px; letter-spacing:.03em; color:var(--ink-soft)}
+.bc-foot a{color:var(--ink); text-decoration:none; border-bottom:1px solid var(--rule)}
+.bc-foot a:hover{color:var(--accent); border-color:var(--accent)}
 /* hotspots (about) */
 .hot{position:absolute; border:1px solid rgba(255,255,255,.0); cursor:pointer}
 .hot .lbl{
