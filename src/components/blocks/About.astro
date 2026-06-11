@@ -1,7 +1,6 @@
 ---
 import { about } from "../../data/content.ts";
 import { withBase } from "../../lib/url.ts";
-import ScrollCue from "../ScrollCue.astro";
 const { video, card } = about;
 ---
 <section class="block about">
@@ -43,8 +42,8 @@ const { video, card } = about;
         <div class="bc-foot" set:html={about.cardFoot} />
       </article>
     </div>
-    <ScrollCue label="scroll" />
   </div>
+  <span class="panel__arrow">↓</span>
 </section>
 
 <script>

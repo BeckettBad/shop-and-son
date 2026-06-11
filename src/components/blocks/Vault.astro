@@ -1,7 +1,6 @@
 ---
 import { vault } from "../../data/content.ts";
 import { withBase } from "../../lib/url.ts";
-import ScrollCue from "../ScrollCue.astro";
 ---
 <section class="block vault" id="vault">
   <div class="left" id="flashzone">
@@ -19,8 +18,8 @@ import ScrollCue from "../ScrollCue.astro";
       <span class="instore">{vault.badge}</span>
     </div>
     <div class="meta">{vault.meta}</div>
-    <ScrollCue />
   </div>
+  <span class="panel__arrow">↓</span>
 </section>
 
 <script>
