@@ -115,8 +115,8 @@ export const about = {
   /** Footer line on the card. */
   cardFoot:
     'mostly <a href="#clothing">clothes</a> · some <a href="#objects">objects</a> · a little <a href="#music">music</a>',
-  /** Left-panel video. Drop the compressed file at public/videos/about.* — poster shows until then. */
-  video: { src: "/videos/about.mp4", webm: "/videos/about.webm", poster: "/images/blocks/about.jpg" },
+  /** Left-panel video (web-optimized 720p H.264 + AAC, ~7 MB). */
+  video: { src: "/videos/about.mp4", poster: "/images/blocks/about.jpg" },
 };
 
 /** Block 02 — clothing. The designer roster maps to Shopify vendors/collections. */
