@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<!--
+  shop and son — drop 01
+  ══════════════════════════════════════════════════════════
+  TO SWAP IMAGES: find the IMAGES object in the <script>
+  at the bottom. Change the file path next to each key.
+  Every image on the left panel is controlled from there.
+
+  TO EDIT COPY: search for  EDIT:  to find every text field.
+  ══════════════════════════════════════════════════════════
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>shop and son — drop 01</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anonymous+Pro:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* exact values from shopandson.com stylesheet */
+  --paper:    #ffffff;
+  --paper-2:  #eae9e7;
+  --ink:      #000000;
+  --ink-soft: #666666;
+  --accent:   #8a5234;
+  --line:     #000000;
+  --hair:     rgba(0,0,0,.15);
+  --font:     "Anonymous Pro", monospace;
+  --hh:       80px; /* --site-header-height-desktop: 80px */
+  --hh-mob:   60px; /* --site-header-height-mobile: 60px  */
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:auto; }
+body, body * { text-transform:lowercase; } /* matches shopandson.com rule */
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font);
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 1.5;
+  letter-spacing: 0em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+/* ══════════════════════════════════════════
+   SITE HEADER — exact match shopandson.com
+   font: Anonymous Pro · height: 80px desktop
+   border: none (--site-header-border-opacity: 0)
+   ══════════════════════════════════════════ */
+.site-header {
+  position:fixed; top:0; left:0; right:0; z-index:80;
+  height:var(--hh);
+  background:#ffffff;
+  /* no border — shopandson.com border-opacity is 0 */
+}
+
+.site-nav {
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;
+  height:100%;
+  padding:0 4rem; /* --page-margin-desktop: 4rem */
+}
+
+/* nav lists */
+.nav-list {
+  list-style:none;
+  display:flex; align-items:center;
+  gap:var(--site-header-primary-menu-spacing, 12px);
+  gap:12px;
+}
+.nav-list--right { justify-content:flex-end; gap:16px; }
+
+/* all nav links */
+.nav-item { position:relative; }
+.nav-item > a {
+  font-family:var(--font);
+  font-size:13px; /* --font-ui-size-desktop */
+  font-weight:400;
+  letter-spacing:0em; /* --body-letter-spacing */
+  color:#000000; /* --color-menu-text */
+  text-decoration:none;
+  padding:4px 0; display:block;
+  transition:color .2s;
+}
+.nav-item > a:hover { color:#666666; }
+
+/* pre-order link — only distinction is a subtle underline */
+.nav-item--preorder > a { text-decoration:underline; text-underline-offset:3px; }
+.nav-item--preorder > a:hover { color:#666666; text-decoration:underline; }
+
+/* logo */
+.nav-logo {
+  display:flex; justify-content:center; align-items:center;
+  text-decoration:none;
+}
+.nav-logo img { height:var(--hh); width:auto; display:block; }
+
+/* dropdowns — white bg, no rounded corners, subtle shadow */
+.nav-dropdown {
+  list-style:none;
+  position:absolute;
+  top:100%;
+  left:0;
+  min-width:220px;
+  background:#ffffff; /* --color-menu-dropdown-background */
+  box-shadow:0 4px 16px rgba(0,0,0,.08);
+  padding:12px 0 16px;
+  opacity:0; visibility:hidden; pointer-events:none;
+  transition:opacity .2s ease, visibility .2s ease;
+  z-index:100;
+}
+.nav-item:hover .nav-dropdown {
+  opacity:1; visibility:visible; pointer-events:auto;
+}
+.nav-dropdown li a {
+  display:block;
+  padding:6px 20px;
+  font-family:var(--font);
+  font-size:13px;
+  font-weight:400;
+  letter-spacing:0em;
+  color:#000000; /* --color-menu-dropdown-text */
+  text-decoration:none;
+  transition:color .15s;
+}
+.nav-dropdown li a:hover { color:#666666; }
+
+/* preorder dropdown extras */
+.nav-dropdown .drop-label {
+  padding:8px 20px 4px;
+  font-size:12px;
+  color:var(--accent);
+  font-family:var(--font);
+}
+.nav-dropdown .drop-soon {
+  padding:4px 20px;
+  font-size:12px;
+  color:#aaa;
+  font-family:var(--font);
+}
+.nav-dropdown .drop-rule {
+  height:1px; background:rgba(0,0,0,.1); margin:8px 20px;
+}
+
+.prog {
+  position:fixed; left:0; top:var(--hh); height:2px;
+  background:var(--accent); z-index:81; width:0; opacity:.6;
+}
+
+/* ══════════════════════════════════════════
+   SPLIT LAYOUT
+   left  = sticky image panel
+   right = scrollable editorial panels
+   ══════════════════════════════════════════ */
+.layout {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  align-items:start;
+  margin-top:var(--hh);
+}
+
+/* ── left: sticky image ── */
+.layout__left {
+  position:sticky;
+  top:var(--hh);
+  height:calc(100vh - var(--hh));
+  overflow:hidden;
+  background:#d8d4ce;
+}
+
+.img-stage {
+  position:relative;
+  width:100%; height:100%;
+}
+
+/* all image slots stacked; JS adds/removes .active */
+.img-slot {
+  position:absolute; inset:0;
+  opacity:0;
+  transition:opacity .85s cubic-bezier(.4,0,.2,1);
+}
+.img-slot.active { opacity:1; }
+
+.img-slot img {
+  width:100%; height:100%;
+  object-fit:cover;
+  object-position:50% 40%;
+  filter:saturate(.9) contrast(1.01);
+  transform-origin:50% 40%;
+  will-change:transform;
+}
+
+/* gradient vignette at bottom of image */
+.img-vignette {
+  position:absolute; inset:0; z-index:2; pointer-events:none;
+  background:linear-gradient(180deg,
+    rgba(33,30,25,.08) 0%,
+    transparent 28%,
+    transparent 58%,
+    rgba(33,30,25,.42) 100%);
+}
+
+/* scene number — top left of image */
+.img-num {
+  position:absolute; top:22px; left:24px; z-index:3;
+  font-family:var(--font); font-size:10.5px; letter-spacing:.08em;
+  color:rgba(239,233,221,.6);
+  transition:opacity .5s ease;
+}
+
+/* label — bottom left of image */
+.img-label {
+  position:absolute; bottom:24px; left:24px; z-index:3;
+  font-family:var(--font); font-size:10px; letter-spacing:.09em;
+  color:rgba(239,233,221,.65);
+  transition:opacity .5s ease;
+}
+
+/* ── right: scrollable panels ── */
+.layout__right {
+  border-left:1px solid var(--hair);
+}
+
+.panel {
+  min-height:calc(100vh - var(--hh));
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding:8vh 52px 8vh;
+  border-bottom:1px solid var(--hair);
+  position:relative;
+}
+
+/* panel elements */
+.panel__kicker {
+  font-family:var(--font); font-size:11px; letter-spacing:.06em;
+  color:var(--ink-soft); margin-bottom:20px;
+  display:flex; align-items:center; gap:10px;
+}
+.panel__kicker .dot {
+  width:5px; height:5px;
+  background:var(--accent); border-radius:50%; flex-shrink:0;
+}
+
+.panel__tag {
+  font-family:var(--font); font-size:10.5px; letter-spacing:.08em;
+  color:var(--ink-soft); margin-bottom:30px;
+  display:flex; align-items:center; gap:13px;
+}
+.panel__tag .rule { width:18px; height:1px; background:var(--hair); flex-shrink:0; }
+
+.panel__h {
+  font-family:var(--font); font-weight:500;
+  letter-spacing:-.014em; line-height:1.04;
+  font-size:clamp(24px,3.2vw,42px);
+  margin-bottom:20px;
+}
+
+.panel__p {
+  font-size:15.5px; line-height:1.68;
+  color:var(--ink-soft); max-width:400px;
+}
+
+.panel__note {
+  margin-top:30px;
+  font-family:var(--font); font-size:11px; letter-spacing:.05em;
+  color:var(--ink-soft);
+  display:flex; align-items:center; gap:9px;
+}
+.panel__note .bullet { color:var(--accent); font-size:9px; }
+
+/* intro panel overrides */
+.panel--intro { padding-top:22vh; justify-content:flex-start; }
+.panel--intro .panel__h {
+  font-size:clamp(28px,4.2vw,54px);
+  margin-bottom:14px;
+}
+
+.panel__price {
+  font-family:var(--font); font-size:13px; letter-spacing:.04em;
+  margin:18px 0 8px;
+}
+.panel__price s { opacity:.38; margin-right:9px; }
+
+.panel__ship {
+  font-family:var(--font); font-size:13px; letter-spacing:.04em;
+  color:var(--ink-soft);
+}
+
+/* scroll cue */
+.scrollcue {
+  font-family:var(--font); font-size:11px; letter-spacing:.05em;
+  margin-top:36px;
+  display:flex; align-items:center; gap:10px;
+  color:var(--ink-soft);
+}
+.scrollcue .bar {
+  width:1px; height:26px;
+  background:var(--hair);
+  position:relative; overflow:hidden; flex-shrink:0;
+}
+.scrollcue .bar::after {
+  content:''; position:absolute; left:0; top:-26px;
+  width:1px; height:26px; background:var(--accent);
+  animation:drop 2s cubic-bezier(.7,0,.3,1) infinite;
+}
+@keyframes drop { 0%{top:-26px} 55%,100%{top:26px} }
+
+/* mobile image inside each panel (hidden on desktop) */
+.panel__mobile-img { display:none; }
+
+/* ══════════════════════════════════════════
+   SPEC SECTION — spec table left, video right
+   ══════════════════════════════════════════ */
+.spec-scroll {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  align-items:stretch;
+}
+
+/* no line between last description panel and the spec section */
+.layout__right .panel:last-child { border-bottom:none; }
+
+.spec-scroll__left {
+  padding:10vh 52px 10vh;
+  /* no border-right — video lives on the page, not in a box */
+}
+
+.spec-scroll__right {
+  background:#ffffff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:40px 32px;
+}
+
+.specs__head {
+  display:flex; align-items:flex-end; justify-content:space-between;
+  border-bottom:1px solid var(--line);
+  padding-bottom:18px; flex-wrap:wrap; gap:16px;
+}
+.specs__head h2 {
+  font-family:var(--font); font-weight:400;
+  font-size:clamp(20px,2.5vw,32px); line-height:1.02;
+  cursor:pointer; transition:color .2s;
+}
+.specs__head h2:hover { color:var(--ink-soft); }
+.specs__head .meta {
+  font-family:var(--font); font-size:11px;
+  text-align:right; line-height:1.9; color:var(--ink-soft);
+}
+
+.spec-row {
+  display:grid; grid-template-columns:140px 1fr;
+  gap:20px; padding:16px 0;
+  border-bottom:1px solid var(--hair);
+  align-items:baseline;
+}
+.spec-row dt {
+  font-family:var(--font); font-size:12px;
+  color:var(--ink-soft);
+}
+.spec-row dd { font-size:13px; line-height:1.6; }
+
+/* ── analog video player ── */
+.video-stage {
+  position:relative;
+  /* stage wraps tightly to the video frame */
+  max-height:calc(100vh - var(--hh) - 80px);
+  aspect-ratio:9/16;
+  width:auto;
+  flex-shrink:0;
+  outline:none;
+}
+.video-stage video {
+  display:block;
+  width:100%; height:100%;
+  object-fit:cover;
+  outline:none;
+}
+
+
+
+/* interactive spec terms */
+dt[data-seq] {
+  cursor:pointer;
+  display:inline-flex; align-items:center; gap:6px;
+  transition:color .2s;
+}
+dt[data-seq]:hover { color:var(--ink); }
+dt[data-seq]::after {
+  content:'▶';
+  font-size:7px; letter-spacing:0;
+  color:var(--accent);
+  opacity:0;
+  transition:opacity .2s, transform .2s;
+  transform:translateY(2px);
+  text-transform:none;
+}
+dt[data-seq]:hover::after,
+dt.seq-active::after { opacity:1; transform:translateY(0); }
+dt.seq-active { color:var(--ink); }
+
+/* ensure panels land below the fixed header on programmatic scroll */
+.panel { scroll-margin-top:var(--hh); }
+
+/* CTA */
+.cta {
+  background:var(--paper-2);
+  padding:14vh 22px;
+  border-top:1px solid var(--hair);
+  text-align:center;
+}
+.cta__inner { max-width:640px; margin:0 auto; }
+
+.kicker {
+  font-family:var(--font); font-size:11.5px; letter-spacing:.06em;
+  color:var(--ink-soft);
+  display:flex; align-items:center; gap:11px; margin-bottom:16px;
+}
+.kicker.center { justify-content:center; }
+.kicker .dot { width:6px; height:6px; background:var(--accent); border-radius:50%; }
+
+.cta h2 {
+  font-family:var(--font); font-weight:500;
+  letter-spacing:-.015em;
+  font-size:clamp(30px,6vw,60px); line-height:1.0;
+}
+.cta__price {
+  font-family:var(--font); font-size:14px;
+  letter-spacing:.04em; margin:22px 0 6px;
+}
+.cta__price s { opacity:.45; margin-right:11px; }
+.cta__sub {
+  font-family:var(--font); font-size:12px;
+  letter-spacing:.04em; color:var(--ink-soft);
+}
+.btn {
+  display:inline-block; margin-top:30px;
+  border:1px solid var(--ink); color:var(--paper); background:var(--ink);
+  font-family:var(--font); font-size:12.5px; letter-spacing:.06em;
+  padding:16px 40px; cursor:pointer;
+  transition:background .25s,color .25s;
+}
+.btn:hover { background:transparent; color:var(--ink); }
+.cta__note {
+  margin-top:20px;
+  font-family:var(--font); font-size:11px;
+  letter-spacing:.03em; color:var(--ink-soft);
+}
+
+/* drop schedule */
+.sched {
+  background:var(--paper);
+  padding:9vh 22px;
+  border-top:1px solid var(--hair);
+}
+.sched h3 {
+  font-family:var(--font); font-size:11.5px;
+  letter-spacing:.06em; margin-bottom:24px; color:var(--ink-soft);
+}
+.sched__grid {
+  display:grid; grid-template-columns:repeat(5,1fr);
+  gap:1px; background:var(--hair); border:1px solid var(--hair);
+}
+.sched__cell {
+  background:var(--paper); padding:18px 15px; min-height:118px;
+  display:flex; flex-direction:column; justify-content:space-between;
+}
+.sched__cell .wk {
+  font-family:var(--font); font-size:10.5px;
+  letter-spacing:.05em; color:var(--ink-soft);
+}
+.sched__cell .nm {
+  font-family:var(--font); font-weight:500;
+  font-size:16px; line-height:1.1; letter-spacing:-.005em;
+}
+.sched__cell.active { background:var(--ink); color:var(--paper); }
+.sched__cell.active .wk { color:var(--accent); }
+.sched__cell .st {
+  font-family:var(--font); font-size:9.5px;
+  letter-spacing:.04em; color:var(--ink-soft);
+}
+.sched__cell.active .st { color:rgba(239,233,221,.6); }
+
+/* size selector */
+.size-opts {
+  display:flex; gap:6px; margin:20px 0 10px;
+}
+.size-btn {
+  font-family:var(--font); font-size:14px; letter-spacing:.05em;
+  border:1px solid var(--hair); background:transparent; color:var(--ink);
+  padding:11px 18px; cursor:pointer;
+  transition:border-color .15s, background .15s, color .15s;
+}
+.size-btn:hover { border-color:var(--ink); }
+.size-btn.selected { border-color:var(--ink); background:var(--ink); color:var(--paper); }
+
+/* quantity row */
+.qty-row {
+  display:flex; align-items:center; margin:0 0 14px;
+}
+
+.qty-btn {
+  font-family:var(--font); font-size:16px; line-height:1;
+  border:1px solid var(--hair); background:transparent; color:var(--ink);
+  width:32px; height:32px; cursor:pointer;
+  transition:border-color .15s;
+}
+.qty-btn:hover { border-color:var(--ink); }
+.qty-val {
+  font-family:var(--font); font-size:13px; letter-spacing:.04em;
+  min-width:36px; text-align:center;
+  border-top:1px solid var(--hair); border-bottom:1px solid var(--hair);
+  height:32px; line-height:30px;
+}
+
+/* scroll hint — animated arrow */
+.scroll-hint {
+  display:flex; flex-direction:column; gap:8px;
+  position:absolute; bottom:52px; left:50%; transform:translateX(-50%);
+  font-family:var(--font); font-size:13px; letter-spacing:.05em;
+  color:var(--ink-soft); white-space:nowrap;
+}
+
+
+.scroll-hint__arrow {
+  display:inline-block;
+  color:var(--accent);
+  font-size:16px; line-height:1;
+  animation:bob 1.8s ease-in-out infinite;
+}
+
+@keyframes bob {
+  0%, 100% { transform:translateY(0); }
+  50%       { transform:translateY(7px); }
+}
+
+/* detail bullets */
+.panel__bullets {
+  list-style:none; margin-top:14px; max-width:320px;
+}
+.panel__bullets li {
+  font-size:14px; line-height:2; color:#444;
+  padding-left:16px; position:relative;
+}
+.panel__bullets li::before {
+  content:'—'; position:absolute; left:0;
+  color:#444;
+}
+
+/* footer */
+.foot {
+  background:var(--paper); padding:38px 22px;
+  border-top:1px solid var(--line);
+  display:flex; justify-content:space-between;
+  flex-wrap:wrap; gap:14px;
+  font-family:var(--font); font-size:11px;
+  letter-spacing:.04em; color:var(--ink-soft);
+}
+.foot em { font-style:italic; }
+
+/* ══════════════════════════════════════════
+   MOBILE — single column, inline images
+   ══════════════════════════════════════════ */
+@media(max-width:768px){
+  .layout {
+    grid-template-columns:1fr;
+    margin-top:0;
+  }
+  .layout__left { display:none; }
+  .layout__right { border-left:none; }
+
+  .panel {
+    min-height:auto;
+    padding:48px 22px 52px;
+    justify-content:flex-start;
+    border-bottom:1px solid var(--hair);
+  }
+  .panel--intro { padding-top:88px; min-height:100svh; }
+
+  .panel__mobile-img {
+    display:block;
+    width:100%; aspect-ratio:4/3;
+    object-fit:cover;
+    filter:saturate(.9) contrast(1.01);
+    margin-bottom:32px;
+  }
+
+  .panel__h { font-size:clamp(22px,6vw,34px); }
+  .panel--intro .panel__h { font-size:clamp(26px,8vw,44px); }
+  .panel__p { font-size:15px; max-width:none; }
+
+  .spec-row { grid-template-columns:1fr; gap:5px; padding:15px 0; }
+  .spec-row dd { font-size:15px; }
+
+  .sched__grid { grid-template-columns:1fr 1fr; }
+  .sched__cell { min-height:94px; }
+
+  /* spec section: stack on mobile */
+  .spec-scroll { grid-template-columns:1fr; }
+  .spec-scroll__left { padding:48px 22px 40px; }
+  .spec-scroll__right { padding:0 22px 40px; }
+  .video-stage { max-height:none; width:100%; }
+  .spec-row { grid-template-columns:100px 1fr; gap:10px; padding:12px 0; }
+
+  /* mobile header: 60px height, hide dropdowns */
+  .site-header { height:var(--hh-mob); }
+  .site-nav { padding:0 1.6rem; }
+  .nav-dropdown { display:none; }
+  .nav-list { gap:12px; }
+  .nav-item > a { font-size:12px; }
+  .nav-logo img { height:var(--hh-mob); }
+  .layout { margin-top:var(--hh-mob); }
+  .layout__left { top:var(--hh-mob); height:calc(100vh - var(--hh-mob)); }
+  .panel { min-height:calc(100vh - var(--hh-mob)); }
+  .prog { top:var(--hh-mob); }
+}
+</style>
+</head>
+<body>
+
+<div class="prog" id="prog"></div>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header class="site-header">
+  <nav class="site-nav">
+
+    <!-- ── left nav ── -->
+    <ul class="nav-list">
+
+      <li class="nav-item">
+        <a href="https://shopandson.com/collections/clothing">wear</a>
+        <ul class="nav-dropdown">
+          <li><a href="https://shopandson.com/collections/clothing">shop all</a></li>
+          <li><a href="https://shopandson.com/collections/jackets-outerwear">jackets / outerwear</a></li>
+          <li><a href="https://shopandson.com/collections/shirts-with-buttons-snaps">shirts with buttons / snaps</a></li>
+          <li><a href="https://shopandson.com/collections/knitwear">knitwear</a></li>
+          <li><a href="https://shopandson.com/collections/tees">tees</a></li>
+          <li><a href="https://shopandson.com/collections/trousers">trousers</a></li>
+          <li><a href="https://shopandson.com/collections/shorts">shorts</a></li>
+          <li><a href="https://shopandson.com/collections/accessories">shoes &amp; accessories</a></li>
+          <li><a href="https://shopandson.com/collections/sunglasses">sunglasses</a></li>
+          <li><a href="https://shopandson.com/collections/apothecary">apothecary</a></li>
+          <li><a href="https://shopandson.com/collections/jewelry">jewelry</a></li>
+          <li><a href="https://shopandson.com/collections/clothing-sale">sale</a></li>
+        </ul>
+      </li>
+
+      <li class="nav-item">
+        <a href="https://shopandson.com/collections/house">house</a>
+        <ul class="nav-dropdown">
+          <li><a href="https://shopandson.com/collections/house">shop all</a></li>
+          <li><a href="https://shopandson.com/collections/house">living</a></li>
+          <li><a href="https://shopandson.com/collections/kitchen">kitchen</a></li>
+          <li><a href="https://shopandson.com/collections/library">library</a></li>
+          <li><a href="https://shopandson.com/collections/seating">seating</a></li>
+          <li><a href="https://shopandson.com/collections/tables">tables</a></li>
+          <li><a href="https://shopandson.com/collections/lighting">lighting</a></li>
+          <li><a href="https://shopandson.com/collections/house-sale">sale</a></li>
+        </ul>
+      </li>
+
+      <li class="nav-item">
+        <a href="https://shopandson.com/pages/designers">designers</a>
+      </li>
+
+      <!-- EDIT: pre-order dropdown — update drop names / status as new drops open -->
+      <li class="nav-item nav-item--preorder">
+        <a href="#">pre-order</a>
+        <ul class="nav-dropdown">
+          <li class="drop-label">drop 01 — open now</li>
+          <li><a href="#">washed canvas blouson</a></li>
+          <li class="drop-rule"></li>
+          <li class="drop-soon">week 02 — coming soon</li>
+          <li class="drop-soon">week 03 — coming soon</li>
+          <li class="drop-soon">week 04 — coming soon</li>
+          <li class="drop-soon">week 05 — coming soon</li>
+        </ul>
+      </li>
+
+    </ul>
+
+    <!-- ── logo (centre) ── -->
+    <a href="https://shopandson.com/" class="nav-logo" target="_blank" rel="noopener">
+      <img src="images/logo.gif" alt="Shop And Son">
+    </a>
+
+    <!-- ── right nav ── -->
+    <ul class="nav-list nav-list--right">
+      <li class="nav-item"><a href="https://shopandson.com/account">account</a></li>
+      <li class="nav-item"><a href="https://shopandson.com/cart">cart</a></li>
+      <li class="nav-item" style="color:var(--ink-soft);font-size:11px;letter-spacing:.05em;font-family:var(--font)" id="hudpct">00%</li>
+    </ul>
+
+  </nav>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════
+     SPLIT LAYOUT
+     Left  → sticky image panel (images injected by JS)
+     Right → scrollable editorial panels
+     ═══════════════════════════════════════════════════════ -->
+<div class="layout">
+
+  <!-- ── LEFT: image stage ── -->
+  <div class="layout__left">
+    <div class="img-stage">
+
+      <!-- one slot per scene; JS sets src from the IMAGES map below -->
+      <div class="img-slot active" data-slot="hero">
+        <img alt="washed canvas blouson, front view">
+      </div>
+      <div class="img-slot" data-slot="cloth">
+        <img alt="washed canvas surface detail">
+      </div>
+      <div class="img-slot" data-slot="closure">
+        <img alt="two-way zip and snap collar">
+      </div>
+      <div class="img-slot" data-slot="pocket">
+        <img alt="double-entry pocket, open">
+      </div>
+      <div class="img-slot" data-slot="cut">
+        <img alt="boxy cropped fit, worn">
+      </div>
+      <div class="img-slot" data-slot="inside">
+        <img alt="striped lining and inner pocket">
+      </div>
+
+      <div class="img-vignette"></div>
+      <div class="img-num" id="imgNum">&nbsp;</div>
+      <div class="img-label" id="imgLabel">shop and son — drop 01</div>
+    </div>
+  </div>
+
+  <!-- ── RIGHT: scrollable panels ── -->
+  <div class="layout__right">
+
+    <!-- ─── INTRO PANEL ─── -->
+    <section class="panel panel--intro" data-slot="hero" data-num="" data-label="drop 01">
+      <!-- mobile image -->
+      <img class="panel__mobile-img" data-slot="hero" alt="washed canvas blouson, front view">
+
+      <div class="panel__kicker">
+        <span class="dot"></span>
+        <!-- EDIT: week / status -->
+        week 01 · pre-order open
+      </div>
+
+      <!-- EDIT: piece name -->
+      <h1 class="panel__h" style="text-transform:none">The Benny Blouson</h1>
+
+      <!-- size selector -->
+      <div class="size-opts" id="sizeOpts">
+        <button class="size-btn" data-size="S">s</button>
+        <button class="size-btn" data-size="M">m</button>
+        <button class="size-btn" data-size="L">l</button>
+        <button class="size-btn" data-size="XL">xl</button>
+      </div>
+
+      <!-- preorder button — fixed price placeholder -->
+      <button class="btn" id="introPreorder" style="margin-top:20px">pre-order now · $495</button>
+
+      <!-- EDIT: ship date -->
+      <div class="panel__ship" style="margin-top:14px; text-align:center">ships in 6-8 weeks</div>
+
+      <div class="scroll-hint" style="align-items:center">
+        scroll for details
+        <span class="scroll-hint__arrow">↓</span>
+      </div>
+    </section>
+
+    <!-- ─── PANEL 01 · OUTER FABRIC ─── -->
+    <section class="panel" data-slot="cloth" data-num="01 / outer fabric" data-label="01 · outer fabric">
+      <img class="panel__mobile-img" data-slot="cloth" alt="moleskine fabric surface">
+
+      <!-- EDIT: cloth heading -->
+      <h2 class="panel__h">01 outer fabric</h2>
+
+      <!-- EDIT: cloth details -->
+      <ul class="panel__bullets">
+        <li>moleskine</li>
+        <li>sourced from japan</li>
+        <li>380 gsm</li>
+        <li>pigment coat applied, washed back down</li>
+      </ul>
+    </section>
+
+    <!-- ─── PANEL 02 · THE LINING ─── -->
+    <section class="panel" data-slot="closure" data-num="02 / the lining" data-label="02 · the lining">
+      <img class="panel__mobile-img" data-slot="closure" alt="striped cupro lining">
+
+      <!-- EDIT: lining heading -->
+      <h2 class="panel__h">02 the lining</h2>
+
+      <!-- EDIT: lining details -->
+      <ul class="panel__bullets">
+        <li>striped yarn-dyed cupro</li>
+        <li>102 gsm</li>
+        <li>silky against the skin</li>
+      </ul>
+    </section>
+
+    <!-- ─── PANEL 03 · HARDWARE ─── -->
+    <section class="panel" data-slot="pocket" data-num="03 / hardware" data-label="03 · hardware">
+      <img class="panel__mobile-img" data-slot="pocket" alt="riri zip and cobrax snaps">
+
+      <!-- EDIT: hardware heading -->
+      <h2 class="panel__h">03 hardware</h2>
+
+      <!-- EDIT: hardware details -->
+      <ul class="panel__bullets">
+        <li>riri two-way zip</li>
+        <li>cobrax snaps</li>
+        <li>stand collar — snap-fastening</li>
+      </ul>
+    </section>
+
+    <!-- ─── PANEL 04 · THE POCKET ─── -->
+    <section class="panel" data-slot="cut" data-num="04 / the pocket" data-label="04 · the pocket">
+      <img class="panel__mobile-img" data-slot="cut" alt="double-entry pocket detail">
+
+      <!-- EDIT: pocket heading -->
+      <h2 class="panel__h">04 the pocket</h2>
+
+      <!-- EDIT: pocket details -->
+      <ul class="panel__bullets">
+        <li>double-entry side pockets</li>
+        <li>upper entrance for hands</li>
+        <li>lower for belongings</li>
+        <li>no flap, no hardware</li>
+      </ul>
+    </section>
+
+    <!-- ─── PANEL 05 · THE BACK ─── -->
+    <section class="panel" data-slot="inside" data-num="05 / the back" data-label="05 · the back">
+      <img class="panel__mobile-img" data-slot="inside" alt="back yoke seam and darts">
+
+      <!-- EDIT: back heading -->
+      <h2 class="panel__h">05 the back</h2>
+
+      <!-- EDIT: back details -->
+      <ul class="panel__bullets">
+        <li>straight yoke seam</li>
+        <li>two darts</li>
+        <li>clean silhouette, room to move</li>
+      </ul>
+    </section>
+
+  </div><!-- /layout__right -->
+</div><!-- /layout -->
+
+<!-- ═══════════════ SPECS + VIDEO ═══════════════ -->
+<div class="spec-scroll">
+
+  <!-- LEFT: spec table -->
+  <div class="spec-scroll__left">
+    <div class="specs__head">
+      <h2>the piece, in full</h2>
+      <div class="meta">
+        click any detail<br>
+        to see it in the video
+      </div>
+    </div>
+    <dl>
+      <div class="spec-row"><dt data-seq="silhouette">silhouette</dt><dd>boxy blouson · dropped shoulder · cropped length · back yoke seam with 2 darts</dd></div>
+      <div class="spec-row"><dt data-seq="closure">closure</dt><dd>riri two-way front zip · cobrax snap-fastening stand collar</dd></div>
+      <div class="spec-row"><dt data-seq="pockets">pockets</dt><dd>two double-entry side pockets (hands + belongings) · one interior pocket</dd></div>
+      <div class="spec-row"><dt data-seq="shell">shell</dt><dd>moleskine · 380 gsm · sourced from japan · pigment-coated, wash finished</dd></div>
+      <div class="spec-row"><dt data-seq="lining">lining</dt><dd>striped yarn-dyed cupro · 102 gsm</dd></div>
+      <div class="spec-row"><dt>belt adjusters</dt><dd>update with more info</dd></div>
+      <div class="spec-row"><dt data-seq="composition">composition</dt><dd>shell: cotton · lining: cupro</dd></div>
+      <div class="spec-row"><dt>care</dt><dd>cold wash · hang dry · expected to age</dd></div>
+    </dl>
+  </div>
+
+  <!-- RIGHT: video — fully displayed, no cropping -->
+  <div class="spec-scroll__right">
+    <div class="video-stage" id="videoStage">
+      <!-- EDIT: replace src if video file changes -->
+      <video id="pieceVideo" preload="metadata" playsinline muted poster="images/video-poster.jpg">
+        <source src="videos/piece.mp4" type="video/mp4">
+      </video>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════ PREORDER CTA ═══════════════ -->
+<section class="cta">
+  <div class="cta__inner">
+    <div class="kicker center"><span class="dot"></span>pre-order · week 01</div>
+    <!-- EDIT: piece name (CTA) -->
+    <h2>reserve yours</h2>
+    <!-- EDIT: price -->
+    <div class="cta__price"><s>$285</s> $245 — pre-order price</div>
+    <!-- EDIT: release date -->
+    <div class="cta__sub">ships week of ___ · limited run</div>
+    <button class="btn" onclick="alert('pre-order flow goes here — placeholder for the mockup.')">pre-order now</button>
+    <div class="cta__note">mockup — checkout not connected</div>
+  </div>
+</section>
+
+<!-- ═══════════════ DROP SCHEDULE ═══════════════ -->
+<section class="sched">
+  <h3>five weeks, five pieces</h3>
+  <div class="sched__grid">
+    <!-- EDIT: names + status for the other 4 pieces -->
+    <div class="sched__cell active"><span class="wk">week 01</span><span class="nm">washed canvas blouson</span><span class="st">pre-order open</span></div>
+    <div class="sched__cell"><span class="wk">week 02</span><span class="nm">piece two</span><span class="st">coming soon</span></div>
+    <div class="sched__cell"><span class="wk">week 03</span><span class="nm">piece three</span><span class="st">coming soon</span></div>
+    <div class="sched__cell"><span class="wk">week 04</span><span class="nm">piece four</span><span class="st">coming soon</span></div>
+    <div class="sched__cell"><span class="wk">week 05</span><span class="nm">piece five</span><span class="st">coming soon</span></div>
+  </div>
+</section>
+
+<footer class="foot">
+  <span>shop and son</span>
+  <span><em>garments for your armoire</em></span>
+  <span>pre-order mockup · drop 01 · © 2026</span>
+</footer>
+
+<script>
+(function () {
+
+  /* ════════════════════════════════════════════════════════
+     IMAGE MAP — update src paths here to swap scene images.
+  
+     ════════════════════════════════════════════════════════ */
+  var IMAGES = {
+    hero:    'images/hero.jpg',        /* EDIT: intro — full jacket shot   */
+    cloth:   'images/fabric.jpg',      /* EDIT: 01 · outer fabric          */
+    closure: 'images/lining.jpg',      /* EDIT: 02 · the lining            */
+    pocket:  'images/hardware.jpg',    /* EDIT: 03 · hardware              */
+    cut:     'images/features-1.jpg',  /* EDIT: 04 · double-entry pocket   */
+    inside:  'images/features-2.jpg',  /* EDIT: 05 · back yoke + darts     */
+  };
+
+  /* inject src values from the map above */
+  document.querySelectorAll('.img-slot[data-slot]').forEach(function (slot) {
+    var key = slot.dataset.slot;
+    if (IMAGES[key]) slot.querySelector('img').src = IMAGES[key];
+  });
+
+  /* inject mobile inline images from the same map */
+  document.querySelectorAll('.panel__mobile-img[data-slot]').forEach(function (img) {
+    var key = img.dataset.slot;
+    if (IMAGES[key]) img.src = IMAGES[key];
+  });
+
+  /* ── references ── */
+  var prog    = document.getElementById('prog');
+  var hudpct  = document.getElementById('hudpct');
+  var imgNum  = document.getElementById('imgNum');
+  var imgLabel = document.getElementById('imgLabel');
+  var panels  = Array.prototype.slice.call(
+    document.querySelectorAll('.layout__right .panel[data-slot]')
+  );
+
+  /* slot elements keyed by slot name */
+  var slots = {};
+  document.querySelectorAll('.img-slot[data-slot]').forEach(function (el) {
+    slots[el.dataset.slot] = el;
+  });
+
+  var activeSlot = 'hero';
+  var vh = window.innerHeight;
+
+  function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+
+  /* switch the left image to a new slot */
+  function activateSlot(key, num, label) {
+    if (key === activeSlot) return;
+    var prev = slots[activeSlot];
+    var next = slots[key];
+    if (!next) return;
+    if (prev) prev.classList.remove('active');
+    next.classList.add('active');
+    activeSlot = key;
+    imgNum.textContent  = num   || '';
+    imgLabel.textContent = label || 'shop and son — drop 01';
+  }
+
+  /* scroll progress bar + HUD % */
+  function updateProgress() {
+    var doc = document.documentElement;
+    var st  = window.pageYOffset || doc.scrollTop;
+    var max = (doc.scrollHeight - vh) || 1;
+    var p   = clamp(st / max, 0, 1);
+    prog.style.width = (p * 100) + '%';
+    hudpct.textContent = (p * 100 < 10 ? '0' : '') + Math.round(p * 100) + '%';
+  }
+
+  /* parallax zoom on the active left image */
+  function updateParallax() {
+    var layoutRight = document.querySelector('.layout__right');
+    if (!layoutRight) return;
+    var r    = layoutRight.getBoundingClientRect();
+    var total = layoutRight.offsetHeight - vh;
+    var prog  = clamp((-r.top) / (total || 1), 0, 1);
+    /* subtle: scale from 1.0 to 1.06 over the full layout scroll */
+    var sc = 1 + 0.06 * prog;
+    var active = document.querySelector('.img-slot.active img');
+    if (active) active.style.transform = 'scale(' + sc.toFixed(4) + ')';
+  }
+
+  /* determine which panel is in the center of the viewport
+     and switch the left image accordingly */
+  function updateActivePanel() {
+    var mid = vh * 0.5;
+    for (var i = 0; i < panels.length; i++) {
+      var r = panels[i].getBoundingClientRect();
+      if (r.top <= mid && r.bottom > mid) {
+        activateSlot(
+          panels[i].dataset.slot,
+          panels[i].dataset.num  || '',
+          panels[i].dataset.label || ''
+        );
+        break;
+      }
+    }
+  }
+
+
+  var ticking = false;
+  function onScroll() {
+    if (!ticking) {
+      ticking = true;
+      requestAnimationFrame(function () {
+        ticking = false;
+        updateProgress();
+        updateActivePanel();
+        updateParallax();
+      });
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', function () { vh = window.innerHeight; onScroll(); });
+
+  /* init */
+  updateProgress();
+  updateActivePanel();
+  updateParallax();
+
+  /* ── video sequence engine ────────────────────────────────────
+     SEQ maps each detail key to an array of {s, e} segments (seconds).
+     e: null → play to video end. Multi-segment sequences cut seamlessly.
+     To add a new detail: add an entry to SEQ and data-seq="key" on its dt.
+  ────────────────────────────────────────────────────────────── */
+  var pieceVideo = document.getElementById('pieceVideo');
+  var videoStage = document.getElementById('videoStage');
+
+  var FPS = 30;
+  function f(n) { return n / FPS; }
+
+  var SEQ = {
+    silhouette:  [{ s: f(1158), e: null   }],
+    closure:     [{ s: f(136),  e: null   }],
+    pockets:     [{ s: f(488),  e: f(526) }, { s: f(720), e: f(830) }],
+    shell:       [{ s: f(0),    e: null   }],
+    lining:      [{ s: f(425),  e: null   }],
+    composition: [{ s: f(0),    e: f(150) }, { s: f(425), e: f(485) }]
+  };
+
+  var activeSeq  = null;
+  var activeSeg  = 0;
+  var activeRow  = null;
+  var seqSeeking = false;
+
+  function clearSeq() {
+    activeSeq = null;
+    activeSeg = 0;
+    if (activeRow) { activeRow.classList.remove('seq-active'); activeRow = null; }
+  }
+
+  function startSeq(key, dtEl) {
+    if (!pieceVideo || !SEQ[key]) return;
+    clearSeq();
+    activeSeq  = SEQ[key];
+    activeSeg  = 0;
+    activeRow  = dtEl;
+    dtEl.classList.add('seq-active');
+    seqSeeking = true;
+    pieceVideo.currentTime = activeSeq[0].s;
+    pieceVideo.play();
+    var spec = document.querySelector('.spec-scroll');
+    if (spec) spec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  if (pieceVideo) {
+    /* reset seek-guard once a seek completes */
+    pieceVideo.addEventListener('seeked', function () { seqSeeking = false; });
+
+    /* watch for segment end and cut to next (or loop) */
+    pieceVideo.addEventListener('timeupdate', function () {
+      if (!activeSeq || seqSeeking) return;
+      var seg = activeSeq[activeSeg];
+      var end = (seg.e !== null) ? seg.e : pieceVideo.duration;
+      if (isNaN(end)) return;
+      if (pieceVideo.currentTime >= end - 0.15) {
+        seqSeeking = true;
+        activeSeg  = (activeSeg + 1) % activeSeq.length;
+        pieceVideo.currentTime = activeSeq[activeSeg].s;
+      }
+    });
+
+    /* fallback: natural end for e:null segments */
+    pieceVideo.addEventListener('ended', function () {
+      if (!activeSeq) return;
+      seqSeeking = true;
+      activeSeg  = (activeSeg + 1) % activeSeq.length;
+      pieceVideo.currentTime = activeSeq[activeSeg].s;
+      pieceVideo.play();
+    });
+  }
+
+  /* click handler */
+  document.querySelectorAll('dt[data-seq]').forEach(function (dt) {
+    dt.addEventListener('click', function () { startSeq(dt.dataset.seq, dt); });
+  });
+
+  /* "the piece, in full" heading — reset video to start */
+  var specsHeading = document.querySelector('.specs__head h2');
+  if (specsHeading && pieceVideo) {
+    specsHeading.addEventListener('click', function () {
+      clearSeq();
+      seqSeeking = true;
+      pieceVideo.currentTime = 0;
+      pieceVideo.play();
+    });
+  }
+
+  /* ── size selector ── */
+  var sizeOpts = document.getElementById('sizeOpts');
+  if (sizeOpts) {
+    sizeOpts.addEventListener('click', function (e) {
+      var btn = e.target.closest ? e.target.closest('.size-btn') : (e.target.classList.contains('size-btn') ? e.target : null);
+      if (!btn) return;
+      sizeOpts.querySelectorAll('.size-btn').forEach(function (b) { b.classList.remove('selected'); });
+      btn.classList.add('selected');
+    });
+  }
+
+  var introPreorder = document.getElementById('introPreorder');
+  if (introPreorder) introPreorder.addEventListener('click', function () {
+    alert('pre-order flow goes here — placeholder for the mockup.');
+  });
+
+  /* ── auto-play / pause on scroll ──
+     Entering view: play (resumes from current position).
+     Leaving view: pause + clear any active sequence.
+  ────────────────────────────────────────────────── */
+  if (videoStage && pieceVideo) {
+    var scrollObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          pieceVideo.play();
+        } else {
+          pieceVideo.pause();
+          clearSeq();
+        }
+      });
+    }, { threshold: 0.3 });
+    scrollObserver.observe(videoStage);
+  }
+
+})();
+</script>
+</body>
+</html>

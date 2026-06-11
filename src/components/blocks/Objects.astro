@@ -1,0 +1,33 @@
+---
+import { objects } from "../../data/content.ts";
+const { featured, ledger } = objects;
+---
+<section class="block" id="objects">
+  <div class="left">
+    <img src="/images/blocks/objects.jpg" alt="objects in the vitrine" />
+    <div class="tint"></div>
+    <div class="swingtag" style="top:auto;bottom:18px">
+      <div class="name">{featured.name}</div>
+      <div class="cloth">{featured.cloth}</div>
+      <dl>
+        {featured.details.map((d) => (
+          <>
+            <dt>{d.label}</dt>
+            <dd>{d.stamp ? <span class="stamp">{d.value}</span> : d.value}</dd>
+          </>
+        ))}
+      </dl>
+    </div>
+    <div class="rackhint">{objects.rackHint}</div>
+  </div>
+  <div class="right">
+    <div class="kicker">{objects.kicker}</div>
+    <div class="title">{objects.title}</div>
+    <div class="ledger">
+      {ledger.map((row) => (
+        <div class="row"><span>{row.maker}</span><span class="ed">{row.edition}</span></div>
+      ))}
+    </div>
+    <div class="meta">{objects.meta}</div>
+  </div>
+</section>

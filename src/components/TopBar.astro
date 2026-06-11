@@ -1,0 +1,14 @@
+---
+import { site } from "../data/content.ts";
+---
+<div class="topbar">
+  <a class="brand" href="/" set:html={site.brand} />
+  <div class="controls">
+    {site.nav.map((item) => (
+      <a class="navlink" href={item.href} {...(item.external ? { target: "_blank", rel: "noopener" } : {})}>{item.label}</a>
+    ))}
+    <span class="clock" id="clock"></span>
+    <button id="idxBtn">+ index</button>
+    <button id="modeBtn">dusk</button>
+  </div>
+</div>

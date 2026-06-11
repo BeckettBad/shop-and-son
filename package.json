@@ -1,0 +1,22 @@
+{
+  "name": "shop-and-son",
+  "type": "module",
+  "version": "0.0.1",
+  "description": "&son — editorial homepage + preorders. Custom front-end; checkout links to Shopify.",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "astro": "^6.4.6"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "typescript": "^6.0.3"
+  }
+}

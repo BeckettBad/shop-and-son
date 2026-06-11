@@ -1,0 +1,35 @@
+---
+import { clothing } from "../../data/content.ts";
+const { featured, designers } = clothing;
+// pad the running number to two digits, as in the index
+const num = (i: number) => String(i + 1).padStart(2, "0");
+---
+<section class="block" id="clothing">
+  <div class="left">
+    <img src="/images/blocks/clothing.jpg" alt="garments on the rack" />
+    <div class="tint"></div>
+    <div class="swingtag">
+      <span class="punch"></span>
+      <div class="name">{featured.name}</div>
+      <div class="cloth">{featured.cloth}</div>
+      <dl>
+        {featured.details.map((d) => (
+          <>
+            <dt>{d.label}</dt><dd>{d.value}</dd>
+          </>
+        ))}
+      </dl>
+    </div>
+    <div class="rackhint">{clothing.rackHint}</div>
+  </div>
+  <div class="right">
+    <div class="kicker">{clothing.kicker}</div>
+    <div class="title">{clothing.title}</div>
+    <div class="idxhead"><span>+ sort a–z</span><span>+ chron</span><span>+ price</span><span>+ filter</span></div>
+    <div class="idxcols">
+      {designers.map((name, i) => (
+        <div class="row"><span class="num">{num(i)}</span><span>{name}</span></div>
+      ))}
+    </div>
+  </div>
+</section>

@@ -1,0 +1,22 @@
+---
+import { about, site } from "../../data/content.ts";
+---
+<section class="block">
+  <div class="left">
+    <img src="/images/blocks/about.jpg" alt="&son storefront" />
+    <div class="tint"></div>
+    {about.hotspots.map((h) => (
+      <a class="hot" href={h.href} style={`left:${h.left};top:${h.top};width:${h.width};height:${h.height}`}>
+        <span class="lbl">{h.label}</span>
+      </a>
+    ))}
+  </div>
+  <div class="right">
+    <div class="kicker">{about.kicker}</div>
+    <div class="title" set:html={about.title} />
+    <p class="lede" set:html={about.ledeHtml} />
+    <div class="meta">
+      {site.address}<br />{site.email}<br /><span id="status">— open now</span>
+    </div>
+  </div>
+</section>
