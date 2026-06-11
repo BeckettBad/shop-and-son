@@ -13,6 +13,18 @@
  * metafields. The types below are intentionally shaped to receive that data.
  */
 
+export interface NavLink {
+  label: string;
+  href: string;
+  /** External links go out to Shopify and open with rel=noopener. */
+  external?: boolean;
+}
+
+/** A primary nav item, optionally with a hover dropdown of sub-links. */
+export interface NavGroup extends NavLink {
+  children?: NavLink[];
+}
+
 export interface SiteConfig {
   brand: string;
   address: string;
@@ -21,9 +33,11 @@ export interface SiteConfig {
   hours: { openHour: number; closeHour: number };
   /** Base URL of the live Shopify store — where every "buy" link points. */
   shopUrl: string;
-  /** Top-bar navigation. `external` links go out to Shopify; others are on-site. */
-  nav: { label: string; href: string; external?: boolean }[];
+  /** Header navigation: primary items on the left, account/cart on the right. */
+  nav: { left: NavGroup[]; right: NavLink[] };
 }
+
+const shop = (path: string) => `https://shopandson.com${path}`;
 
 export const site: SiteConfig = {
   brand: "&son",
@@ -31,12 +45,52 @@ export const site: SiteConfig = {
   email: "info@shopandson.com",
   hours: { openHour: 12, closeHour: 19 },
   shopUrl: "https://shopandson.com",
-  nav: [
-    { label: "wear", href: "https://shopandson.com/collections/wear", external: true },
-    { label: "house", href: "https://shopandson.com/collections/house", external: true },
-    { label: "designers", href: "#clothing" },
-    { label: "preorders", href: "/preorders/" },
-  ],
+  nav: {
+    left: [
+      {
+        label: "wear",
+        href: shop("/collections/clothing"),
+        external: true,
+        children: [
+          { label: "shop all", href: shop("/collections/clothing"), external: true },
+          { label: "jackets / outerwear", href: shop("/collections/jackets-outerwear"), external: true },
+          { label: "shirts with buttons / snaps", href: shop("/collections/shirts-with-buttons-snaps"), external: true },
+          { label: "knitwear", href: shop("/collections/knitwear"), external: true },
+          { label: "tees", href: shop("/collections/tees"), external: true },
+          { label: "trousers", href: shop("/collections/trousers"), external: true },
+          { label: "shorts", href: shop("/collections/shorts"), external: true },
+          { label: "shoes & accessories", href: shop("/collections/accessories"), external: true },
+          { label: "sunglasses", href: shop("/collections/sunglasses"), external: true },
+          { label: "apothecary", href: shop("/collections/apothecary"), external: true },
+          { label: "jewelry", href: shop("/collections/jewelry"), external: true },
+          { label: "sale", href: shop("/collections/clothing-sale"), external: true },
+        ],
+      },
+      {
+        label: "house",
+        href: shop("/collections/house"),
+        external: true,
+        children: [
+          { label: "shop all", href: shop("/collections/house"), external: true },
+          { label: "living", href: shop("/collections/house"), external: true },
+          { label: "kitchen", href: shop("/collections/kitchen"), external: true },
+          { label: "library", href: shop("/collections/library"), external: true },
+          { label: "seating", href: shop("/collections/seating"), external: true },
+          { label: "tables", href: shop("/collections/tables"), external: true },
+          { label: "lighting", href: shop("/collections/lighting"), external: true },
+          { label: "sale", href: shop("/collections/house-sale"), external: true },
+        ],
+      },
+      // on-site: scrolls to the designer index block
+      { label: "designers", href: "#clothing" },
+      // on-site: the migrated preorders experience
+      { label: "pre-order", href: "/preorders/" },
+    ],
+    right: [
+      { label: "account", href: shop("/account"), external: true },
+      { label: "cart", href: shop("/cart"), external: true },
+    ],
+  },
 };
 
 /** A label/value pair on a swing tag or placard. */
