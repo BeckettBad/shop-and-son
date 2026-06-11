@@ -145,13 +145,26 @@ body{
 .swingtag dl{font-size:12px; line-height:1.7}
 .swingtag dt{opacity:.5; letter-spacing:.04em} .swingtag dd{margin-bottom:7px}
 .rackhint{position:absolute; bottom:16px; left:18px; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#fff; opacity:.8; mix-blend-mode:difference}
-/* index (clothing designers) */
-.idxhead{display:flex; gap:20px; font-size:11px; letter-spacing:.12em; text-transform:lowercase; opacity:.6; margin-bottom:18px}
-.idxhead span{cursor:pointer} .idxhead span:hover{opacity:1; color:var(--accent)}
+/* index (clothing designers) — a living, sortable directory */
+.idxhead{display:flex; gap:16px; align-items:center; font-size:11px; letter-spacing:.1em; margin-bottom:16px}
+.idxctl{
+  font-family:var(--mono); font-size:11px; letter-spacing:.1em;
+  background:none; border:none; color:var(--ink-soft); cursor:pointer;
+  padding:2px 0; border-bottom:1px solid transparent; transition:color .2s,border-color .2s;
+}
+.idxctl:hover{color:var(--ink)}
+.idxctl.on{color:var(--ink); border-bottom-color:var(--ink)}
+.idxcount{margin-left:auto; color:var(--ink-soft); font-variant-numeric:tabular-nums; letter-spacing:.06em}
+.idxsearch{
+  font-family:var(--mono); font-size:13px; color:var(--ink); background:none;
+  border:none; border-bottom:1px solid var(--rule); padding:6px 0; margin-bottom:14px;
+  width:100%; outline:none;
+}
+.idxsearch::placeholder{color:var(--ink-soft)}
 .idxcols{columns:2; column-gap:34px; font-size:14px; line-height:1.95}
-.idxcols .row{display:flex; gap:10px; break-inside:avoid; font-style:italic}
-.idxcols .num{opacity:.4; font-style:normal; font-variant-numeric:tabular-nums; min-width:22px}
-.idxcols .row:hover{color:var(--accent)}
+.idxcols .row{display:flex; gap:10px; break-inside:avoid; color:var(--ink); text-decoration:none}
+.idxcols .num{color:var(--ink-soft); font-variant-numeric:tabular-nums; min-width:24px}
+.idxcols .row:hover,.idxcols .row:hover .num{color:var(--accent)}
 /* objects ledger */
 .ledger .row{display:flex; justify-content:space-between; border-bottom:1px dotted var(--rule); padding:9px 0; font-style:italic; font-size:16px}
 .ledger .ed{font-style:normal; font-size:11px; letter-spacing:.1em; opacity:.5; text-transform:uppercase}
