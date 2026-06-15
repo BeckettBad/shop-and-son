@@ -288,23 +288,37 @@ body{
 .shopall{display:inline-block; margin-top:10px; font-family:var(--mono); font-size:13px; letter-spacing:.06em; color:var(--ink); text-decoration:underline; text-underline-offset:3px}
 .shopall:hover{color:var(--accent)}
 .obj-hint{margin-top:16px; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft)}
-.obj-collage{position:relative; align-self:center; width:100%; aspect-ratio:1/1; padding:5%; color:var(--rule)}
-.obj-collage .cross{position:absolute; inset:0; width:100%; height:100%; pointer-events:none}
-.obj{position:absolute; width:38%; display:block; text-decoration:none; cursor:pointer}
-.obj img{width:100%; height:auto; border:1px solid var(--rule); background:var(--tag); box-shadow:0 8px 24px rgba(0,0,0,.12); display:block}
-.o1{top:2%; left:8%} .o2{top:6%; right:6%; width:34%} .o3{bottom:4%; left:4%; width:40%} .o4{bottom:8%; right:8%}
-.obj .tip{
-  position:absolute; left:50%; bottom:-6px; transform:translate(-50%,100%);
+/* square canvas split into 4 quadrants by the perpendicular cross; each cutout
+   floats inside its own quadrant (drop-shadow, no box) and never touches the line */
+.obj-collage{
+  position:relative; align-self:center; width:100%; aspect-ratio:1/1; padding:2%; color:var(--rule);
+  display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr;
+}
+.obj-collage .cross{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0}
+.obj{position:relative; display:flex; padding:9%; min-width:0; min-height:0; text-decoration:none; cursor:pointer}
+/* push each toward its outer corner, away from the centre cross */
+.o1{justify-content:flex-start; align-items:flex-start}
+.o2{justify-content:flex-end;   align-items:flex-start}
+.o3{justify-content:flex-start; align-items:flex-end}
+.o4{justify-content:flex-end;   align-items:flex-end}
+.objwrap{position:relative; display:inline-flex; max-width:100%; max-height:100%}
+.objwrap img{
+  max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; display:block;
+  filter:drop-shadow(0 8px 18px rgba(0,0,0,.20)); transition:transform .25s ease, filter .25s ease;
+}
+.obj:hover .objwrap img{transform:scale(1.04); filter:drop-shadow(0 12px 26px rgba(0,0,0,.30))}
+.obj.sold{cursor:default}
+.obj.sold .objwrap img{opacity:.78}
+.tip{
+  position:absolute; left:50%; bottom:0; transform:translate(-50%,135%);
   background:var(--ink); color:var(--paper); font-family:var(--mono); font-size:10px;
   padding:5px 8px; white-space:nowrap; opacity:0; transition:.2s; pointer-events:none; letter-spacing:.04em;
 }
-.obj:hover .tip{opacity:1; bottom:-2px}
-.obj:hover img{outline:2px solid var(--accent)}
-.obj.sold{cursor:default}
+.obj:hover .tip{opacity:1; transform:translate(-50%,118%)}
 .obj-stamp{
-  position:absolute; top:10px; left:10px; border:2px solid var(--accent); color:var(--accent);
+  position:absolute; top:6%; left:0; border:2px solid var(--accent); color:var(--accent);
   font-family:var(--mono); font-size:10px; letter-spacing:.1em; padding:2px 6px;
-  transform:rotate(-7deg); text-transform:uppercase;
+  transform:rotate(-7deg); text-transform:uppercase; background:color-mix(in srgb,var(--paper) 80%,transparent);
 }
 
 /* ---- 04 music: stripped column, now-playing, off-air ---- */

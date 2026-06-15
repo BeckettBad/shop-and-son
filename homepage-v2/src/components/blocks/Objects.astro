@@ -29,19 +29,23 @@ const cutouts = [
   <!-- collage of floating cutouts joined by cross-lines on the RIGHT -->
   <div class="obj-collage">
     <svg class="cross" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M50 4 V96 M6 50 H94" stroke="currentColor" stroke-width=".4" fill="none" />
+      <path d="M50 1 V99 M1 50 H99" stroke="currentColor" stroke-width=".6" fill="none" />
     </svg>
     {cutouts.map((c) =>
       c.sold ? (
         <div class={`obj ${c.pos} sold`}>
-          <Image src={c.img} alt={c.maker} width={c.img.width} height={c.img.height} />
-          <span class="obj-stamp">sold</span>
-          <span class="tip">{c.maker} · sold</span>
+          <span class="objwrap">
+            <Image src={c.img} alt={c.maker} width={c.img.width} height={c.img.height} />
+            <span class="obj-stamp">sold</span>
+            <span class="tip">{c.maker} · sold</span>
+          </span>
         </div>
       ) : (
         <a class={`obj ${c.pos}`} href={searchUrl(c.maker)} target="_blank" rel="noopener">
-          <Image src={c.img} alt={c.maker} width={c.img.width} height={c.img.height} />
-          <span class="tip">{c.maker} → shop</span>
+          <span class="objwrap">
+            <Image src={c.img} alt={c.maker} width={c.img.width} height={c.img.height} />
+            <span class="tip">{c.maker} → shop</span>
+          </span>
         </a>
       ),
     )}
