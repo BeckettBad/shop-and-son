@@ -1,0 +1,49 @@
+---
+import { objects, site } from "../../data/content.ts";
+import { Image } from "astro:assets";
+import o1 from "../../assets/blocks/object-01.png";
+import o2 from "../../assets/blocks/object-02.png";
+import o3 from "../../assets/blocks/object-03.png";
+import o4 from "../../assets/blocks/object-04.png";
+
+const searchUrl = (n: string) => `${site.shopUrl}/search?q=${encodeURIComponent(n)}`;
+// owner-updatable: which cutouts float here + their maker + sold state
+const cutouts = [
+  { img: o1, pos: "o1", maker: "Shino Takeda", sold: false },
+  { img: o2, pos: "o2", maker: "Danny's Mud Shop", sold: false },
+  { img: o3, pos: "o3", maker: "Mark Patrick Harrington", sold: true },
+  { img: o4, pos: "o4", maker: "Binu Binu", sold: false },
+];
+---
+<section class="block objects-v2" id="objects">
+  <!-- text + Shop All on the LEFT -->
+  <div class="right obj-text">
+    <div class="kicker">{objects.kicker}</div>
+    <div class="title">{objects.title}</div>
+    <p class="lede">{objects.meta}</p>
+    <a class="shopall" href={`${site.shopUrl}/collections/house`} target="_blank" rel="noopener">Shop All →</a>
+    <p class="obj-hint">hover a piece — shop by its designer</p>
+    <div class="scroll-hint"><span class="scroll-hint__arrow">↓</span></div>
+  </div>
+
+  <!-- collage of floating cutouts joined by cross-lines on the RIGHT -->
+  <div class="obj-collage">
+    <svg class="cross" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M50 4 V96 M6 50 H94" stroke="currentColor" stroke-width=".4" fill="none" />
+    </svg>
+    {cutouts.map((c) =>
+      c.sold ? (
+        <div class={`obj ${c.pos} sold`}>
+          <Image src={c.img} alt={c.maker} width={c.img.width} height={c.img.height} />
+          <span class="obj-stamp">sold</span>
+          <span class="tip">{c.maker} · sold</span>
+        </div>
+      ) : (
+        <a class={`obj ${c.pos}`} href={searchUrl(c.maker)} target="_blank" rel="noopener">
+          <Image src={c.img} alt={c.maker} width={c.img.width} height={c.img.height} />
+          <span class="tip">{c.maker} → shop</span>
+        </a>
+      ),
+    )}
+  </div>
+</section>

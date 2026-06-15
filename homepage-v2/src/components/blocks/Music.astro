@@ -1,0 +1,44 @@
+---
+import { music } from "../../data/content.ts";
+import { Image } from "astro:assets";
+import djImg from "../../assets/blocks/music-dj.jpg";
+// Starts off-air: the live Spotify "currently playing" feed needs a small backend
+// (store-account OAuth) wired later. Until then this is the graceful fallback.
+---
+<section class="block offair" id="music">
+  <div class="left" id="musicpane">
+    <Image src={djImg} alt="DJ at the wooden speaker booth" width={djImg.width} height={djImg.height} />
+    <div class="tint"></div>
+    <div class="woofer" id="woofer"></div>
+  </div>
+  <div class="right">
+    <div class="kicker">{music.kicker}</div>
+    <div class="title" set:html={music.title} />
+    <p class="lede" style="margin-top:-10px">& son official playlist</p>
+
+    <div class="nowplaying" id="np">
+      <div class="bt"><span>now playing · in store</span><span id="np-status">off air</span></div>
+      <div class="song" id="np-song">official playlist</div>
+      <div class="artist" id="np-artist">&amp; son radio</div>
+      <div class="eq"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+    <p class="np-src">↳ mirrors the shop via Spotify — display only, no audio streamed</p>
+
+    <div class="scroll-hint"><span class="scroll-hint__arrow">↓</span></div>
+  </div>
+</section>
+
+<script>
+  // Reveal the woofer while the block is on screen. The woofer/eq animate only
+  // when a track is live (section lacks `.offair`); they rest on the off-air
+  // fallback. When the Spotify backend lands, it will toggle `.offair` and fill
+  // #np-song / #np-artist / #np-status from the store account's currently-playing.
+  const wf = document.getElementById("woofer");
+  const section = document.getElementById("music");
+  if (wf && section) {
+    new IntersectionObserver(
+      (entries) => entries.forEach((e) => { wf.style.opacity = e.isIntersecting ? "1" : "0"; }),
+      { threshold: 0.4 },
+    ).observe(section);
+  }
+</script>

@@ -1,0 +1,42 @@
+---
+import { site } from "../data/content.ts";
+import { withBase } from "../lib/url.ts";
+
+const { left, right } = site.nav;
+const ext = (e?: boolean) => (e ? { target: "_blank", rel: "noopener" } : {});
+const resolve = (href: string, external?: boolean) => (external ? href : withBase(href));
+---
+<header class="site-header">
+  <nav class="site-nav">
+
+    <!-- left: primary nav, some with hover dropdowns -->
+    <ul class="nav-list nav-list--left">
+      {left.map((item) => (
+        <li class={`nav-item${item.children ? " has-drop" : ""}${item.label === "pre-order" ? " nav-item--preorder" : ""}`}>
+          <a href={resolve(item.href, item.external)} {...ext(item.external)}>{item.label}</a>
+          {item.children && (
+            <ul class="nav-dropdown">
+              {item.children.map((c) => (
+                <li><a href={resolve(c.href, c.external)} {...ext(c.external)}>{c.label}</a></li>
+              ))}
+            </ul>
+          )}
+        </li>
+      ))}
+    </ul>
+
+    <!-- center: logo -->
+    <a class="nav-logo" href={withBase("/")} aria-label="&son — home">
+      <img src={withBase("/images/logo.gif")} alt="&son" />
+    </a>
+
+    <!-- right: account / cart, then the on-site index toggle -->
+    <ul class="nav-list nav-list--right">
+      {right.map((item) => (
+        <li class="nav-item"><a href={resolve(item.href, item.external)} {...ext(item.external)}>{item.label}</a></li>
+      ))}
+      <li class="nav-item util"><button id="idxBtn">+ index</button></li>
+    </ul>
+
+  </nav>
+</header>
