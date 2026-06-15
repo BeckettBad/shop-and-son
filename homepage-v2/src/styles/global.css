@@ -337,11 +337,14 @@ body{
   font-size:11px; letter-spacing:.14em; text-transform:uppercase; padding:4px 9px; font-style:normal}
 .vbox{position:relative; align-self:stretch; min-height:60vh; background:#050403;
   display:flex; align-items:center; justify-content:center; overflow:hidden; cursor:crosshair}
-.vbox img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .45s}
-.vbox .neon{position:relative; font-family:'Cardo',serif; font-style:italic; font-size:clamp(24px,2.8vw,38px);
-  color:#ffcaa0; text-shadow:0 0 8px #ff9d4d,0 0 22px #ff7a1a; opacity:0; transition:opacity .45s}
-.vbox:hover img{opacity:.55} .vbox:hover .neon{opacity:.95}
-.vhint{position:absolute; left:12px; bottom:10px; font-size:10px; color:#fff; opacity:.55; letter-spacing:.06em}
+.vbox img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.92; filter:saturate(.96)}
+/* black overlay with a radial hole at the cursor — the flashlight */
+.vbox .flash{position:absolute; inset:0; background:#050403;
+  -webkit-mask:radial-gradient(circle 150px at var(--mx,50%) var(--my,50%),transparent 0,transparent 54%,#000 100%);
+  mask:radial-gradient(circle 150px at var(--mx,50%) var(--my,50%),transparent 0,transparent 54%,#000 100%)}
+.vbox .neon{position:relative; z-index:2; font-family:'Cardo',serif; font-style:italic; font-size:clamp(24px,2.8vw,38px);
+  color:#ffcaa0; text-shadow:0 0 8px #ff9d4d,0 0 22px #ff7a1a; opacity:.92; animation:flick 5s infinite}
+.vhint{position:absolute; left:12px; bottom:10px; z-index:2; font-size:10px; color:#fff; opacity:.55; letter-spacing:.06em}
 .wave{position:absolute; left:0; width:100%; height:30px; opacity:.7; mix-blend-mode:difference; pointer-events:none; z-index:7}
 .wave.t{top:14px} .wave.b{bottom:14px}
 
