@@ -4,11 +4,13 @@
 
 :root{
   /* exact values from shopandson.com / the preorders page */
-  --paper:#ffffff; --paper-2:#eae9e7; --ink:#000000; --ink-soft:#666666;
+  --paper:#ffffff; --paper-2:#eae9e7; --ink:#006BB6; --ink-soft:rgba(0,107,182,.62);
   --rule:rgba(0,0,0,.15); --line:#000000; --tag:#ffffff;
-  --photo-tint:rgba(0,0,0,0); --accent:#8a5234;
-  /* type: mono is the system/catalog voice; serif is reserved for display titles */
-  --mono:'Anonymous Pro',ui-monospace,'SFMono-Regular',Menlo,monospace;
+  --photo-tint:rgba(0,0,0,0); --accent:#F58426;
+  /* type: body text is Roboto Mono; the header keeps Anonymous Pro (--mono-ui);
+     serif is reserved for the display titles */
+  --mono:'Roboto Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+  --mono-ui:'Anonymous Pro',ui-monospace,'SFMono-Regular',Menlo,monospace;
   --serif:'EB Garamond','Cardo',Georgia,serif;
   --hh:80px; --hh-mob:60px;  /* header height, desktop / mobile */
 }
@@ -36,14 +38,14 @@ body{
 .nav-item{position:relative}
 .nav-item > a,
 .nav-item button{
-  font-family:var(--mono); font-size:13px; font-weight:400; letter-spacing:0;
+  font-family:var(--mono-ui); font-size:13px; font-weight:400; letter-spacing:0;
   color:var(--ink); text-decoration:none; cursor:pointer;
   background:none; border:none; padding:6px 0; display:block; transition:color .2s;
 }
-.nav-item > a:hover,.nav-item button:hover,.nav-item button.on{color:var(--ink-soft)}
+.nav-item > a:hover,.nav-item button:hover,.nav-item button.on{color:var(--accent)}
 /* pre-order link — subtle underline, exactly like the live nav */
 .nav-item--preorder > a{text-decoration:underline; text-underline-offset:3px}
-.nav-item--preorder > a:hover{color:var(--ink-soft); text-decoration:underline}
+.nav-item--preorder > a:hover{color:var(--accent); text-decoration:underline}
 /* center logo — fills the header height, as on the live site */
 .nav-logo{display:flex; justify-content:center; align-items:center; text-decoration:none}
 .nav-logo img{height:var(--hh); width:auto; display:block}
@@ -56,10 +58,10 @@ body{
 }
 .nav-item.has-drop:hover .nav-dropdown{opacity:1; visibility:visible; pointer-events:auto}
 .nav-dropdown li a{
-  display:block; padding:6px 20px; font-family:var(--mono); font-size:13px;
+  display:block; padding:6px 20px; font-family:var(--mono-ui); font-size:13px;
   color:var(--ink); text-decoration:none; transition:color .15s;
 }
-.nav-dropdown li a:hover{color:var(--ink-soft)}
+.nav-dropdown li a:hover{color:var(--accent)}
 /* ---- block ---- */
 .block{position:relative; display:grid; grid-template-columns:1fr 1fr; min-height:100vh; border-bottom:1px solid var(--rule)}
 .block:first-of-type{margin-top:var(--hh)}
@@ -73,8 +75,8 @@ body{
 .kicker{font-size:11px; letter-spacing:.22em; text-transform:uppercase; opacity:.5; margin-bottom:22px}
 .title{font-size:clamp(34px,4.2vw,62px); font-style:italic; letter-spacing:.01em; margin-bottom:26px; font-weight:500}
 .lede{font-size:clamp(15px,1.25vw,19px); line-height:1.85; font-style:italic; max-width:30ch}
-.lede a{color:var(--accent); text-decoration:none; border-bottom:1px solid transparent}
-.lede a:hover{border-bottom-color:var(--accent)}
+.lede a{color:var(--ink); text-decoration:none; border-bottom:1px solid transparent}
+.lede a:hover{color:var(--accent); border-bottom-color:var(--accent)}
 .meta{margin-top:30px; font-size:13px; line-height:2; letter-spacing:.04em; opacity:.85}
 .concept{
   position:absolute; left:7vw; bottom:26px; right:7vw;
