@@ -320,11 +320,10 @@ body{
 .swingtag-card dl{font-size:12px; line-height:1.7}
 .swingtag-card dt{color:var(--ink-soft); letter-spacing:.04em} .swingtag-card dd{margin-bottom:6px}
 
-/* ---- 03 objects: floating-cutout collage ---- */
+/* ---- 03 objects: collage LEFT / text RIGHT ---- */
 .obj-text{align-items:flex-start; text-align:left}
 .shopall{display:inline-block; margin-top:10px; font-family:var(--mono); font-size:13px; letter-spacing:.06em; color:var(--ink); text-decoration:underline; text-underline-offset:3px}
 .shopall:hover{color:var(--accent)}
-.obj-hint{margin-top:16px; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft)}
 /* square canvas split into 4 quadrants by the perpendicular cross; each cutout
    floats inside its own quadrant (drop-shadow, no box) and never touches the line */
 .obj-collage{
@@ -344,19 +343,19 @@ body{
   filter:drop-shadow(0 8px 18px rgba(0,0,0,.20)); transition:transform .25s ease, filter .25s ease;
 }
 .obj:hover .objwrap img{transform:scale(1.04); filter:drop-shadow(0 12px 26px rgba(0,0,0,.30))}
-.obj.sold{cursor:default}
-.obj.sold .objwrap img{opacity:.78}
-.tip{
-  position:absolute; left:50%; bottom:0; transform:translate(-50%,135%);
-  background:var(--ink); color:var(--paper); font-family:var(--mono); font-size:10px;
-  padding:5px 8px; white-space:nowrap; opacity:0; transition:.2s; pointer-events:none; letter-spacing:.04em;
+/* maker label that follows the cursor while over an object */
+.objcursor{
+  position:fixed; z-index:60; pointer-events:none; transform:translate(15px,16px);
+  background:var(--ink); color:var(--paper); font-family:var(--mono); font-size:11px;
+  letter-spacing:.04em; padding:5px 9px; white-space:nowrap; opacity:0; transition:opacity .15s;
 }
-.obj:hover .tip{opacity:1; transform:translate(-50%,118%)}
-.obj-stamp{
-  position:absolute; top:6%; left:0; border:2px solid var(--accent); color:var(--accent);
-  font-family:var(--mono); font-size:10px; letter-spacing:.1em; padding:2px 6px;
-  transform:rotate(-7deg); text-transform:uppercase; background:color-mix(in srgb,var(--paper) 80%,transparent);
-}
+.objcursor.show{opacity:1}
+/* flowers on the four tips of the cross */
+.cf{position:absolute; z-index:2; pointer-events:none; width:clamp(34px,3.4vw,52px); height:auto; opacity:.9}
+.cf-top{top:0; left:50%; transform:translate(-50%,-46%)}
+.cf-bottom{bottom:0; left:50%; transform:translate(-50%,46%) rotate(180deg)}
+.cf-left{left:0; top:50%; transform:translate(-46%,-50%) rotate(-90deg)}
+.cf-right{right:0; top:50%; transform:translate(46%,-50%) rotate(90deg)}
 
 /* ---- 04 music: stripped column, now-playing, off-air ---- */
 #musicpane .woofer{left:50%; right:auto; top:auto; bottom:6%; transform:translateX(-50%); width:30%}

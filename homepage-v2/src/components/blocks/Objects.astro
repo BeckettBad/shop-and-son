@@ -5,49 +5,64 @@ import o1 from "../../assets/blocks/object-01.png";
 import o2 from "../../assets/blocks/object-02.png";
 import o3 from "../../assets/blocks/object-03.png";
 import o4 from "../../assets/blocks/object-04.png";
+import flower from "../../assets/blocks/flower.png";
 
 const searchUrl = (n: string) => `${site.shopUrl}/search?q=${encodeURIComponent(n)}`;
-// owner-updatable: which cutouts float here + their maker + sold state
+// Slide-3 positions (grid auto-flow order = TL, TR, BL, BR).
+// Senia Cade takes the slot that was Mark Patrick Harrington (object-03).
 const cutouts = [
-  { img: o1, pos: "o1", maker: "Shino Takeda", sold: false },
-  { img: o2, pos: "o2", maker: "Danny's Mud Shop", sold: false },
-  { img: o3, pos: "o3", maker: "Mark Patrick Harrington", sold: true },
-  { img: o4, pos: "o4", maker: "Binu Binu", sold: false },
+  { img: o3, pos: "o1", maker: "Senia Cade" },       // top-left
+  { img: o2, pos: "o2", maker: "Danny's Mud Shop" },  // top-right
+  { img: o1, pos: "o3", maker: "Shino Takeda" },      // bottom-left
+  { img: o4, pos: "o4", maker: "Binu Binu" },         // bottom-right
 ];
 ---
 <section class="block objects-v2" id="objects">
-  <!-- text + Shop All on the LEFT -->
+  <!-- collage on the LEFT -->
+  <div class="obj-collage">
+    <svg class="cross" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M50 1 V99 M1 50 H99" stroke="currentColor" stroke-width=".6" fill="none" />
+    </svg>
+    {cutouts.map((c) => (
+      <a class={`obj ${c.pos}`} href={searchUrl(c.maker)} target="_blank" rel="noopener" data-maker={c.maker}>
+        <span class="objwrap">
+          <Image src={c.img} alt={c.maker} width={c.img.width} height={c.img.height} />
+        </span>
+      </a>
+    ))}
+    <!-- flowers planted on the four tips of the cross -->
+    <Image class="cf cf-top" src={flower} width={flower.width} height={flower.height} alt="" aria-hidden="true" />
+    <Image class="cf cf-bottom" src={flower} width={flower.width} height={flower.height} alt="" aria-hidden="true" />
+    <Image class="cf cf-left" src={flower} width={flower.width} height={flower.height} alt="" aria-hidden="true" />
+    <Image class="cf cf-right" src={flower} width={flower.width} height={flower.height} alt="" aria-hidden="true" />
+  </div>
+
+  <!-- text on the RIGHT -->
   <div class="right obj-text">
     <div class="kicker">{objects.kicker}</div>
     <div class="title">{objects.title}</div>
     <p class="lede">{objects.meta}</p>
     <a class="shopall" href={`${site.shopUrl}/collections/house`} target="_blank" rel="noopener">Shop All →</a>
-    <p class="obj-hint">hover a piece — shop by its designer</p>
     <div class="scroll-hint"><span class="scroll-hint__arrow">↓</span></div>
   </div>
 
-  <!-- collage of floating cutouts joined by cross-lines on the RIGHT -->
-  <div class="obj-collage">
-    <svg class="cross" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M50 1 V99 M1 50 H99" stroke="currentColor" stroke-width=".6" fill="none" />
-    </svg>
-    {cutouts.map((c) =>
-      c.sold ? (
-        <div class={`obj ${c.pos} sold`}>
-          <span class="objwrap">
-            <Image src={c.img} alt={c.maker} width={c.img.width} height={c.img.height} />
-            <span class="obj-stamp">sold</span>
-            <span class="tip">{c.maker} · sold</span>
-          </span>
-        </div>
-      ) : (
-        <a class={`obj ${c.pos}`} href={searchUrl(c.maker)} target="_blank" rel="noopener">
-          <span class="objwrap">
-            <Image src={c.img} alt={c.maker} width={c.img.width} height={c.img.height} />
-            <span class="tip">{c.maker} → shop</span>
-          </span>
-        </a>
-      ),
-    )}
-  </div>
+  <!-- maker label that follows the cursor while over an object -->
+  <span class="objcursor" id="objcursor" aria-hidden="true"></span>
 </section>
+
+<script>
+  const cur = document.getElementById("objcursor");
+  if (cur) {
+    document.querySelectorAll<HTMLElement>(".objects-v2 .obj").forEach((obj) => {
+      obj.addEventListener("mouseenter", () => {
+        cur.textContent = obj.dataset.maker || "";
+        cur.classList.add("show");
+      });
+      obj.addEventListener("mouseleave", () => cur.classList.remove("show"));
+      obj.addEventListener("mousemove", (e) => {
+        cur.style.left = e.clientX + "px";
+        cur.style.top = e.clientY + "px";
+      });
+    });
+  }
+</script>
