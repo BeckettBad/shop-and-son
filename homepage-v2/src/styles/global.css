@@ -367,7 +367,7 @@ body{
 .np-src{margin-top:10px; font-size:11px; font-style:italic; color:var(--ink-soft); line-height:1.6; max-width:34ch}
 #np-status{text-transform:uppercase; letter-spacing:.08em}
 #music.offair .woofer{animation:none}
-#music.offair .eq{visibility:hidden}
+/* the equalizer ("animated music thing") always animates in the now-playing card */
 #music.offair #np-status{color:var(--ink-soft)}
 #music:not(.offair) #np-status{color:var(--accent)}
 
