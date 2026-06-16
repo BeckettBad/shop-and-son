@@ -322,6 +322,7 @@ body{
 
 /* ---- 03 objects: collage LEFT / text RIGHT ---- */
 .obj-text{align-items:flex-start; text-align:left}
+.objects-v2 .obj-text{padding-left:clamp(56px,12vw,200px)}  /* whitespace between collage and text */
 .shopall{display:inline-block; margin-top:10px; font-family:var(--mono); font-size:13px; letter-spacing:.06em; color:var(--ink); text-decoration:underline; text-underline-offset:3px}
 .shopall:hover{color:var(--accent)}
 /* square canvas split into 4 quadrants by the perpendicular cross; each cutout

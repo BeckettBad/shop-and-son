@@ -18,11 +18,8 @@ const cutouts = [
 ];
 ---
 <section class="block objects-v2" id="objects">
-  <!-- collage on the LEFT -->
+  <!-- collage on the LEFT (flowers mark the points; no grey cross lines) -->
   <div class="obj-collage">
-    <svg class="cross" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M50 1 V99 M1 50 H99" stroke="currentColor" stroke-width=".6" fill="none" />
-    </svg>
     {cutouts.map((c) => (
       <a class={`obj ${c.pos}`} href={searchUrl(c.maker)} target="_blank" rel="noopener" data-maker={c.maker}>
         <span class="objwrap">
