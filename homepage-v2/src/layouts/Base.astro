@@ -57,6 +57,15 @@ const { title = `${site.brand} — independent design` } = Astro.props;
         ib.classList.toggle("on", Boolean(o));
         ib.textContent = o ? "– close" : "+ index";
       });
+
+      // header: transparent over the full-screen hero, solid white once scrolled past
+      const header = document.querySelector(".site-header");
+      const overHero = () => {
+        if (header) header.classList.toggle("over-hero", window.scrollY < window.innerHeight - 90);
+      };
+      overHero();
+      window.addEventListener("scroll", overHero, { passive: true });
+      window.addEventListener("resize", overHero, { passive: true });
     </script>
   </body>
 </html>

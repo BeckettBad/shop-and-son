@@ -28,7 +28,16 @@ body{
 .site-header{
   position:fixed; top:0; left:0; right:0; height:var(--hh); z-index:80;
   background:#ffffff;                  /* solid white, no border (live header has none) */
+  transition:background .3s ease;
 }
+/* over the full-screen hero: transparent (video shows through), white nav + logo,
+   with a soft top scrim for legibility. Turns solid white once scrolled past. */
+.site-header.over-hero{background:linear-gradient(180deg, rgba(0,0,0,.42), rgba(0,0,0,0))}
+.site-header.over-hero .nav-item > a,
+.site-header.over-hero .nav-item button{color:#fff}
+.site-header.over-hero .nav-item > a:hover,
+.site-header.over-hero .nav-item button:hover{color:var(--accent)}
+.site-header.over-hero .nav-logo img{filter:invert(1)}
 .site-nav{
   display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
   height:100%; padding:0 4rem;
@@ -249,21 +258,11 @@ body{
    homepage-v2 — per-block layout changes (v1 skin kept; structure adjusted)
    ========================================================================= */
 
-/* ---- 01 hero: full-viewport background video ---- */
-.hero-video{display:block; grid-template-columns:none; min-height:0; height:calc(100vh - var(--hh)); overflow:hidden; padding:0}
+/* ---- 01 hero: full-viewport background video (fills behind the header) ---- */
+.block.hero-video{display:block; grid-template-columns:none; min-height:0; margin-top:0; height:100vh; overflow:hidden; padding:0}
 .hero-video__media{position:absolute; inset:0; width:100%; height:100%; object-fit:cover}
-.hero-video__tag{
-  position:absolute; right:5vw; bottom:7vh; z-index:2; margin:0;
-  text-align:right; text-transform:none; color:#fff;
-  font-family:var(--serif); font-style:italic; font-weight:500;
-  font-size:clamp(22px,3vw,42px); line-height:1.25; letter-spacing:.01em;
-  text-shadow:0 2px 16px rgba(0,0,0,.5);
-}
-.hero-video__tag a{color:inherit; text-decoration:underline; text-underline-offset:4px; transition:color .2s}
-.hero-video__tag a:hover{color:var(--accent)}
 @media(max-width:760px){
-  .hero-video{height:calc(100svh - var(--hh-mob))}
-  .hero-video__tag{font-size:clamp(20px,6vw,30px); right:7vw; bottom:6vh}
+  .block.hero-video{height:100svh}
 }
 
 /* ---- 02 clothing: hero "shop new arrivals" overlay ---- */
