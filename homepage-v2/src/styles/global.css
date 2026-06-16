@@ -375,7 +375,9 @@ body{
 .vault-note{margin-top:10px; color:var(--ink-soft); line-height:1.7}
 .vault .instore{display:inline-block; margin-top:16px; border:1px solid var(--accent); color:var(--accent);
   font-size:11px; letter-spacing:.14em; text-transform:uppercase; padding:4px 9px; font-style:normal}
-.vbox{position:relative; align-self:stretch; min-height:60vh; background:#050403;
+/* reveal box inset within its (white) panel — does not bleed to the block edges */
+.vault-box-panel{display:flex; align-items:center; justify-content:center; padding:9vh 4vw; background:var(--paper)}
+.vbox{position:relative; width:100%; height:74vh; max-height:80vh; background:#050403;
   display:flex; align-items:center; justify-content:center; overflow:hidden; cursor:crosshair}
 .vbox img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.92; filter:saturate(.96)}
 /* black overlay with a radial hole at the cursor — the flashlight */
@@ -387,8 +389,13 @@ body{
 .vhint{position:absolute; left:12px; bottom:10px; z-index:2; font-size:10px; color:#fff; opacity:.55; letter-spacing:.06em}
 .wave{position:absolute; left:0; width:100%; height:30px; opacity:.7; mix-blend-mode:difference; pointer-events:none; z-index:7}
 .wave.t{top:14px} .wave.b{bottom:14px}
+/* flowers at the wave ends: top-right + bottom-left */
+.wave-flower{position:absolute; z-index:8; width:clamp(40px,4vw,62px); height:auto; pointer-events:none; opacity:.92}
+.wf-tr{top:-4px; right:2vw; transform:rotate(22deg)}
+.wf-bl{bottom:-4px; left:2vw; transform:scaleX(-1) rotate(22deg)}
 
 @media(max-width:760px){
   .obj-collage{margin-top:24px}
-  .vbox{min-height:48vh}
+  .vbox{height:52vh}
+  .wave-flower{width:38px}
 }
