@@ -1,7 +1,7 @@
 ---
 import { clothing, site } from "../../data/content.ts";
 import { Image } from "astro:assets";
-import heroImg from "../../assets/blocks/clothing-hero.jpg";
+import { withBase } from "../../lib/url.ts";
 import vine from "../../assets/blocks/vine.png";
 import flower from "../../assets/blocks/flower.png";
 const { featured, designers } = clothing;
@@ -70,8 +70,10 @@ const newArrivalsUrl = `${site.shopUrl}/collections/new-arrivals`;
 
   <!-- clothing-hero image RIGHT, inset within the panel -->
   <div class="cloth-img">
-    <a class="shopnew" href={newArrivalsUrl} target="_blank" rel="noopener">
-      <Image src={heroImg} alt="editorial model shot — shop new arrivals" width={heroImg.width} height={heroImg.height} />
+    <a class="shopnew" href={newArrivalsUrl} target="_blank" rel="noopener" aria-label="shop new arrivals">
+      <video class="shopnew-media" autoplay muted loop playsinline preload="metadata" poster={withBase("/videos/new-arrivals-poster.jpg")}>
+        <source src={withBase("/videos/new-arrivals.mp4")} type="video/mp4" />
+      </video>
       <span class="shopnew__label">shop<br />new<br />arrivals</span>
     </a>
   </div>
