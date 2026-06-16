@@ -21,10 +21,27 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Build Astro site
-        uses: withastro/action@v3
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Build v1 (root site → ./dist)
+        run: |
+          npm ci
+          npm run build
+      - name: Build v2 (homepage-v2 → ./homepage-v2/dist)
+        run: |
+          cd homepage-v2
+          npm ci
+          npm run build
+      - name: Nest v2 under /homepage-v2 of the deployed site
+        run: cp -R homepage-v2/dist ./dist/homepage-v2
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
 
   deploy:
     needs: build
