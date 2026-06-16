@@ -83,8 +83,6 @@ export const site: SiteConfig = {
       },
       // on-site: scrolls to the designer index block
       { label: "designers", href: "#clothing" },
-      // on-site: the migrated preorders experience
-      { label: "pre-order", href: "/preorders/" },
     ],
     right: [
       { label: "account", href: shop("/account"), external: true },

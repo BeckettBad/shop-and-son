@@ -25,11 +25,6 @@ const resolve = (href: string, external?: boolean) => (external ? href : withBas
       ))}
     </ul>
 
-    <!-- center: logo -->
-    <a class="nav-logo" href={withBase("/")} aria-label="&son — home">
-      <img src={withBase("/images/logo.gif")} alt="&son" />
-    </a>
-
     <!-- right: account / cart, then the on-site index toggle -->
     <ul class="nav-list nav-list--right">
       {right.map((item) => (

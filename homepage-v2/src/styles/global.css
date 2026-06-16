@@ -39,7 +39,7 @@ body{
 .site-header.over-hero .nav-item button:hover{color:var(--accent)}
 .site-header.over-hero .nav-logo img{filter:invert(1)}
 .site-nav{
-  display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
+  display:flex; align-items:center; justify-content:space-between;
   height:100%; padding:0 4rem;
 }
 .nav-list{list-style:none; display:flex; align-items:center; gap:18px}
