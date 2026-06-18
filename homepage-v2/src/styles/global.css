@@ -397,20 +397,33 @@ body{
   .wave-flower{width:38px}
 }
 
-/* ---- footer (replicated from shopandson.com — design only) ---- */
+/* ---- footer (precise replication of shopandson.com — design only) ---- */
 /* wavy divider between the last block and the footer (moved from the vault) */
-.footer-wave{display:block; width:100%; height:30px; color:#1a1a1a; margin:0 0 4px}
-.site-footer{background:#ffffff; color:#1a1a1a; padding:40px 24px 44px; font-family:var(--mono-ui)}
-.footer-inner{max-width:680px; margin:0 auto; display:flex; flex-direction:column; align-items:center; text-align:center; gap:18px}
-.footer-mark{width:min(300px,72%); height:auto; display:block}
-.footer-news{font-style:italic; font-size:14px; line-height:1.6; max-width:44ch; color:#1a1a1a; margin:0}
-.footer-signup{display:flex; width:min(380px,100%); margin:4px 0 2px}
-.footer-signup input{flex:1; min-width:0; font-family:var(--mono-ui); font-size:13px; padding:11px 12px; border:1px solid #1a1a1a; border-right:none; background:#fff; color:#1a1a1a; outline:none}
-.footer-signup input::placeholder{color:#1a1a1a; opacity:.55}
-.footer-signup button{font-family:var(--mono-ui); font-size:13px; letter-spacing:.02em; padding:11px 20px; border:1px solid #1a1a1a; background:#1a1a1a; color:#fff; cursor:pointer}
-.footer-links,.footer-policies{display:flex; flex-wrap:wrap; justify-content:center; gap:6px 18px; margin:0}
-.footer-links a,.footer-policies a{color:#1a1a1a; text-decoration:none; font-size:13px}
-.footer-policies a{font-size:12px; opacity:.85}
-.footer-links a:hover,.footer-policies a:hover{text-decoration:underline}
-.footer-currency{font-size:13px; margin-top:4px}
-.footer-copy{font-size:12px; opacity:.7}
+.footer-wave{display:block; width:100%; height:30px; color:#1a1a1a; margin:0}
+.site-footer{background:#ffffff; color:#1a1a1a; font-family:var(--mono-ui); padding:44px 5vw 28px}
+/* newsletter block — centered column */
+.footer-newsletter{display:flex; flex-direction:column; align-items:center; text-align:center; gap:18px; max-width:520px; margin:0 auto}
+.footer-mark{width:280px; max-width:80%; height:auto; display:block}
+.footer-subheading p{font-style:italic; font-size:14px; line-height:1.6; margin:0}
+.footer-form{width:min(360px,100%)}
+.footer-field{display:flex; align-items:stretch; border:1px solid #1a1a1a}
+.footer-field input{flex:1; min-width:0; border:none; background:transparent; font-family:var(--mono-ui); font-size:13px; padding:12px 13px; color:#1a1a1a; outline:none}
+.footer-field input::placeholder{color:#1a1a1a; opacity:.6}
+.footer-subscribe{border:none; border-left:1px solid #1a1a1a; background:transparent; font-family:var(--mono-ui); font-size:13px; padding:12px 18px; color:#1a1a1a; cursor:pointer; transition:background .2s,color .2s}
+.footer-subscribe:hover{background:#1a1a1a; color:#fff}
+/* primary horizontal link list */
+.footer-linklist{display:flex; flex-wrap:wrap; justify-content:center; gap:8px 22px; list-style:none; margin:34px 0 0; padding:0}
+.footer-linklist a{color:#1a1a1a; text-decoration:none; font-size:13px}
+.footer-linklist a:hover{text-decoration:underline}
+/* sub-footer — two columns: policies + currency (left), copyright (right) */
+.sub-footer{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px 24px; margin-top:32px; font-size:12px}
+.footer-policies{display:flex; flex-wrap:wrap; align-items:center; gap:6px 18px; list-style:none; margin:0; padding:0}
+.footer-policies a,.market-selector{color:#1a1a1a; font-size:12px; font-family:var(--mono-ui)}
+.footer-policies a{text-decoration:none}
+.footer-policies a:hover{text-decoration:underline}
+.market-selector{background:none; border:none; padding:0; cursor:pointer; text-decoration:underline}
+.footer-copyright{font-size:12px}
+@media(max-width:760px){
+  .sub-footer{justify-content:center; text-align:center}
+  .footer-policies{justify-content:center}
+}
