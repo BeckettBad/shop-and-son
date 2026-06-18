@@ -1,7 +1,7 @@
 ---
 import { clothing, site } from "../../data/content.ts";
 import { withBase } from "../../lib/url.ts";
-const { featured, designers } = clothing;
+const { designers } = clothing;
 const num = (i: number) => String(i + 1).padStart(2, "0");
 const searchUrl = (name: string) => `${site.shopUrl}/search?q=${encodeURIComponent(name)}`;
 // Categories tier reuses v1's "wear" category menu as the source of truth.
@@ -31,19 +31,6 @@ const newArrivalsUrl = `${site.shopUrl}/collections/new-arrivals`;
       <div class="drow" id="des">
         <button class="dhead" type="button" aria-expanded="false">designers <span class="sign">+</span></button>
         <div class="dbody"><div class="dinner">
-          <div class="swingtag-card">
-            <span class="punch"></span>
-            <div class="name">{featured.name}</div>
-            <div class="cloth">{featured.cloth}</div>
-            <dl>
-              {featured.details.map((d) => (
-                <>
-                  <dt>{d.label}</dt><dd>{d.value}</dd>
-                </>
-              ))}
-            </dl>
-          </div>
-
           <div class="idxhead">
             <button class="idxctl on" data-sort="az">a–z</button>
             <button class="idxctl" data-sort="za">z–a</button>
