@@ -1,35 +1,11 @@
 ---
-import { vault } from "../../data/content.ts";
 import { withBase } from "../../lib/url.ts";
 ---
 <section class="block vault vault-v2" id="vault">
-  <!-- black reveal box on the LEFT, inset within its panel -->
-  <div class="vault-box-panel">
-    <div class="vbox" id="flashzone">
-      <img src={withBase("/images/blocks/vault.jpg")} alt="inside the vault" />
-      <div class="flash"></div>
-    </div>
-  </div>
-
-  <!-- text on the RIGHT -->
-  <div class="right vault-text">
+  <img class="vault-img" src={withBase("/images/blocks/vault.jpg")} alt="inside the vintage vault" />
+  <div class="vault-overlay">
     <div class="title">The Vintage<br />Vault</div>
-    <p class="lede" style="font-size:16px">Clothes ~ Books ~ Records</p>
+    <p class="lede">Clothes ~ Books ~ Records</p>
     <p class="vault-note">Available in store only.<br />New pieces weekly.</p>
-    <span class="instore">in store only</span>
   </div>
 </section>
-
-<script>
-  // flashlight: a soft spotlight follows the cursor across the vault box,
-  // cutting a hole in the black overlay to reveal the photo beneath.
-  const fz = document.getElementById("flashzone");
-  const fl = fz?.querySelector<HTMLElement>(".flash");
-  if (fz && fl) {
-    fz.addEventListener("mousemove", (e) => {
-      const r = fz.getBoundingClientRect();
-      fl.style.setProperty("--mx", ((e.clientX - r.left) / r.width) * 100 + "%");
-      fl.style.setProperty("--my", ((e.clientY - r.top) / r.height) * 100 + "%");
-    });
-  }
-</script>
