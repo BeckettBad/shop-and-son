@@ -16,13 +16,14 @@ const slides = [
 const sizes = ["s", "m", "l", "xl"];
 ---
 <section class="block preorders-v2" id="preorders">
-  <!-- garment image carousel (LEFT) -->
-  <div class="left po-carousel">
-    <img class="po-slide" id="poSlide" src={`${imgBase}/${slides[0].file}`} alt="the benny blouson — pre-order" />
-    <div class="tint"></div>
-    <button class="po-arrow po-prev" id="poPrev" type="button" aria-label="previous image">‹</button>
-    <button class="po-arrow po-next" id="poNext" type="button" aria-label="next image">›</button>
-    <div class="po-caption"><span id="poLabel">{slides[0].label}</span><span class="po-count"><span id="poIdx">1</span> / {slides.length}</span></div>
+  <!-- garment image carousel (LEFT, inset with margin) -->
+  <div class="po-imgpanel">
+    <div class="po-carousel">
+      <img class="po-slide" id="poSlide" src={`${imgBase}/${slides[0].file}`} alt="the benny blouson — pre-order" />
+      <button class="po-arrow po-prev" id="poPrev" type="button" aria-label="previous image">‹</button>
+      <button class="po-arrow po-next" id="poNext" type="button" aria-label="next image">›</button>
+      <div class="po-caption"><span id="poLabel">{slides[0].label}</span><span class="po-count"><span id="poIdx">1</span> / {slides.length}</span></div>
+    </div>
   </div>
 
   <!-- drop info (RIGHT) -->
