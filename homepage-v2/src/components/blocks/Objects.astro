@@ -6,6 +6,7 @@ import o2 from "../../assets/blocks/object-02.png";
 import o3 from "../../assets/blocks/object-03.png";
 import o4 from "../../assets/blocks/object-04.png";
 import flower from "../../assets/blocks/flower.png";
+import stem from "../../assets/blocks/stem.png";
 
 const searchUrl = (n: string) => `${site.shopUrl}/search?q=${encodeURIComponent(n)}`;
 // Slide-3 positions (grid auto-flow order = TL, TR, BL, BR).
@@ -18,8 +19,10 @@ const cutouts = [
 ];
 ---
 <section class="block objects-v2" id="objects">
-  <!-- collage on the LEFT (flowers mark the points; no grey cross lines) -->
+  <!-- collage on the LEFT: squiggly stems run the axes, petals at the tips -->
   <div class="obj-collage">
+    <Image class="cross-stem cross-stem-v" src={stem} width={stem.width} height={stem.height} alt="" aria-hidden="true" />
+    <Image class="cross-stem cross-stem-h" src={stem} width={stem.width} height={stem.height} alt="" aria-hidden="true" />
     {cutouts.map((c) => (
       <a class={`obj ${c.pos}`} href={searchUrl(c.maker)} target="_blank" rel="noopener" data-maker={c.maker}>
         <span class="objwrap">
