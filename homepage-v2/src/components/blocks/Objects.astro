@@ -5,8 +5,7 @@ import o1 from "../../assets/blocks/object-01.png";
 import o2 from "../../assets/blocks/object-02.png";
 import o3 from "../../assets/blocks/object-03.png";
 import o4 from "../../assets/blocks/object-04.png";
-import flower from "../../assets/blocks/flower.png";
-import stem from "../../assets/blocks/stem.png";
+import FlowerDivider from "../FlowerDivider.astro";
 
 const searchUrl = (n: string) => `${site.shopUrl}/search?q=${encodeURIComponent(n)}`;
 // Slide-3 positions (grid auto-flow order = TL, TR, BL, BR).
@@ -19,12 +18,9 @@ const cutouts = [
 ];
 ---
 <section class="block objects-v2" id="objects">
-  <!-- collage on the LEFT: squiggly stems run the axes, petals at the tips -->
+  <!-- collage on the LEFT: one perpendicular flower-stem divider behind the objects -->
   <div class="obj-collage">
-    <Image class="cross-stem cs-up" src={stem} width={stem.width} height={stem.height} alt="" aria-hidden="true" />
-    <Image class="cross-stem cs-right" src={stem} width={stem.width} height={stem.height} alt="" aria-hidden="true" />
-    <Image class="cross-stem cs-down" src={stem} width={stem.width} height={stem.height} alt="" aria-hidden="true" />
-    <Image class="cross-stem cs-left" src={stem} width={stem.width} height={stem.height} alt="" aria-hidden="true" />
+    <FlowerDivider />
     {cutouts.map((c) => (
       <a class={`obj ${c.pos}`} href={searchUrl(c.maker)} target="_blank" rel="noopener" data-maker={c.maker}>
         <span class="objwrap">
@@ -32,11 +28,6 @@ const cutouts = [
         </span>
       </a>
     ))}
-    <!-- flowers planted on the four tips of the cross -->
-    <Image class="cf cf-top" src={flower} width={flower.width} height={flower.height} alt="" aria-hidden="true" />
-    <Image class="cf cf-bottom" src={flower} width={flower.width} height={flower.height} alt="" aria-hidden="true" />
-    <Image class="cf cf-left" src={flower} width={flower.width} height={flower.height} alt="" aria-hidden="true" />
-    <Image class="cf cf-right" src={flower} width={flower.width} height={flower.height} alt="" aria-hidden="true" />
   </div>
 
   <!-- text on the RIGHT -->

@@ -334,7 +334,15 @@ body{
   position:relative; align-self:center; width:100%; aspect-ratio:1/1; padding:2%; color:var(--rule);
   display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr;
 }
-.obj-collage .cross{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0}
+/* unified perpendicular flower-stem divider (behind the products) */
+.flower-divider{position:absolute; inset:0; z-index:0; pointer-events:none}
+.fd-stems{position:absolute; inset:0; width:100%; height:100%; overflow:visible}
+.fd-stems path{fill:none; stroke:#1a1a1a; stroke-width:.35; stroke-linecap:round; stroke-linejoin:round}
+.fd-flower{position:absolute; width:clamp(32px,3.2vw,48px); height:auto}
+.fd-top{top:0; left:50%; transform:translate(-50%,-48%)}
+.fd-bottom{bottom:0; left:50%; transform:translate(-50%,48%) rotate(180deg)}
+.fd-left{left:0; top:50%; transform:translate(-48%,-50%) rotate(-90deg)}
+.fd-right{right:0; top:50%; transform:translate(48%,-50%) rotate(90deg)}
 /* every object centred in its quadrant, uniform size, consistent spacing */
 .obj{position:relative; display:flex; align-items:center; justify-content:center; padding:8%; min-width:0; min-height:0; text-decoration:none; cursor:pointer}
 .objwrap{position:relative; display:inline-flex; align-items:center; justify-content:center; width:100%; height:32vh; max-height:100%}
@@ -350,23 +358,7 @@ body{
   letter-spacing:.04em; padding:5px 9px; white-space:nowrap; opacity:0; transition:opacity .15s;
 }
 .objcursor.show{opacity:1}
-/* squiggly stems: 4 arms from centre to each tip, rendered at the SAME scale as
-   the petals so the line weight matches the stem inside the petal image */
-.cross-stem{
-  position:absolute; left:50%; bottom:50%; width:clamp(34px,3.4vw,52px); height:50%;
-  transform-origin:bottom center; z-index:1; pointer-events:none; opacity:.9;
-}
-.cs-up{transform:translateX(-50%) rotate(0deg)}
-.cs-right{transform:translateX(-50%) rotate(90deg)}
-.cs-down{transform:translateX(-50%) rotate(180deg)}
-.cs-left{transform:translateX(-50%) rotate(270deg)}
-.objects-v2 .obj{z-index:2}                 /* objects sit above the stems */
-/* flowers (petals) on the four tips of the cross — capping each stem */
-.cf{position:absolute; z-index:3; pointer-events:none; width:clamp(34px,3.4vw,52px); height:auto; opacity:.9}
-.cf-top{top:0; left:50%; transform:translate(-50%,-46%)}
-.cf-bottom{bottom:0; left:50%; transform:translate(-50%,46%) rotate(180deg)}
-.cf-left{left:0; top:50%; transform:translate(-46%,-50%) rotate(-90deg)}
-.cf-right{right:0; top:50%; transform:translate(46%,-50%) rotate(90deg)}
+.objects-v2 .obj{z-index:2}                 /* objects float above the divider */
 
 /* ---- 04 music: text LEFT / inset image RIGHT ---- */
 .music-img{position:relative; display:flex; align-items:center; justify-content:center; padding:9vh 4vw; background:var(--paper)}
