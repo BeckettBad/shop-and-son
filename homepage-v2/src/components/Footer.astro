@@ -1,0 +1,30 @@
+---
+import { withBase } from "../lib/url.ts";
+// Footer replicated from shopandson.com (design only; links are # placeholders,
+// the email field is non-functional). Centered single column.
+const links = ["contact", "return policy", "about", "& son radio", "gift card", "social"];
+const policies = ["Refund policy", "Privacy policy", "Terms of service", "Contact information"];
+---
+<footer class="site-footer">
+  <div class="footer-inner">
+    <img class="footer-mark" src={withBase("/images/chronicle-outline.png")} alt="& son" width="1184" height="602" />
+
+    <p class="footer-news">be the first to know about new product, pop ups &amp; the general going ons of &amp; son</p>
+
+    <form class="footer-signup" onsubmit="return false">
+      <input type="email" placeholder="Email" aria-label="Email" />
+      <button type="button">Subscribe</button>
+    </form>
+
+    <nav class="footer-links" aria-label="footer">
+      {links.map((l) => <a href="#">{l}</a>)}
+    </nav>
+
+    <nav class="footer-policies" aria-label="policies">
+      {policies.map((p) => <a href="#">{p}</a>)}
+    </nav>
+
+    <div class="footer-currency">US ($)</div>
+    <div class="footer-copy">© 2026 Shop And Son</div>
+  </div>
+</footer>

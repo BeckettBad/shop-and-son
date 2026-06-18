@@ -11,10 +11,10 @@ const searchUrl = (n: string) => `${site.shopUrl}/search?q=${encodeURIComponent(
 // Slide-3 positions (grid auto-flow order = TL, TR, BL, BR).
 // Senia Cade takes the slot that was Mark Patrick Harrington (object-03).
 const cutouts = [
-  { img: o3, pos: "o1", maker: "Senia Cade" },       // top-left
-  { img: o2, pos: "o2", maker: "Danny's Mud Shop" },  // top-right
-  { img: o1, pos: "o3", maker: "Shino Takeda" },      // bottom-left
-  { img: o4, pos: "o4", maker: "Binu Binu" },         // bottom-right
+  { img: o1, pos: "o1", maker: "Senia Cade" },       // top-left  (image swapped with bottom-left)
+  { img: o2, pos: "o2", maker: "Danny's Mud Shop" },  // top-right (unchanged)
+  { img: o3, pos: "o3", maker: "Shino Takeda" },      // bottom-left (image swapped with top-left)
+  { img: o4, pos: "o4", maker: "Binu Binu" },         // bottom-right (unchanged)
 ];
 ---
 <section class="block objects-v2" id="objects">
