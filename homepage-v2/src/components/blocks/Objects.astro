@@ -21,8 +21,10 @@ const cutouts = [
 <section class="block objects-v2" id="objects">
   <!-- collage on the LEFT: squiggly stems run the axes, petals at the tips -->
   <div class="obj-collage">
-    <Image class="cross-stem cross-stem-v" src={stem} width={stem.width} height={stem.height} alt="" aria-hidden="true" />
-    <Image class="cross-stem cross-stem-h" src={stem} width={stem.width} height={stem.height} alt="" aria-hidden="true" />
+    <Image class="cross-stem cs-up" src={stem} width={stem.width} height={stem.height} alt="" aria-hidden="true" />
+    <Image class="cross-stem cs-right" src={stem} width={stem.width} height={stem.height} alt="" aria-hidden="true" />
+    <Image class="cross-stem cs-down" src={stem} width={stem.width} height={stem.height} alt="" aria-hidden="true" />
+    <Image class="cross-stem cs-left" src={stem} width={stem.width} height={stem.height} alt="" aria-hidden="true" />
     {cutouts.map((c) => (
       <a class={`obj ${c.pos}`} href={searchUrl(c.maker)} target="_blank" rel="noopener" data-maker={c.maker}>
         <span class="objwrap">

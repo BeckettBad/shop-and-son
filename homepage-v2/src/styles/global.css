@@ -350,10 +350,16 @@ body{
   letter-spacing:.04em; padding:5px 9px; white-space:nowrap; opacity:0; transition:opacity .15s;
 }
 .objcursor.show{opacity:1}
-/* squiggly stems running the two axes (the perpendicular divider) */
-.cross-stem{position:absolute; left:50%; top:50%; height:100%; width:auto; z-index:1; pointer-events:none; opacity:.9}
-.cross-stem-v{transform:translate(-50%,-50%)}
-.cross-stem-h{transform:translate(-50%,-50%) rotate(90deg)}
+/* squiggly stems: 4 arms from centre to each tip, rendered at the SAME scale as
+   the petals so the line weight matches the stem inside the petal image */
+.cross-stem{
+  position:absolute; left:50%; bottom:50%; width:clamp(34px,3.4vw,52px); height:50%;
+  transform-origin:bottom center; z-index:1; pointer-events:none; opacity:.9;
+}
+.cs-up{transform:translateX(-50%) rotate(0deg)}
+.cs-right{transform:translateX(-50%) rotate(90deg)}
+.cs-down{transform:translateX(-50%) rotate(180deg)}
+.cs-left{transform:translateX(-50%) rotate(270deg)}
 .objects-v2 .obj{z-index:2}                 /* objects sit above the stems */
 /* flowers (petals) on the four tips of the cross — capping each stem */
 .cf{position:absolute; z-index:3; pointer-events:none; width:clamp(34px,3.4vw,52px); height:auto; opacity:.9}
