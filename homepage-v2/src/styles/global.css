@@ -368,20 +368,15 @@ body{
 #music.offair #np-status{color:var(--ink-soft)}
 #music:not(.offair) #np-status{color:var(--accent)}
 
-/* ---- 05 vault: inset image (white margins) with a bottom text overlay ---- */
-.vault-v2{display:flex; align-items:center; justify-content:center; min-height:100vh; padding:9vh 4vw; background:var(--paper)}
-.vault-frame{position:relative; width:100%; height:78vh; max-height:82vh; overflow:hidden}
-.vault-img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center; display:block}
-.vault-overlay{
-  position:absolute; left:0; right:0; bottom:0; z-index:2; text-align:center;
-  padding:15vh 7% 6vh;
-  background:linear-gradient(to top, rgba(255,255,255,.94), rgba(255,255,255,.5) 42%, transparent);
-}
-.vault-overlay .title{color:var(--ink); margin-bottom:12px}
-.vault-overlay .lede{color:var(--ink); max-width:none; margin:0; font-size:clamp(15px,1.5vw,19px)}
-.vault-note{margin-top:8px; line-height:1.7}
-.vault-overlay .vault-note{color:var(--ink-soft)}
-@media(max-width:760px){.vault-frame{height:60vh}}
+/* ---- 05 vault: inset image (slim white margins) with the text below it ---- */
+.vault-v2{display:flex; align-items:center; justify-content:center; min-height:100vh; padding:5vh 3vw; background:var(--paper)}
+.vault-inner{display:flex; flex-direction:column; align-items:center; gap:26px; width:100%; max-width:1200px}
+.vault-img{display:block; max-width:100%; max-height:72vh; width:auto; height:auto; margin:0 auto}
+.vault-caption{text-align:center}
+.vault-caption .title{color:var(--ink); margin-bottom:8px}
+.vault-caption .lede{color:var(--ink); max-width:none; margin:0; font-size:clamp(15px,1.5vw,19px)}
+.vault-note{line-height:1.7}
+.vault-caption .vault-note{color:var(--ink-soft); margin-top:6px}
 
 @media(max-width:760px){
   .obj-collage{margin-top:24px}
