@@ -1,9 +1,6 @@
 ---
 import { clothing, site } from "../../data/content.ts";
-import { Image } from "astro:assets";
 import { withBase } from "../../lib/url.ts";
-import vine from "../../assets/blocks/vine.png";
-import flower from "../../assets/blocks/flower.png";
 const { featured, designers } = clothing;
 const num = (i: number) => String(i + 1).padStart(2, "0");
 const searchUrl = (name: string) => `${site.shopUrl}/search?q=${encodeURIComponent(name)}`;
@@ -15,7 +12,6 @@ const newArrivalsUrl = `${site.shopUrl}/collections/new-arrivals`;
 <section class="block clothing-v2" id="clothing">
   <!-- text LEFT -->
   <div class="right cloth-text">
-    <div class="kicker">{clothing.kicker}</div>
     <div class="title">Clothes &amp; Accessories</div>
     <p class="sub">Independent design, sourced worldwide.</p>
 
@@ -64,8 +60,6 @@ const newArrivalsUrl = `${site.shopUrl}/collections/new-arrivals`;
         </div></div>
       </div>
     </div>
-
-    <div class="scroll-hint"><span class="scroll-hint__arrow">↓</span></div>
   </div>
 
   <!-- new-arrivals video RIGHT, inset within the panel -->
@@ -77,11 +71,6 @@ const newArrivalsUrl = `${site.shopUrl}/collections/new-arrivals`;
       <span class="shopnew__label">shop<br />new<br />arrivals</span>
     </a>
   </div>
-
-  <!-- flowers (slide 2): top-left + top-right, vine down the left edge -->
-  <Image class="flower flower--tl" src={flower} width={flower.width} height={flower.height} alt="" aria-hidden="true" />
-  <Image class="flower flower--tr" src={flower} width={flower.width} height={flower.height} alt="" aria-hidden="true" />
-  <Image class="vine vine--left" src={vine} width={vine.width} height={vine.height} alt="" aria-hidden="true" />
 </section>
 
 <script>

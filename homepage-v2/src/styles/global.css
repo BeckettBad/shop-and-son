@@ -72,7 +72,7 @@ body{
 }
 .nav-dropdown li a:hover{color:var(--accent)}
 /* ---- block ---- */
-.block{position:relative; display:grid; grid-template-columns:1fr 1fr; min-height:100vh; border-bottom:1px solid var(--rule)}
+.block{position:relative; display:grid; grid-template-columns:1fr 1fr; min-height:100vh}
 .block:first-of-type{margin-top:var(--hh)}
 .left{position:relative; overflow:hidden; background:#000}
 .left img,.left video{width:100%; height:100%; object-fit:cover; display:block; filter:saturate(.96)}
