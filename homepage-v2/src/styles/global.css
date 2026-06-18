@@ -398,7 +398,9 @@ body{
 }
 
 /* ---- footer (replicated from shopandson.com — design only) ---- */
-.site-footer{background:#ffffff; color:#1a1a1a; padding:64px 24px 44px; font-family:var(--mono-ui)}
+/* wavy divider between the last block and the footer (moved from the vault) */
+.footer-wave{display:block; width:100%; height:30px; color:#1a1a1a; margin:0 0 4px}
+.site-footer{background:#ffffff; color:#1a1a1a; padding:40px 24px 44px; font-family:var(--mono-ui)}
 .footer-inner{max-width:680px; margin:0 auto; display:flex; flex-direction:column; align-items:center; text-align:center; gap:18px}
 .footer-mark{width:min(300px,72%); height:auto; display:block}
 .footer-news{font-style:italic; font-size:14px; line-height:1.6; max-width:44ch; color:#1a1a1a; margin:0}
