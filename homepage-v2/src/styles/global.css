@@ -110,9 +110,11 @@ body{
   .scroll-hint{position:static; transform:none; margin:28px auto 0}
 }
 @media(prefers-reduced-motion:reduce){.scroll-hint__arrow{animation:none}}
-/* ---- about: hero video — show the whole frame (cinematic letterbox) ---- */
-.about .left{background:#000}
-.about-video{object-fit:contain; background:#000; filter:none}
+/* ---- about: inset video with uniform whitespace margins (like blocks 2/4) ---- */
+.about-vid-panel{display:flex; align-items:center; justify-content:center; padding:9vh 4vw; background:var(--paper)}
+.about-vid{position:relative; width:100%; height:78vh; max-height:80vh; overflow:hidden; background:#000}
+.about-vid .about-video{width:100%; height:100%; object-fit:cover; display:block}
+@media(max-width:760px){.about-vid{height:52vh}}
 /* ---- about: video sound toggle ---- */
 .sound-toggle{
   position:absolute; bottom:18px; right:18px; z-index:4;

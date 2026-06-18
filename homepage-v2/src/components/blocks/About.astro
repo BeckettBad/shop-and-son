@@ -4,21 +4,22 @@ import { withBase } from "../../lib/url.ts";
 const { video, card } = about;
 ---
 <section class="block about">
-  <div class="left">
-    <video
-      id="aboutVideo"
-      class="about-video"
-      autoplay
-      muted
-      loop
-      playsinline
-      preload="metadata"
-      poster={withBase(video.poster)}
-    >
-      <source src={withBase(video.src)} type="video/mp4" />
-    </video>
-    <div class="tint"></div>
-    <button class="sound-toggle" id="aboutSound" aria-label="toggle sound">♪ sound off</button>
+  <div class="about-vid-panel">
+    <div class="about-vid">
+      <video
+        id="aboutVideo"
+        class="about-video"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="metadata"
+        poster={withBase(video.poster)}
+      >
+        <source src={withBase(video.src)} type="video/mp4" />
+      </video>
+      <button class="sound-toggle" id="aboutSound" aria-label="toggle sound">♪ sound off</button>
+    </div>
   </div>
 
   <div class="right">
