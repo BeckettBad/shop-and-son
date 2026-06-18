@@ -2,11 +2,11 @@
 import { defineConfig } from 'astro/config';
 
 // https://astro.build/config
-// homepage-v2 — separate test build. Served at a sub-path off the Pages site:
-// beckettbad.github.io/shop-and-son/homepage-v2/  (kept isolated from v1).
+// This is now THE site — served at the Pages root for the repo:
+// beckettbad.github.io/shop-and-son/  (v1 retired; v2 promoted to root).
 // `base` applies to every built asset/link; use src/lib/url.ts `withBase()` for
-// runtime hrefs. Deploying this sub-path to Pages is a later promotion step.
+// runtime hrefs. The pre-order site is bundled at public/preorders → /shop-and-son/preorders/.
 export default defineConfig({
   site: 'https://beckettbad.github.io',
-  base: '/shop-and-son/homepage-v2',
+  base: '/shop-and-son',
 });
