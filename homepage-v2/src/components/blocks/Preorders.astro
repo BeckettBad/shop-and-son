@@ -1,0 +1,36 @@
+---
+import { Image } from "astro:assets";
+import heroImg from "../../assets/blocks/preorder-hero.jpg";
+// the opening of the preorder site, brought in as a homepage block
+const preordersUrl = "https://beckettbad.github.io/shop-and-son/preorders/";
+const sizes = ["s", "m", "l", "xl"];
+---
+<section class="block preorders-v2" id="preorders">
+  <!-- the benny blouson hero (LEFT) -->
+  <div class="left">
+    <Image src={heroImg} alt="the benny blouson — pre-order" width={heroImg.width} height={heroImg.height} />
+    <div class="tint"></div>
+  </div>
+
+  <!-- drop info (RIGHT) -->
+  <div class="right preorder-text">
+    <div class="po-status">week 01 · pre-order open</div>
+    <div class="title">The Benny Blouson</div>
+    <div class="po-sizes" id="poSizes">
+      {sizes.map((s) => <button class="po-size" type="button" data-size={s}>{s}</button>)}
+    </div>
+    <a class="po-cta" href={preordersUrl} target="_blank" rel="noopener">pre-order now · $495</a>
+    <p class="po-ship">ships in 6-8 weeks</p>
+  </div>
+</section>
+
+<script>
+  // size selector (visual selection only)
+  const wrap = document.getElementById("poSizes");
+  wrap?.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest(".po-size");
+    if (!btn) return;
+    wrap.querySelectorAll(".po-size").forEach((x) => x.classList.remove("selected"));
+    btn.classList.add("selected");
+  });
+</script>

@@ -397,6 +397,18 @@ body{
   .wave-flower{width:38px}
 }
 
+/* ---- pre-orders block (the preorder site's opening, re-dressed) ---- */
+.preorders-v2 .preorder-text{align-items:flex-start; text-align:left}
+.po-status{display:flex; align-items:center; gap:9px; font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--ink-soft); margin-bottom:14px}
+.po-status::before{content:""; width:6px; height:6px; border-radius:50%; background:var(--accent)}
+.po-sizes{display:flex; gap:7px; margin:22px 0 20px}
+.po-size{font-family:var(--mono); font-size:14px; border:1px solid var(--rule); background:none; color:var(--ink); padding:9px 15px; cursor:pointer; transition:border-color .15s,background .15s,color .15s}
+.po-size:hover{border-color:var(--ink)}
+.po-size.selected{border-color:var(--ink); background:var(--ink); color:var(--paper)}
+.po-cta{display:inline-block; width:max-content; font-family:var(--mono); font-size:13px; letter-spacing:.04em; border:1px solid var(--ink); background:var(--ink); color:var(--paper); padding:14px 28px; text-decoration:none; transition:background .2s,color .2s}
+.po-cta:hover{background:transparent; color:var(--ink)}
+.po-ship{margin-top:14px; font-family:var(--mono); font-size:12px; color:var(--ink-soft)}
+
 /* ---- footer (precise replication of shopandson.com — design only) ---- */
 /* wavy divider between the last block and the footer (moved from the vault) */
 .footer-wave{display:block; width:100%; height:30px; color:#1a1a1a; margin:0}
