@@ -398,6 +398,23 @@ body{
 }
 
 /* ---- pre-orders block (the preorder site's opening, re-dressed) ---- */
+/* garment-image carousel (left), images shared with the live preorder site */
+.po-carousel{position:relative}
+.po-slide{transition:opacity .2s}
+.po-arrow{
+  position:absolute; top:50%; transform:translateY(-50%); z-index:4;
+  width:42px; height:42px; display:flex; align-items:center; justify-content:center;
+  font-family:var(--mono-ui); font-size:26px; line-height:1; color:#fff;
+  background:rgba(0,0,0,.30); border:1px solid rgba(255,255,255,.4); cursor:pointer;
+  backdrop-filter:blur(2px); transition:background .2s;
+}
+.po-arrow:hover{background:rgba(0,0,0,.55)}
+.po-prev{left:16px} .po-next{right:16px}
+.po-caption{
+  position:absolute; left:16px; bottom:14px; z-index:4; display:flex; gap:12px; align-items:baseline;
+  font-family:var(--mono-ui); font-size:11px; letter-spacing:.1em; color:#fff; text-shadow:0 1px 6px rgba(0,0,0,.55);
+}
+.po-count{opacity:.7}
 .preorders-v2 .preorder-text{align-items:flex-start; text-align:left}
 .po-status{display:flex; align-items:center; gap:9px; font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--ink-soft); margin-bottom:14px}
 .po-status::before{content:""; width:6px; height:6px; border-radius:50%; background:var(--accent)}
