@@ -1,0 +1,19 @@
+---
+description: &son project rules — read before any work in this repo
+alwaysApply: true
+---
+
+# &son — read this first
+
+- The **active build is `homepage-v3/`** (a brand-new homepage). Before coding,
+  read **`AGENTS.md`** and **`homepage-v3/CONCEPT.md`** (the spec), and view the
+  mockups in **`homepage-v3/design/`**.
+- The landing page must **perfectly resemble** `homepage-v3/design/01-landing-opening.png`
+  — spacing, text, order, everything. Verify against it with a screenshot, don't eyeball.
+- **Do not edit `homepage-v2/`** (the current live site) or the root `src/` (retired v1)
+  while building v3. Do not change `.github/workflows/deploy.yml` until launch.
+- Stack: **Astro v6**, static, vanilla CSS/JS. v3 uses **Helvetica Neue Light**, cream
+  `#EFEBE2`, near-black text — NOT v2's mono/serif.
+- Node lives at `/opt/homebrew/bin` (Homebrew); make sure it's on PATH before npm.
+- Git: work on `dev`, merge to `main` to deploy. Committing `homepage-v3/` is safe —
+  it won't change the live site until the deploy is repointed at launch.
