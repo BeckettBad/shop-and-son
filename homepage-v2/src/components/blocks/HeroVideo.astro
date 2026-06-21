@@ -1,9 +1,70 @@
 ---
+import { heroNav } from "../../data/content.ts";
 import { withBase } from "../../lib/url.ts";
-// Block 1 — full-viewport muted background video (compressed from the 156 MB source).
+// Block 1 — sidebar + full-bleed video (house line-art baked into the video).
 ---
 <section class="block hero-video" id="hero">
-  <video class="hero-video__media" autoplay muted loop playsinline preload="metadata">
-    <source src={withBase("/videos/new-about-homepage.mp4")} type="video/mp4" />
-  </video>
+  <aside class="hero__sidebar" aria-hidden="true"></aside>
+
+  <div class="hero__visual">
+    <video class="hero-video__media" autoplay muted loop playsinline preload="metadata">
+      <source src={withBase("/videos/new-about-homepage.mp4")} type="video/mp4" />
+    </video>
+  </div>
+
+  <nav class="hero__nav" aria-label="Site sections">
+    <ul class="hero__nav-list">
+      {
+        heroNav.map((item) => (
+          <li class="hero__nav-item" data-hero-dropdown>
+            <button type="button" class="hero__nav-trigger" aria-expanded="false">
+              {item.label} <span class="hero__nav-toggle">+</span>
+            </button>
+            {item.subsections.length > 0 && (
+              <ul class="hero__nav-sublist">
+                {item.subsections.map((sub) => (
+                  <li><a href={sub.href}>{sub.label}</a></li>
+                ))}
+              </ul>
+            )}
+          </li>
+        ))
+      }
+      <li class="hero__nav-item">
+        <span class="hero__nav-chronicle">& SON CHRONICLE</span>
+      </li>
+    </ul>
+  </nav>
+
+  <div class="hero__info">
+    <div class="hero__info-block">
+      <p>
+        Mostly clothes,<br />
+        some objects,<br />
+        and a little music
+      </p>
+      <p>
+        138 sullivan st,<br />
+        new york, ny 10012
+      </p>
+      <p>
+        contact:<br />
+        <a href="mailto:info@shopandson.com">info@shopandson.com</a>
+      </p>
+    </div>
+  </div>
 </section>
+
+<script>
+  document.querySelectorAll("[data-hero-dropdown]").forEach((item) => {
+    const trigger = item.querySelector(".hero__nav-trigger");
+    const toggle = item.querySelector(".hero__nav-toggle");
+    if (!trigger || !toggle) return;
+
+    trigger.addEventListener("click", () => {
+      const isOpen = item.classList.toggle("is-open");
+      trigger.setAttribute("aria-expanded", String(isOpen));
+      toggle.textContent = isOpen ? "\u2013" : "+";
+    });
+  });
+</script>

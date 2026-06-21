@@ -30,9 +30,8 @@ body{
   background:#ffffff;                  /* solid white, no border (live header has none) */
   transition:background .3s ease;
 }
-/* over the full-screen hero: transparent (video shows through), white nav + logo,
-   with a soft top scrim for legibility. Turns solid white once scrolled past. */
-.site-header.over-hero{background:linear-gradient(180deg, rgba(0,0,0,.42), rgba(0,0,0,0))}
+/* over the full-screen hero: hide the shop header so block 1 matches the landing mockup */
+.site-header.over-hero{opacity:0; visibility:hidden; pointer-events:none; background:none}
 .site-header.over-hero .nav-item > a,
 .site-header.over-hero .nav-item button{color:#fff}
 .site-header.over-hero .nav-item > a:hover,
@@ -260,11 +259,61 @@ body{
    homepage-v2 — per-block layout changes (v1 skin kept; structure adjusted)
    ========================================================================= */
 
-/* ---- 01 hero: full-viewport background video (fills behind the header) ---- */
-.block.hero-video{display:block; grid-template-columns:none; min-height:0; margin-top:0; height:100vh; overflow:hidden; padding:0}
-.hero-video__media{position:absolute; inset:0; width:100%; height:100%; object-fit:cover}
+/* ---- 01 hero: sidebar + full-bleed video (1366×768 reference frame) ---- */
+.block.hero-video{
+  position:relative; min-height:0; margin-top:0;
+  width:100vw; height:100vh; overflow:hidden; padding:0;
+  background:#e6e2dc;
+}
+.hero__sidebar{
+  position:absolute; left:0; top:0;
+  width:16.85vw; height:100vh;
+  background:#e6e2dc; z-index:5;
+}
+.hero__visual{
+  position:absolute; left:16.85vw; top:0;
+  width:83.15vw; height:100vh; overflow:hidden; z-index:1;
+}
+.hero-video__media{
+  position:absolute; inset:0;
+  width:100%; height:100%;
+  object-fit:cover; object-position:center center;
+}
+.hero__nav{
+  position:absolute; left:5.7vw; top:10.4vh; z-index:6;
+  margin:0; padding:0;
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:26px; font-weight:300; line-height:1.08;
+  letter-spacing:0.02em; color:#000000; text-transform:uppercase;
+}
+.hero__nav-list,.hero__nav-sublist{list-style:none; margin:0; padding:0}
+.hero__nav-trigger,.hero__nav-chronicle{
+  display:block; background:none; border:none; padding:0; margin:0;
+  font:inherit; color:inherit; text-align:left; cursor:pointer; white-space:nowrap;
+}
+.hero__nav-trigger:hover{text-decoration:underline}
+.hero__nav-sublist{display:none; padding-left:.6em}
+.hero__nav-item.is-open .hero__nav-sublist{display:block}
+.hero__nav-sublist a{
+  display:block; text-transform:none; font-size:.65em; line-height:1.3; letter-spacing:0;
+  color:inherit; text-decoration:none;
+}
+.hero__nav-sublist a:hover{text-decoration:underline}
+.hero__info{
+  position:absolute; left:5.7vw; top:71.6vh; z-index:6;
+  margin:0; padding:0;
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:13px; font-weight:400; line-height:1.28;
+  letter-spacing:0; color:#0f0b09; opacity:1; text-transform:none;
+}
+.hero__info a{color:inherit; text-decoration:none}
+.hero__info a:hover{text-decoration:underline}
+.hero__info-block p{margin:0; padding:0}
+.hero__info-block p + p{margin-top:1.28em}
 @media(max-width:760px){
   .block.hero-video{height:100svh}
+  .hero__nav{font-size:22px}
+  .hero__info{font-size:12px}
 }
 
 /* ---- 02 clothing: hero "shop new arrivals" overlay ---- */

@@ -99,6 +99,15 @@ export interface DetailRow {
   stamp?: boolean;
 }
 
+/** Block 01 — hero landing overlay nav (dropdown labels only; sub-sections wired later). */
+export const heroNav = [
+  { label: "CLOTHES", subsections: [] as { label: string; href: string }[] },
+  { label: "OBJECTS", subsections: [] as { label: string; href: string }[] },
+  { label: "MUSIC", subsections: [] as { label: string; href: string }[] },
+  { label: "VINTAGE", subsections: [] as { label: string; href: string }[] },
+  { label: "& FAM", subsections: [] as { label: string; href: string }[] },
+] as const;
+
 /** Block 01 — about. The right side renders as a letterpress business card. */
 export const about = {
   kicker: "01 — about",
