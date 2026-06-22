@@ -99,14 +99,76 @@ export interface DetailRow {
   stamp?: boolean;
 }
 
-/** Block 01 — hero landing overlay nav (dropdown labels only; sub-sections wired later). */
-export const heroNav = [
-  { label: "CLOTHES", subsections: [] as { label: string; href: string }[] },
-  { label: "OBJECTS", subsections: [] as { label: string; href: string }[] },
-  { label: "MUSIC", subsections: [] as { label: string; href: string }[] },
-  { label: "VINTAGE", subsections: [] as { label: string; href: string }[] },
-  { label: "& FAM", subsections: [] as { label: string; href: string }[] },
-] as const;
+/** Block 01 — hero landing overlay menu. */
+export interface HeroMenuNestedItem {
+  label: string;
+  href?: string;
+}
+
+export interface HeroMenuSubItem {
+  label: string;
+  href?: string;
+  /** Appended after label (e.g. "CATEGORIES |"). */
+  suffix?: string;
+  children?: HeroMenuNestedItem[];
+}
+
+export interface HeroMenuSection {
+  label: string;
+  items: HeroMenuSubItem[];
+}
+
+export const heroMenu: HeroMenuSection[] = [
+  {
+    label: "CLOTHES",
+    items: [
+      { label: "SHOP ALL" },
+      {
+        label: "CATEGORIES",
+        suffix: " |",
+        children: [
+          { label: "SHIRTS" },
+          { label: "OUTERWEAR / JACKETS" },
+          { label: "ETC...." },
+        ],
+      },
+      {
+        label: "DESIGNERS",
+        children: [
+          { label: "DESIGNER 1" },
+          { label: "DESIGNER 2" },
+          { label: "ETC." },
+        ],
+      },
+    ],
+  },
+  {
+    label: "OBJECTS",
+    items: [
+      { label: "SHOP ALL" },
+      { label: "BINU BINU" },
+      { label: "DANNY D'S MUD SHOP" },
+      { label: "SHINO TAKEDA" },
+    ],
+  },
+  {
+    label: "MUSIC",
+    items: [
+      { label: "& SON OFFICIAL PLAYLIST" },
+      { label: "WILLIAM FREDERICK PLAYLIST" },
+      { label: "SMALL TALK STUDIO PLAYLIST" },
+    ],
+  },
+  {
+    label: "& FAM",
+    items: [
+      { label: "SMALL TALK STUDIO INTERVIEW" },
+      { label: "WILLIAM FREDERICK INTERVIEW" },
+      { label: "LIV RYAN INTERVIEW" },
+      { label: "ETC..." },
+    ],
+  },
+];
 
 /** Block 01 — about. The right side renders as a letterpress business card. */
 export const about = {

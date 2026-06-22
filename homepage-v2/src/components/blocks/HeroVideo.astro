@@ -1,68 +1,70 @@
 ---
-import { heroNav } from "../../data/content.ts";
+import { heroMenu } from "../../data/content.ts";
 import { withBase } from "../../lib/url.ts";
-// Block 1 — sidebar + full-bleed video (house line-art baked into the video).
+// Block 1 — full-viewport hero video + left menu overlay.
 ---
 <section class="block hero-video" id="hero">
-  <aside class="hero__sidebar" aria-hidden="true"></aside>
+  <video class="hero-video__media" autoplay muted loop playsinline preload="metadata">
+    <source src={withBase("/videos/homepage-hero.mp4")} type="video/mp4" />
+  </video>
 
-  <div class="hero__visual">
-    <video class="hero-video__media" autoplay muted loop playsinline preload="metadata">
-      <source src={withBase("/videos/new-about-homepage.mp4")} type="video/mp4" />
-    </video>
-  </div>
-
-  <nav class="hero__nav" aria-label="Site sections">
-    <ul class="hero__nav-list">
+  <nav class="hero__overlay" aria-label="Site sections">
+    <ul class="hero__menu">
       {
-        heroNav.map((item) => (
-          <li class="hero__nav-item" data-hero-dropdown>
-            <button type="button" class="hero__nav-trigger" aria-expanded="false">
-              {item.label} <span class="hero__nav-toggle">+</span>
+        heroMenu.map((section) => (
+          <li class="hero__menu-section is-open" data-hero-dropdown>
+            <button type="button" class="hero__menu-header" aria-expanded="true">
+              {section.label} <span class="hero__menu-toggle">–</span>
             </button>
-            {item.subsections.length > 0 && (
-              <ul class="hero__nav-sublist">
-                {item.subsections.map((sub) => (
-                  <li><a href={sub.href}>{sub.label}</a></li>
-                ))}
-              </ul>
-            )}
+            <ul class="hero__menu-panel">
+              {
+                section.items.map((item) => (
+                  <li class="hero__menu-item">
+                    {item.href ? (
+                      <a class="hero__menu-link hero__menu-link--dash" href={item.href}>
+                        {item.label}{item.suffix ?? ""}
+                      </a>
+                    ) : (
+                      <span class="hero__menu-link hero__menu-link--dash">
+                        {item.label}{item.suffix ?? ""}
+                      </span>
+                    )}
+                    {item.children && item.children.length > 0 && (
+                      <ul class="hero__menu-nested">
+                        {
+                          item.children.map((child) => (
+                            <li>
+                              {child.href ? (
+                                <a class="hero__menu-link hero__menu-link--bullet" href={child.href}>
+                                  {child.label}
+                                </a>
+                              ) : (
+                                <span class="hero__menu-link hero__menu-link--bullet">{child.label}</span>
+                              )}
+                            </li>
+                          ))
+                        }
+                      </ul>
+                    )}
+                  </li>
+                ))
+              }
+            </ul>
           </li>
         ))
       }
-      <li class="hero__nav-item">
-        <span class="hero__nav-chronicle">& SON CHRONICLE</span>
-      </li>
     </ul>
   </nav>
-
-  <div class="hero__info">
-    <div class="hero__info-block">
-      <p>
-        Mostly clothes,<br />
-        some objects,<br />
-        and a little music
-      </p>
-      <p>
-        138 sullivan st,<br />
-        new york, ny 10012
-      </p>
-      <p>
-        contact:<br />
-        <a href="mailto:info@shopandson.com">info@shopandson.com</a>
-      </p>
-    </div>
-  </div>
 </section>
 
 <script>
-  document.querySelectorAll("[data-hero-dropdown]").forEach((item) => {
-    const trigger = item.querySelector(".hero__nav-trigger");
-    const toggle = item.querySelector(".hero__nav-toggle");
+  document.querySelectorAll("[data-hero-dropdown]").forEach((section) => {
+    const trigger = section.querySelector(".hero__menu-header");
+    const toggle = section.querySelector(".hero__menu-toggle");
     if (!trigger || !toggle) return;
 
     trigger.addEventListener("click", () => {
-      const isOpen = item.classList.toggle("is-open");
+      const isOpen = section.classList.toggle("is-open");
       trigger.setAttribute("aria-expanded", String(isOpen));
       toggle.textContent = isOpen ? "\u2013" : "+";
     });

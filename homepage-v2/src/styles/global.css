@@ -259,62 +259,49 @@ body{
    homepage-v2 — per-block layout changes (v1 skin kept; structure adjusted)
    ========================================================================= */
 
-/* ---- 01 hero: sidebar + full-bleed video (1366×768 reference frame) ---- */
+/* ---- 01 hero: full-viewport video ---- */
 .block.hero-video{
   position:relative; min-height:0; margin-top:0;
   width:100vw; height:100vh; overflow:hidden; padding:0;
-  background:#e6e2dc;
-}
-.hero__sidebar{
-  position:absolute; left:0; top:0;
-  width:16.85vw; height:100vh;
-  background:#e6e2dc; z-index:5;
-}
-.hero__visual{
-  position:absolute; left:16.85vw; top:0;
-  width:83.15vw; height:100vh; overflow:hidden; z-index:1;
 }
 .hero-video__media{
   position:absolute; inset:0;
   width:100%; height:100%;
   object-fit:cover; object-position:center center;
-  transform:scale(1.18); transform-origin:center center;
 }
-.hero__nav{
-  position:absolute; left:5.7vw; top:10.4vh; z-index:6;
-  margin:0; padding:0;
-  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
-  font-size:26px; font-weight:300; line-height:1.08;
-  letter-spacing:0.02em; color:#000000; text-transform:uppercase;
+.hero__overlay{
+  position:absolute; left:0; top:0; z-index:2;
+  box-sizing:border-box;
+  width:42vw; min-width:280px; max-width:560px;
+  height:100vh; padding:8vh 4vw 8vh 5.7vw;
+  overflow-y:auto;
+  font-family:"Helvetica Now","Helvetica Neue",Helvetica,Arial,sans-serif;
+  color:#000000;
 }
-.hero__nav-list,.hero__nav-sublist{list-style:none; margin:0; padding:0}
-.hero__nav-trigger,.hero__nav-chronicle{
-  display:block; background:none; border:none; padding:0; margin:0;
-  font:inherit; color:inherit; text-align:left; cursor:pointer; white-space:nowrap;
+.hero__menu,.hero__menu-panel,.hero__menu-nested{list-style:none; margin:0; padding:0}
+.hero__menu-section{margin-bottom:1.1em}
+.hero__menu-header{
+  display:block; margin:0; padding:0; border:none; background:none;
+  font-family:inherit; font-size:clamp(24px,2.4vw,32px); font-weight:400; line-height:1.1;
+  letter-spacing:0; color:inherit; text-align:left; cursor:pointer;
+  text-transform:uppercase;
 }
-.hero__nav-trigger:hover{text-decoration:underline}
-.hero__nav-sublist{display:none; padding-left:.6em}
-.hero__nav-item.is-open .hero__nav-sublist{display:block}
-.hero__nav-sublist a{
-  display:block; text-transform:none; font-size:.65em; line-height:1.3; letter-spacing:0;
-  color:inherit; text-decoration:none;
+.hero__menu-header:hover{text-decoration:underline}
+.hero__menu-panel{display:none; padding:0.35em 0 0}
+.hero__menu-section.is-open .hero__menu-panel{display:block}
+.hero__menu-link{
+  display:block; font-size:clamp(14px,1.35vw,18px); font-weight:400; line-height:1.25;
+  letter-spacing:0; color:inherit; text-decoration:none; text-transform:uppercase;
 }
-.hero__nav-sublist a:hover{text-decoration:underline}
-.hero__info{
-  position:absolute; left:5.7vw; top:71.6vh; z-index:6;
-  margin:0; padding:0;
-  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
-  font-size:13px; font-weight:400; line-height:1.28;
-  letter-spacing:0; color:#0f0b09; opacity:1; text-transform:none;
-}
-.hero__info a{color:inherit; text-decoration:none}
-.hero__info a:hover{text-decoration:underline}
-.hero__info-block p{margin:0; padding:0}
-.hero__info-block p + p{margin-top:1.28em}
+.hero__menu-link:hover{text-decoration:underline}
+.hero__menu-link--dash::before{content:"- "}
+.hero__menu-link--bullet::before{content:"o "}
+.hero__menu-nested{padding-left:1.4em; margin-top:0.15em}
 @media(max-width:760px){
   .block.hero-video{height:100svh}
-  .hero__nav{font-size:22px}
-  .hero__info{font-size:12px}
+  .hero__overlay{width:88vw; max-width:none; padding:6vh 6vw}
+  .hero__menu-header{font-size:22px}
+  .hero__menu-link{font-size:14px}
 }
 
 /* ---- 02 clothing: hero "shop new arrivals" overlay ---- */
