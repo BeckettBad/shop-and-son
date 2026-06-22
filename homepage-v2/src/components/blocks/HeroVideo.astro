@@ -12,9 +12,9 @@ import { withBase } from "../../lib/url.ts";
     <ul class="hero__menu">
       {
         heroMenu.map((section) => (
-          <li class="hero__menu-section is-open" data-hero-dropdown>
-            <button type="button" class="hero__menu-header" aria-expanded="true">
-              {section.label} <span class="hero__menu-toggle">–</span>
+          <li class="hero__menu-section" data-hero-dropdown>
+            <button type="button" class="hero__menu-header" aria-expanded="false">
+              {section.label} <span class="hero__menu-toggle">+</span>
             </button>
             <ul class="hero__menu-panel">
               {
