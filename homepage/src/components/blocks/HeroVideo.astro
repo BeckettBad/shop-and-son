@@ -40,7 +40,18 @@ import { withBase } from "../../lib/url.ts";
               {
                 section.items.map((item) => (
                   <li class="hero__menu-item">
-                    {item.href ? (
+                    {item.collection ? (
+                      <button
+                        type="button"
+                        class="hero__menu-link hero__menu-link--dash"
+                        data-shop-all
+                        data-collection={item.collection}
+                        data-collection-label={item.collectionLabel ?? item.label}
+                        aria-pressed="false"
+                      >
+                        {item.label}{item.suffix ?? ""}
+                      </button>
+                    ) : item.href ? (
                       <a class="hero__menu-link hero__menu-link--dash" href={item.href}>
                         {item.label}{item.suffix ?? ""}
                       </a>
@@ -75,9 +86,110 @@ import { withBase } from "../../lib/url.ts";
       }
     </ul>
   </nav>
+
+  <aside class="hero__catalog" aria-hidden="true">
+    <div class="hero__catalog-head">
+      <h2 class="hero__catalog-title" data-catalog-title></h2>
+      <button type="button" class="hero__catalog-close" data-catalog-close aria-label="Close catalogue">&times;</button>
+    </div>
+    <div class="hero__catalog-grid" data-catalog-grid></div>
+  </aside>
 </section>
 
 <script>
+  import { getCatalogProducts } from "../../lib/catalog";
+
+  const hero = document.querySelector<HTMLElement>(".hero-video");
+  const catalog = hero?.querySelector<HTMLElement>(".hero__catalog");
+  const catalogTitle = hero?.querySelector<HTMLElement>("[data-catalog-title]");
+  const catalogGrid = hero?.querySelector<HTMLElement>("[data-catalog-grid]");
+  const catalogClose = hero?.querySelector<HTMLButtonElement>("[data-catalog-close]");
+  const shopAllButtons = hero
+    ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-shop-all]"))
+    : [];
+  let renderToken = 0;
+
+  const setActiveButton = (collection: string | null) => {
+    shopAllButtons.forEach((button) => {
+      const isActive = Boolean(collection && button.dataset.collection === collection);
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-pressed", String(isActive));
+    });
+  };
+
+  const renderCatalog = async (collection: string, label: string) => {
+    if (!hero || !catalog || !catalogTitle || !catalogGrid) return;
+
+    const token = renderToken + 1;
+    renderToken = token;
+    hero.classList.add("is-catalog");
+    hero.dataset.activeCollection = collection;
+    catalog.setAttribute("aria-hidden", "false");
+    catalogTitle.textContent = label;
+    catalogGrid.replaceChildren();
+    setActiveButton(collection);
+
+    const products = await getCatalogProducts(collection);
+    if (token !== renderToken) return;
+
+    const cards = products.map((product) => {
+      const card = document.createElement("a");
+      card.className = "product-card";
+      card.href = product.url;
+
+      const media = document.createElement("span");
+      media.className = "product-card__media";
+      if (product.image) {
+        const image = document.createElement("img");
+        image.src = product.image;
+        image.alt = product.title;
+        image.loading = "lazy";
+        media.append(image);
+      }
+
+      const body = document.createElement("span");
+      body.className = "product-card__body";
+
+      const title = document.createElement("span");
+      title.className = "product-card__title";
+      title.textContent = product.title;
+
+      const vendor = document.createElement("span");
+      vendor.className = "product-card__vendor";
+      vendor.textContent = product.vendor;
+
+      const price = document.createElement("span");
+      price.className = "product-card__price";
+      price.textContent = product.price;
+
+      body.append(title, vendor, price);
+      card.append(media, body);
+      return card;
+    });
+
+    catalogGrid.replaceChildren(...cards);
+  };
+
+  const closeCatalog = () => {
+    if (!hero || !catalog) return;
+
+    hero.classList.remove("is-catalog");
+    delete hero.dataset.activeCollection;
+    catalog.setAttribute("aria-hidden", "true");
+    setActiveButton(null);
+  };
+
+  shopAllButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const collection = button.dataset.collection;
+      const label = button.dataset.collectionLabel ?? button.textContent?.trim() ?? "";
+      if (!collection) return;
+      void renderCatalog(collection, label);
+    });
+  });
+
+  catalogClose?.addEventListener("click", closeCatalog);
+
   document.querySelectorAll("[data-hero-dropdown]").forEach((section) => {
     const trigger = section.querySelector(".hero__menu-header");
     const toggle = section.querySelector(".hero__menu-toggle");

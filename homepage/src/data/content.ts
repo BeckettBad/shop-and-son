@@ -108,6 +108,8 @@ export interface HeroMenuNestedItem {
 export interface HeroMenuSubItem {
   label: string;
   href?: string;
+  collection?: string;
+  collectionLabel?: string;
   /** Appended after label (e.g. "CATEGORIES |"). */
   suffix?: string;
   children?: HeroMenuNestedItem[];
@@ -122,7 +124,7 @@ export const heroMenu: HeroMenuSection[] = [
   {
     label: "CLOTHES",
     items: [
-      { label: "SHOP ALL" },
+      { label: "SHOP ALL", collection: "clothing", collectionLabel: "CLOTHES" },
       {
         label: "CATEGORIES",
         suffix: " |",
@@ -145,7 +147,7 @@ export const heroMenu: HeroMenuSection[] = [
   {
     label: "OBJECTS",
     items: [
-      { label: "SHOP ALL" },
+      { label: "SHOP ALL", collection: "house", collectionLabel: "OBJECTS" },
       { label: "BINU BINU" },
       { label: "DANNY D'S MUD SHOP" },
       { label: "SHINO TAKEDA" },
