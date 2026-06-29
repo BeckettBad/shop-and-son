@@ -50,34 +50,42 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## ACTIVE BRIEF
 
-**Status:** approved & committed @ a2f93f8 (Claude reviewed + committed; Codex sandbox couldn't write repo-root .git) — ready for operator verify on `dev`
-**Task:** Shrink the hero menu headers + their dropdown sub-labels to 2/3 of their current size (Phase A of the hero/catalogue rework — CSS only).
+**Status:** ✅ committed `47ded3b` on dev (Claude reviewed: clean, in-scope, build+check green). Awaiting operator verify on dev + the C2 token. Animation feel/visual polish not browser-verified (no headless browser available) — needs operator's eyes.
+**Task:** Phase C1 — catalogue interaction + slide animation, with MOCK product data (live Shopify fetch is C2, blocked on the token). Clicking SHOP ALL under CLOTHES or OBJECTS slides the stencil off-left and slides a scrollable product catalogue (rows of 3) in from the right over the still-looping video. The menu stays visible (user can switch collections); a close control returns to the landing stencil.
 
-**Files / area:** `homepage/src/styles/global.css` only. No markup or JS changes.
+**Layout reality (important):** `.hero__overlay` (the menu) is on the LEFT — `left:0; width:42vw; max-width:560px` desktop; horizontal tabs at the top on mobile (`max-width:760px`). The stencil is centered (`.hero__stencil`, z-index 1, with `transform`/`transition` already in place from Phase B). Build the catalogue to fill the area to the RIGHT of the menu so the menu stays visible and clickable.
 
-**What to change:** Four `font-size` declarations, each scaled to 2/3 of its current value (each clamp arg ×2/3, rounded). Change nothing else.
+**Files / area:**
+- `src/data/content.ts` — give the CLOTHES and OBJECTS `SHOP ALL` items a `collection` handle + a display label (use `"clothing"` / `"house"` as placeholders — to be confirmed for C2).
+- `src/components/blocks/HeroVideo.astro` — render `SHOP ALL` items that have a `collection` as a `<button data-shop-all data-collection data-collection-label>`; add the catalogue panel markup; add a client `<script>` for the interaction.
+- `src/styles/global.css` — catalogue panel + product-card styles + the slide-in/out animation states.
+- `src/lib/catalog.ts` (NEW) — `export async function getCatalogProducts(collection: string)`: for C1 return MOCK data (≈9 items per collection: `{ title, vendor, price, url, image? }`, image optional → card shows a neutral placeholder box). Add a clear `// TODO C2:` marker showing where the live Storefront fetch swaps in. Do NOT wire live Shopify in C1.
 
-1. `.hero__menu-header` (desktop, ~line 291):
-   `font-size:clamp(24px,2.4vw,32px)` → `font-size:clamp(16px,1.6vw,21px)`
-2. `.hero__menu-link` (desktop, ~line 299):
-   `font-size:clamp(14px,1.35vw,18px)` → `font-size:clamp(9px,0.9vw,12px)`
-3. `.hero__menu-header` inside `@media(max-width:760px)` (~line 330):
-   `font-size:21px` → `font-size:14px`
-4. `.hero__menu-link` inside `@media(max-width:760px)` (~line 339):
-   `font-size:16px` → `font-size:11px`
+**Behavior:**
+1. State on the `.hero-video` section: toggle class `is-catalog` (+ keep the active collection). Default (no `is-catalog`) MUST render identically to Phase B — catalogue only appears on click.
+2. Click a SHOP ALL button → add `is-catalog`, set the catalogue header to its label, render the grid from `getCatalogProducts(collection)`.
+3. Stencil slides off-left: `.hero-video.is-catalog .hero__stencil{ transform:translateX(-130%) }` (reuses the existing transition).
+4. Catalogue panel `.hero__catalog`: absolutely positioned, `z-index:2` (below the menu), occupies right of the menu (desktop `left:max(42vw,280px)` → right edge; mobile full width below the tabs). Default off-screen right + hidden (`transform:translateX(110%); opacity:0; visibility:hidden`); active `.hero-video.is-catalog .hero__catalog{ transform:translateX(0); opacity:1; visibility:visible }`. Transition transform+opacity ~.55s.
+5. Catalogue contains a header (collection label + a close "×" button `[data-catalog-close]`) and a scrollable grid `.hero__catalog-grid` — `grid-template-columns:repeat(3,1fr)` with `overflow-y:auto` (rows of 3, scroll for more). Mobile: 2 columns (or 1 on very narrow).
+6. Product card `.product-card`: placeholder image area (neutral box if no image) + title + vendor + price; whole card links to `url`. Editorial/brutalist mono styling consistent with the site.
+7. Close button → remove `is-catalog` → stencil slides back in, catalogue slides out.
+8. Switching collections while open: clicking another SHOP ALL just repopulates header + grid.
+9. Z-order: video 0 < stencil 1 < catalogue 2 < menu/overlay (bump `.hero__overlay` to `z-index:3`). Menu stays clickable throughout.
 
-`.hero__menu-link` covers both dash sub-items and the bullet/nested children, so all sub-labels shrink with one rule per breakpoint.
+**Style / structure constraints:** Default landing unchanged (Phase B look). Keep the existing skin (mono fonts, restrained palette, the menu styling). Don't change Phase A type sizes or the stencil rule except adding the `.is-catalog` transform. No live Shopify, no external image dependencies, no instructional/internal text on the page.
 
-**Style / structure constraints:** Touch only the four `font-size` values above. Do NOT change line-height, padding, letter-spacing, white-space, or any other property — only the numeric font sizes. Leave all editorial blocks (`.kicker`, `.title`, etc.) untouched. Keep both the desktop and mobile breakpoints in sync as listed.
-
-**Done when:** `npm run build` and `npx astro check` both green; the four font-size values match exactly what's listed above and nothing else in `global.css` changed.
+**Done when:** `npm run build` and `npx astro check` both green; default landing identical to Phase B; clicking CLOTHES→SHOP ALL or OBJECTS→SHOP ALL slides the stencil out and a 3-up scrollable mock catalogue in from the right; close returns to landing; menu stays usable; `getCatalogProducts` isolates the data source for an easy C2 swap.
 
 ---
 
-### QUEUED (do not start — blocked on the operator delivering assets/credentials)
+### QUEUED (do not start — blocked)
 
-- **Phase B — clean video + stencil overlay.** Swap `homepage-hero.mp4` for the clean no-stencil video and add the house stencil as a separate centered overlay layer above the video (independently positionable so it can be animated). Blocked: clean video `SHOP AND SON HOMEPAGE.mp4` + the 3 stencil PNGs are not on disk yet.
-- **Phase C — live catalogue + animation.** On clicking SHOP ALL under CLOTHES/OBJECTS: stencil slides off-left, a row of 3 live Shopify products slides in from the right over the looping video; infinite scroll in rows of 3 under the collection header; right-hand menu stays visible to switch collections. Live in-browser fetch to the Storefront API. Blocked: no `homepage/.env` (need `SHOPIFY_STORE_DOMAIN` + `SHOPIFY_STOREFRONT_API_TOKEN`) and the CLOTHES/OBJECTS collection handles.
+- **Phase C2 — live Shopify fetch.** Replace the mock in `getCatalogProducts` with a client-side Storefront API fetch (public `PUBLIC_SHOPIFY_STORE_DOMAIN` + `PUBLIC_SHOPIFY_STOREFRONT_API_TOKEN`, exposed to the browser since it's read-only), querying by collection handle, mapping to the card shape. Blocked: no token/domain in `homepage/.env`, and need the confirmed CLOTHES/OBJECTS collection handles. Everything else (the panel, animation, cards) is done in C1.
+
+### SHIPPED / committed on dev (awaiting operator verify + deploy)
+- **Phase A** — hero menu type → 2/3. Committed `a2f93f8`, pushed, in PR #1 (`dev → main`).
+- **Phase B** — clean hero video + separate centered stencil overlay layer (`.hero__stencil`). Committed `f4276a8` (assets + HeroVideo.astro + CSS). Claude verified via a composited preview frame. NOT yet pushed (kept off PR #1 until operator verifies).
+- **Phase C1** — catalogue interaction + slide animation + mock product grid. Committed `47ded3b`. Claude reviewed clean. NOT yet pushed (kept off PR #1 until operator verifies). C2 (live Shopify) still blocked on token + handles.
 
 ---
 
@@ -96,6 +104,8 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## Log (Codex appends newest at top: date — task — result/commit)
 
+- 2026-06-29 — Phase C1: catalogue interaction + slide animation + mock grid — 47ded3b — build:green check:green — Codex implemented per brief; reviewed clean by Claude (gated on .is-catalog, menu z-index→3, rows of 3, race-guarded render, getCatalogProducts isolates data for C2). Not pushed.
+- 2026-06-29 — Phase B: clean video + separate centered stencil overlay — f4276a8 — build:green check:green — Claude prepped assets (4K→1080p 2.5MB, white stencil IMG_4242→hero-stencil.png); Codex did HeroVideo.astro + CSS; reviewed clean + composite-previewed. Not pushed.
 - 2026-06-29 — Codex commit access enabled — `--add-dir` could not lift the seatbelt `.git` block, so per operator's informed choice the dispatch now runs Codex unsandboxed (`--dangerously-bypass-approvals-and-sandbox`); Codex committed this scaffolding itself on `dev`. Commits stay on dev (no push/merge); Claude reviews after.
 - 2026-06-29 — shrink hero menu typography (Phase A) — a2f93f8 — build:green check:green — Codex implemented per brief; reviewed clean by Claude (exactly the 4 font-size values, nothing else); Codex sandbox couldn't write repo-root .git, so Claude committed
 - 2026-06-29 — shrink hero menu typography — no commit (sandbox blocked `.git/index.lock`) — build:green check:green — CSS implemented; commit step blocked by read-only Git metadata
