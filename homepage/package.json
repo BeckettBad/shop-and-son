@@ -1,8 +1,8 @@
 {
-  "name": "shop-and-son-v2",
+  "name": "shop-and-son-homepage",
   "type": "module",
   "version": "0.0.1",
-  "description": "&son homepage-v2 — separate test build (v1 skin, adjusted per-block layouts).",
+  "description": "&son homepage — the live site served at beckettbad.github.io/shop-and-son/.",
   "engines": {
     "node": ">=22.12.0"
   },
