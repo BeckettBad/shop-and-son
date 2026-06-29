@@ -1,0 +1,71 @@
+---
+import { about } from "../../data/content.ts";
+import { withBase } from "../../lib/url.ts";
+const { video, card } = about;
+---
+<section class="block about">
+  <div class="about-vid-panel">
+    <div class="about-vid">
+      <video
+        id="aboutVideo"
+        class="about-video"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="metadata"
+        poster={withBase(video.poster)}
+      >
+        <source src={withBase(video.src)} type="video/mp4" />
+      </video>
+      <button class="sound-toggle" id="aboutSound" aria-label="toggle sound">♪ sound off</button>
+    </div>
+  </div>
+
+  <div class="right">
+    <!-- letterpress business card -->
+    <div class="bizcard-wrap">
+      <span class="cm tl"></span><span class="cm tr"></span>
+      <span class="cm bl"></span><span class="cm br"></span>
+      <article class="bizcard">
+        <div class="bc-mark serif-it">{about.title}</div>
+        <div class="bc-tag">{about.tagline}</div>
+        <hr class="bc-rule" />
+        <dl class="bc-details">
+          {card.map((row) => (
+            <div class="bc-row">
+              <dt>{row.label}</dt>
+              <dd set:html={row.value} />
+            </div>
+          ))}
+        </dl>
+        <div class="bc-foot" set:html={about.cardFoot} />
+      </article>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Endless muted-autoplay loop. Browsers only allow autoplay while muted, so
+  // sound starts off; the toggle unmutes on a real click. The video pauses when
+  // scrolled out of frame and resumes when it returns.
+  const v = document.getElementById("aboutVideo") as HTMLVideoElement | null;
+  const btn = document.getElementById("aboutSound");
+  if (v) {
+    new IntersectionObserver(
+      (entries) =>
+        entries.forEach((e) => {
+          if (e.isIntersecting) v.play().catch(() => {});
+          else v.pause();
+        }),
+      { threshold: 0.2 },
+    ).observe(v);
+
+    btn?.addEventListener("click", () => {
+      v.muted = !v.muted;
+      btn.textContent = v.muted ? "♪ sound off" : "♪ sound on";
+      btn.classList.toggle("on", !v.muted);
+      if (!v.muted) v.play().catch(() => {});
+    });
+  }
+</script>

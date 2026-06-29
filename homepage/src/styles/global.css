@@ -1,0 +1,527 @@
+/* &son — global styles.
+   Palette + header match shopandson.com and the preorders page exactly:
+   white paper, black ink, the brown accent. Single light scheme (no dark mode). */
+
+:root{
+  /* exact values from shopandson.com / the preorders page */
+  --paper:#ffffff; --paper-2:#eae9e7; --ink:#006BB6; --ink-soft:rgba(0,107,182,.62);
+  --rule:rgba(0,0,0,.15); --line:#000000; --tag:#ffffff;
+  --photo-tint:rgba(0,0,0,0); --accent:#F58426;
+  /* type: body text is Roboto Mono; the header keeps Anonymous Pro (--mono-ui);
+     serif is reserved for the display titles */
+  --mono:'Roboto Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+  --mono-ui:'Anonymous Pro',ui-monospace,'SFMono-Regular',Menlo,monospace;
+  --serif:'EB Garamond','Cardo',Georgia,serif;
+  --hh:80px; --hh-mob:60px;  /* header height, desktop / mobile */
+}
+*{box-sizing:border-box; margin:0; padding:0}
+html{scroll-behavior:smooth}
+html.landing,html.landing body{overflow:hidden; height:100%}
+body{
+  font-family:var(--mono); font-size:15px; color:var(--ink); background:var(--paper);
+  text-transform:lowercase;            /* the catalog register — matches shopandson.com */
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+/* serif italic is the one editorial stroke against the mono — display titles only */
+.title,.lede,.serif-it{font-family:var(--serif)}
+.serif-it{font-style:italic}
+/* ---- site header — exact match to shopandson.com / preorders ---- */
+.site-header{
+  position:fixed; top:0; left:0; right:0; height:var(--hh); z-index:80;
+  background:#ffffff;                  /* solid white, no border (live header has none) */
+  transition:background .3s ease;
+}
+/* over the full-screen hero: hide the shop header so block 1 matches the landing mockup */
+.site-header.over-hero{opacity:0; visibility:hidden; pointer-events:none; background:none}
+.site-header.over-hero .nav-item > a,
+.site-header.over-hero .nav-item button{color:#fff}
+.site-header.over-hero .nav-item > a:hover,
+.site-header.over-hero .nav-item button:hover{color:var(--accent)}
+.site-header.over-hero .nav-logo img{filter:invert(1)}
+.site-nav{
+  display:flex; align-items:center; justify-content:space-between;
+  height:100%; padding:0 4rem;
+}
+.nav-list{list-style:none; display:flex; align-items:center; gap:18px}
+.nav-list--right{justify-content:flex-end; gap:16px}
+.nav-item{position:relative}
+.nav-item > a,
+.nav-item button{
+  font-family:var(--mono-ui); font-size:13px; font-weight:400; letter-spacing:0;
+  color:var(--ink); text-decoration:none; cursor:pointer;
+  background:none; border:none; padding:6px 0; display:block; transition:color .2s;
+}
+.nav-item > a:hover,.nav-item button:hover,.nav-item button.on{color:var(--accent)}
+/* pre-order link — subtle underline, exactly like the live nav */
+.nav-item--preorder > a{text-decoration:underline; text-underline-offset:3px}
+.nav-item--preorder > a:hover{color:var(--accent); text-decoration:underline}
+/* center logo — fills the header height, as on the live site */
+.nav-logo{display:flex; justify-content:center; align-items:center; text-decoration:none}
+.nav-logo img{height:var(--hh); width:auto; display:block}
+/* hover dropdowns — white, no border, soft shadow, square corners */
+.nav-dropdown{
+  list-style:none; position:absolute; top:100%; left:0; min-width:220px;
+  background:#ffffff; box-shadow:0 4px 16px rgba(0,0,0,.08); padding:12px 0 16px;
+  opacity:0; visibility:hidden; pointer-events:none;
+  transition:opacity .2s ease,visibility .2s ease; z-index:100;
+}
+.nav-item.has-drop:hover .nav-dropdown{opacity:1; visibility:visible; pointer-events:auto}
+.nav-dropdown li a{
+  display:block; padding:6px 20px; font-family:var(--mono-ui); font-size:13px;
+  color:var(--ink); text-decoration:none; transition:color .15s;
+}
+.nav-dropdown li a:hover{color:var(--accent)}
+/* ---- block ---- */
+.block{position:relative; display:grid; grid-template-columns:1fr 1fr; min-height:100vh}
+.block:first-of-type{margin-top:var(--hh)}
+.left{position:relative; overflow:hidden; background:#000}
+.left img,.left video{width:100%; height:100%; object-fit:cover; display:block; filter:saturate(.96)}
+.left .tint{position:absolute; inset:0; background:var(--photo-tint); transition:background .6s; pointer-events:none}
+.right{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:8vh 7vw; position:relative; background:var(--paper);
+}
+.kicker{font-size:11px; letter-spacing:.22em; text-transform:uppercase; opacity:.5; margin-bottom:22px}
+.title{font-size:clamp(34px,4.2vw,62px); font-style:italic; letter-spacing:.01em; margin-bottom:26px; font-weight:500}
+.lede{font-size:clamp(15px,1.25vw,19px); line-height:1.85; font-style:italic; max-width:30ch}
+.lede a{color:var(--ink); text-decoration:none; border-bottom:1px solid transparent}
+.lede a:hover{color:var(--accent); border-bottom-color:var(--accent)}
+.meta{margin-top:30px; font-size:13px; line-height:2; letter-spacing:.04em; opacity:.85}
+.concept{
+  position:absolute; left:7vw; bottom:26px; right:7vw;
+  font-size:11px; letter-spacing:.04em; line-height:1.7; opacity:.55;
+  border-top:1px dotted var(--rule); padding-top:10px; font-style:normal;
+}
+.concept b{font-style:italic; font-weight:500; opacity:.9}
+/* ---- scroll hint — bottom-centre of the right panel (as on preorders) ---- */
+.scroll-hint{
+  position:absolute; bottom:40px; left:50%; transform:translateX(-50%);
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+  font-family:var(--mono); font-size:12px; letter-spacing:.08em;
+  color:var(--ink-soft); white-space:nowrap; text-align:center; pointer-events:none;
+}
+/* container is centred via translateX; the arrow bobs via translateY — no clash */
+.scroll-hint__arrow{
+  display:inline-block; color:var(--accent); font-size:20px; line-height:1;
+  animation:bob 1.8s ease-in-out infinite;
+}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
+@media(max-width:768px){
+  .scroll-hint{position:static; transform:none; margin:28px auto 0}
+}
+@media(prefers-reduced-motion:reduce){.scroll-hint__arrow{animation:none}}
+/* ---- about: inset video with uniform whitespace margins (like blocks 2/4) ---- */
+.about-vid-panel{display:flex; align-items:center; justify-content:center; padding:9vh 4vw; background:var(--paper)}
+.about-vid{position:relative; width:100%; height:78vh; max-height:80vh; overflow:hidden; background:#000}
+.about-vid .about-video{width:100%; height:100%; object-fit:cover; display:block}
+@media(max-width:760px){.about-vid{height:52vh}}
+/* ---- about: video sound toggle ---- */
+.sound-toggle{
+  position:absolute; bottom:18px; right:18px; z-index:4;
+  font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase;
+  color:#fff; background:rgba(0,0,0,.32); border:1px solid rgba(255,255,255,.35);
+  padding:6px 11px; cursor:pointer; backdrop-filter:blur(2px);
+  transition:background .2s,border-color .2s;
+}
+.sound-toggle:hover{background:rgba(0,0,0,.55)}
+.sound-toggle.on{border-color:#fff; background:rgba(0,0,0,.5)}
+/* ---- about: letterpress business card ---- */
+.about .right{align-items:center}                 /* center the card in the panel */
+.bizcard-wrap{position:relative; width:min(84%,420px)}
+/* corner registration brackets (crop marks) */
+.cm{position:absolute; width:13px; height:13px; pointer-events:none}
+.cm.tl{top:-13px; left:-13px; border-left:1px solid var(--ink); border-top:1px solid var(--ink)}
+.cm.tr{top:-13px; right:-13px; border-right:1px solid var(--ink); border-top:1px solid var(--ink)}
+.cm.bl{bottom:-13px; left:-13px; border-left:1px solid var(--ink); border-bottom:1px solid var(--ink)}
+.cm.br{bottom:-13px; right:-13px; border-right:1px solid var(--ink); border-bottom:1px solid var(--ink)}
+.bizcard{
+  position:relative; background:var(--paper); border:1px solid var(--ink);
+  padding:36px 34px 30px; text-align:center;
+}
+/* inner hairline frame — the double-rule letterpress look */
+.bizcard::after{content:''; position:absolute; inset:6px; border:1px solid var(--rule); pointer-events:none}
+.bc-no{font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:18px}
+.bc-mark{font-size:clamp(40px,5vw,56px); line-height:1; margin-bottom:12px}
+.bc-tag{font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-soft)}
+.bc-rule{border:none; border-top:1px solid var(--ink); margin:22px auto; width:34px}
+.bc-details{display:flex; flex-direction:column; gap:13px}
+.bc-row dt{font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:4px}
+.bc-row dd{font-size:13px; line-height:1.5}
+.bc-row dd a{color:var(--ink); text-decoration:none; border-bottom:1px solid var(--rule)}
+.bc-row dd a:hover{color:var(--accent); border-color:var(--accent)}
+.bc-foot{margin-top:22px; padding-top:16px; border-top:1px solid var(--rule); font-size:11px; letter-spacing:.03em; color:var(--ink-soft)}
+.bc-foot a{color:var(--ink); text-decoration:none; border-bottom:1px solid var(--rule)}
+.bc-foot a:hover{color:var(--accent); border-color:var(--accent)}
+/* hotspots (about) */
+.hot{position:absolute; border:1px solid rgba(255,255,255,.0); cursor:pointer}
+.hot .lbl{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(.96);
+  white-space:nowrap; background:var(--tag); color:var(--ink); font-style:italic;
+  font-size:14px; padding:7px 13px; border:1px solid var(--rule); opacity:0; transition:.25s;
+  box-shadow:0 6px 22px rgba(0,0,0,.25);
+}
+.hot:hover .lbl{opacity:1; transform:translate(-50%,-50%) scale(1)}
+.hot:hover{box-shadow:inset 0 0 0 2000px rgba(255,255,255,.07)}
+/* swing tag (clothing) */
+.swingtag{
+  position:absolute; top:18px; left:18px; width:260px; background:var(--tag);
+  border:1px solid var(--rule); padding:16px 18px 18px; opacity:0; transform:translateY(-6px);
+  transition:.3s; box-shadow:0 10px 30px rgba(0,0,0,.3); pointer-events:none; z-index:5;
+}
+.left:hover .swingtag{opacity:1; transform:translateY(0)}
+.swingtag .name{font-style:italic; font-size:21px; margin-bottom:2px}
+.swingtag .cloth{font-size:11px; letter-spacing:.13em; text-transform:uppercase; opacity:.6; margin-bottom:12px}
+.swingtag .punch{width:13px; height:13px; border-radius:50%; border:1px solid var(--rule); position:absolute; top:10px; right:14px}
+.swingtag dl{font-size:12px; line-height:1.7}
+.swingtag dt{opacity:.5; letter-spacing:.04em} .swingtag dd{margin-bottom:7px}
+.rackhint{position:absolute; bottom:16px; left:18px; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#fff; opacity:.8; mix-blend-mode:difference}
+/* index (clothing designers) — a living, sortable directory */
+.idxhead{display:flex; gap:16px; align-items:center; font-size:11px; letter-spacing:.1em; margin-bottom:16px}
+.idxctl{
+  font-family:var(--mono); font-size:11px; letter-spacing:.1em;
+  background:none; border:none; color:var(--ink-soft); cursor:pointer;
+  padding:2px 0; border-bottom:1px solid transparent; transition:color .2s,border-color .2s;
+}
+.idxctl:hover{color:var(--ink)}
+.idxctl.on{color:var(--ink); border-bottom-color:var(--ink)}
+.idxcount{margin-left:auto; color:var(--ink-soft); font-variant-numeric:tabular-nums; letter-spacing:.06em}
+.idxsearch{
+  font-family:var(--mono); font-size:13px; color:var(--ink); background:none;
+  border:none; border-bottom:1px solid var(--rule); padding:6px 0; margin-bottom:14px;
+  width:100%; outline:none;
+}
+.idxsearch::placeholder{color:var(--ink-soft)}
+.idxcols{columns:2; column-gap:34px; font-size:14px; line-height:1.95}
+.idxcols .row{display:flex; gap:10px; break-inside:avoid; color:var(--ink); text-decoration:none}
+.idxcols .num{color:var(--ink-soft); font-variant-numeric:tabular-nums; min-width:24px}
+.idxcols .row:hover,.idxcols .row:hover .num{color:var(--accent)}
+/* objects ledger */
+.ledger .row{display:flex; justify-content:space-between; border-bottom:1px dotted var(--rule); padding:9px 0; font-style:italic; font-size:16px}
+.ledger .ed{font-style:normal; font-size:11px; letter-spacing:.1em; opacity:.5; text-transform:uppercase}
+.stamp{display:inline-block; border:2px solid var(--accent); color:var(--accent); font-size:10px;
+  letter-spacing:.1em; padding:2px 6px; transform:rotate(-7deg); text-transform:uppercase; font-style:normal}
+/* music */
+.speakerwrap{position:absolute; inset:0; display:grid; place-items:center}
+.woofer{position:absolute; border-radius:50%; background:radial-gradient(circle at 50% 45%,#3a342c,#0c0a07 70%);
+  box-shadow:inset 0 0 30px rgba(0,0,0,.8); animation:thump 1.05s ease-in-out infinite;
+  width:30%; aspect-ratio:1; left:6%; top:34%; opacity:.0}
+@keyframes thump{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+.nowplaying{margin-top:26px; border:1px solid var(--rule); padding:13px 15px; max-width:32ch; background:var(--tag)}
+.nowplaying .bt{font-size:11px; letter-spacing:.14em; opacity:.55; display:flex; justify-content:space-between}
+.nowplaying .song{font-style:italic; font-size:19px; margin:6px 0 1px}
+.nowplaying .artist{font-size:12px; opacity:.7; letter-spacing:.06em}
+.eq{display:flex; gap:3px; align-items:flex-end; height:14px; margin-top:9px}
+.eq i{width:3px; background:var(--accent); animation:eq 1s ease-in-out infinite}
+.eq i:nth-child(2){animation-delay:.2s}.eq i:nth-child(3){animation-delay:.4s}
+.eq i:nth-child(4){animation-delay:.1s}.eq i:nth-child(5){animation-delay:.3s}
+@keyframes eq{0%,100%{height:3px}50%{height:14px}}
+.tracklist{margin-top:24px; font-size:13px; line-height:2}
+.tracklist .t{display:flex; gap:12px} .tracklist .tn{opacity:.4; min-width:20px}
+.dispatch{margin-top:22px; font-size:12px; font-style:italic; opacity:.7; line-height:1.7; border-left:2px solid var(--rule); padding-left:12px; max-width:34ch}
+/* vintage flashlight */
+.vault .left{background:#050403}
+.vault .left img{opacity:.9}
+.vault .flash{position:absolute; inset:0; background:#000;
+  -webkit-mask:radial-gradient(circle 140px at var(--mx,30%) var(--my,50%),transparent 0,transparent 55%,#000 100%);
+  mask:radial-gradient(circle 140px at var(--mx,30%) var(--my,50%),transparent 0,transparent 55%,#000 100%);
+  transition:opacity .4s}
+.vault .neon{position:absolute; left:7%; top:34%; font-family:'Cardo',serif; font-style:italic;
+  font-size:34px; color:#ffcaa0; text-shadow:0 0 8px #ff9d4d,0 0 22px #ff7a1a; opacity:.92; animation:flick 5s infinite}
+@keyframes flick{0%,97%,100%{opacity:.92}97.5%{opacity:.5}98%{opacity:.95}}
+.vaultcard{border:1px solid var(--rule); padding:20px 22px; max-width:30ch; background:var(--tag)}
+.vaultcard .key{font-size:11px; letter-spacing:.2em; text-transform:uppercase; opacity:.5}
+.instore{display:inline-block; margin-top:14px; border:1px solid var(--accent); color:var(--accent);
+  font-size:11px; letter-spacing:.14em; text-transform:uppercase; padding:4px 9px; font-style:normal}
+/* index overlay */
+.overlay{position:fixed; inset:var(--hh) 0 0 0; background:var(--paper); z-index:40; padding:5vh 8vw;
+  overflow:auto; display:none}
+.overlay.show{display:block}
+.overlay h2{font-style:italic; font-weight:500; font-size:22px; margin-bottom:6px}
+.overlay .sub{font-size:12px; opacity:.55; margin-bottom:26px; letter-spacing:.08em}
+.catalog{columns:2; column-gap:50px; font-size:15px; line-height:2.1}
+.catalog .row{display:flex; gap:12px; break-inside:avoid; font-style:italic}
+.catalog .row.sec{font-style:normal; text-transform:uppercase; letter-spacing:.12em; font-size:12px; opacity:.5; margin-top:14px}
+.catalog .num{opacity:.4; font-style:normal; min-width:26px; font-variant-numeric:tabular-nums}
+.catalog .row:not(.sec):hover{color:var(--accent)}
+@media(max-width:760px){
+  :root{--hh:var(--hh-mob)}              /* cascades to header, block offset, overlay */
+  .block{grid-template-columns:1fr}
+  .left{min-height:48vh}
+  .idxcols,.catalog{columns:1}
+  .site-nav{padding:0 16px}
+  .nav-list{gap:12px}
+  .nav-item > a,.nav-item button{font-size:12px; padding:4px 0}
+  .nav-dropdown{display:none}           /* TODO: proper mobile menu */
+  .nav-item.util{display:none}          /* hide + index on small screens for now (needs mobile menu) */
+  .nav-logo img{height:calc(var(--hh-mob) - 20px)}
+}
+
+/* =========================================================================
+   homepage-v2 — per-block layout changes (v1 skin kept; structure adjusted)
+   ========================================================================= */
+
+/* ---- 01 hero: full-viewport video ---- */
+.block.hero-video{
+  position:relative; min-height:0; margin-top:0;
+  width:100vw; height:100vh; height:100dvh; overflow:hidden; padding:0;
+}
+.hero-video__media{
+  width:100%; height:100%;
+  object-fit:cover; object-position:center center;
+}
+.hero-video__media--desktop{
+  position:absolute; inset:0;
+}
+.hero-video__media--mobile{
+  display:none;
+}
+.hero__overlay{
+  position:absolute; left:0; top:0; z-index:2;
+  box-sizing:border-box;
+  width:42vw; min-width:280px; max-width:560px;
+  height:100vh; padding:8vh 4vw 8vh 5.7vw;
+  overflow-y:auto;
+  font-family:"Helvetica Now","Helvetica Neue",Helvetica,Arial,sans-serif;
+  color:#000000;
+}
+.hero__menu,.hero__menu-panel,.hero__menu-nested{list-style:none; margin:0; padding:0}
+.hero__menu-section{margin-bottom:1.1em}
+.hero__menu-header{
+  display:block; margin:0; padding:0; border:none; background:none;
+  font-family:inherit; font-size:clamp(16px,1.6vw,21px); font-weight:400; line-height:1.1;
+  letter-spacing:0; color:inherit; text-align:left; cursor:pointer;
+  text-transform:uppercase;
+}
+.hero__menu-header:hover{text-decoration:underline}
+.hero__menu-panel{display:none; padding:0.35em 0 0}
+.hero__menu-section.is-open .hero__menu-panel{display:block}
+.hero__menu-link{
+  display:block; font-size:clamp(9px,0.9vw,12px); font-weight:400; line-height:1.25;
+  letter-spacing:0; color:inherit; text-decoration:none; text-transform:uppercase;
+}
+.hero__menu-link:hover{text-decoration:underline}
+.hero__menu-link--dash::before{content:"- "}
+.hero__menu-link--bullet::before{content:"o "}
+.hero__menu-nested{padding-left:1.4em; margin-top:0.15em}
+@media(max-width:760px){
+  .hero-video__media--desktop{display:none}
+  .hero-video__media--mobile{
+    display:block; position:absolute; inset:0;
+    object-fit:cover; object-position:center center;
+  }
+  .hero__overlay{
+    position:absolute; left:0; right:0; top:0; z-index:2;
+    width:100%; max-width:none; min-width:0;
+    height:auto; max-height:100%; max-height:100dvh;
+    padding:max(4vh, env(safe-area-inset-top)) 4vw 4vh;
+    overflow-x:auto; overflow-y:auto; background:none;
+    -webkit-overflow-scrolling:touch;
+  }
+  .hero__menu{
+    display:flex; flex-direction:row; flex-wrap:nowrap;
+    align-items:flex-start; gap:1.6rem;
+    width:max-content; min-width:100%;
+  }
+  .hero__menu-section{
+    display:flex; flex-direction:column; align-items:flex-start;
+    flex:0 0 auto; margin-bottom:0;
+  }
+  .hero__menu-header{
+    font-size:14px; line-height:1.12; white-space:nowrap;
+    padding:0.15em 0;
+  }
+  .hero__menu-panel{
+    display:none; position:static;
+    padding:0.45em 0 0; width:max-content; max-width:88vw;
+  }
+  .hero__menu-section.is-open .hero__menu-panel{display:block}
+  .hero__menu-link{
+    font-size:11px; font-weight:400; line-height:1.35;
+    padding:0.3em 0; white-space:nowrap;
+  }
+  .hero__menu-nested{padding-left:1.4em; margin-top:0.2em}
+}
+
+/* ---- 02 clothing: hero "shop new arrivals" overlay ---- */
+.left .shopnew{position:relative; display:block; width:100%; height:100%; text-decoration:none}
+.shopnew__label{
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; text-align:center;
+  font-family:var(--serif); font-style:italic; font-weight:500; line-height:1.02;
+  font-size:clamp(30px,3.6vw,52px); color:#1b2b50; letter-spacing:.01em;
+  text-decoration:none; text-underline-offset:6px;
+  text-shadow:0 1px 14px rgba(255,255,255,.4); transition:color .2s;
+}
+.left .shopnew:hover .shopnew__label{text-decoration:underline; text-underline-offset:5px}
+
+/* ---- 02 clothing: block-2 layout — text left / inset image right + flowers ---- */
+.clothing-v2{overflow:hidden}                       /* contain the decorative flowers/vine */
+.clothing-v2 .cloth-text{align-items:flex-start; text-align:left}
+.cloth-text .sub{font-size:14px; line-height:1.6; color:var(--ink-soft); margin:-14px 0 4px}
+.cloth-img{position:relative; display:flex; align-items:center; justify-content:center; padding:9vh 4vw; background:var(--paper)}
+.cloth-img .shopnew{position:relative; display:block; width:100%; height:100%; max-height:78vh; text-decoration:none}
+.cloth-img .shopnew img,.cloth-img .shopnew video{width:100%; height:100%; object-fit:cover; display:block}
+/* hover anywhere in the video frame → underline + dark green (only while hovered) */
+.cloth-img .shopnew:hover .shopnew__label{color:#1c3d24; text-decoration:underline}
+/* flowers + vine — the uploaded hand-drawn image, scaled/rotated/positioned */
+.flower{position:absolute; z-index:5; pointer-events:none; width:clamp(64px,7vw,104px); height:auto; opacity:.92}
+.flower--tl{top:2.4vh; left:1.4vw; transform:rotate(-14deg)}
+.flower--tr{top:2.4vh; right:1.4vw; transform:scaleX(-1) rotate(-14deg)}
+.vine--left{position:absolute; z-index:4; pointer-events:none; width:auto; height:82%; top:9%; left:-2vw; opacity:.85}
+@media(max-width:760px){
+  .vine--left{display:none}
+  .flower{width:52px}
+}
+
+/* ---- 02 clothing: progressive-disclosure accordion ---- */
+.disc{border-top:1px solid var(--rule); margin-top:6px}
+.drow{border-bottom:1px solid var(--rule)}
+.dhead{
+  width:100%; display:flex; justify-content:space-between; align-items:center;
+  padding:16px 2px; cursor:pointer; background:none; border:none; color:var(--ink);
+  font-family:var(--mono); font-size:14px; letter-spacing:.04em; text-transform:lowercase;
+}
+.dhead:hover{color:var(--accent)}
+.dhead .sign{font-family:var(--serif); font-size:20px; transition:transform .25s}
+.drow.open .dhead .sign{transform:rotate(45deg)}
+.dbody{max-height:0; overflow:hidden; transition:max-height .4s ease}
+.drow.open .dbody{max-height:1500px}
+.dinner{padding:2px 2px 20px}
+.catlist{display:flex; flex-direction:column; gap:9px}
+.catlist a{font-size:14px; color:var(--ink); text-decoration:none; width:max-content}
+.catlist a:hover{color:var(--accent)}
+/* swing-tag detail card, now living inside the expanded designers tier */
+.swingtag-card{position:relative; border:1px solid var(--rule); background:var(--tag); padding:14px 16px 16px; margin-bottom:18px; max-width:300px}
+.swingtag-card .punch{width:11px; height:11px; border-radius:50%; border:1px solid var(--rule); position:absolute; top:10px; right:12px}
+.swingtag-card .name{font-family:var(--serif); font-style:italic; font-size:19px}
+.swingtag-card .cloth{font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:10px}
+.swingtag-card dl{font-size:12px; line-height:1.7}
+.swingtag-card dt{color:var(--ink-soft); letter-spacing:.04em} .swingtag-card dd{margin-bottom:6px}
+
+/* ---- 03 objects: collage LEFT / text RIGHT ---- */
+.obj-text{align-items:flex-start; text-align:left}
+.objects-v2 .obj-text{padding-left:clamp(56px,12vw,200px)}  /* whitespace between collage and text */
+.shopall{display:inline-block; margin-top:10px; font-family:var(--mono); font-size:13px; letter-spacing:.06em; color:var(--ink); text-decoration:underline; text-underline-offset:3px}
+.shopall:hover{color:var(--accent)}
+/* square canvas split into 4 quadrants by the perpendicular cross; each cutout
+   floats inside its own quadrant (drop-shadow, no box) and never touches the line */
+.obj-collage{
+  position:relative; align-self:center; width:100%; aspect-ratio:1/1; padding:2%; color:var(--rule);
+  display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr;
+}
+/* unified perpendicular flower-stem divider (behind the products) */
+.flower-divider{position:absolute; inset:0; z-index:0; pointer-events:none}
+.fd-stems{position:absolute; inset:0; width:100%; height:100%; overflow:visible}
+.fd-stems path{fill:none; stroke:#1a1a1a; stroke-width:.35; stroke-linecap:round; stroke-linejoin:round}
+.fd-flower{position:absolute; width:clamp(32px,3.2vw,48px); height:auto}
+.fd-top{top:0; left:50%; transform:translate(-50%,-48%)}
+.fd-bottom{bottom:0; left:50%; transform:translate(-50%,48%) rotate(180deg)}
+.fd-left{left:0; top:50%; transform:translate(-48%,-50%) rotate(-90deg)}
+.fd-right{right:0; top:50%; transform:translate(48%,-50%) rotate(90deg)}
+/* every object centred in its quadrant, uniform size, consistent spacing */
+.obj{position:relative; display:flex; align-items:center; justify-content:center; padding:8%; min-width:0; min-height:0; text-decoration:none; cursor:pointer}
+.objwrap{position:relative; display:inline-flex; align-items:center; justify-content:center; width:100%; height:32vh; max-height:100%}
+.objwrap img{
+  max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; display:block;
+  filter:drop-shadow(0 8px 18px rgba(0,0,0,.20)); transition:transform .25s ease, filter .25s ease;
+}
+.obj:hover .objwrap img{transform:scale(1.04); filter:drop-shadow(0 12px 26px rgba(0,0,0,.30))}
+/* maker label that follows the cursor while over an object */
+.objcursor{
+  position:fixed; z-index:60; pointer-events:none; transform:translate(15px,16px);
+  background:var(--ink); color:var(--paper); font-family:var(--mono); font-size:11px;
+  letter-spacing:.04em; padding:5px 9px; white-space:nowrap; opacity:0; transition:opacity .15s;
+}
+.objcursor.show{opacity:1}
+.objects-v2 .obj{z-index:2}                 /* objects float above the divider */
+
+/* ---- 04 music: text LEFT / inset image RIGHT ---- */
+.music-img{position:relative; display:flex; align-items:center; justify-content:center; padding:9vh 4vw; background:var(--paper)}
+.music-img img{width:100%; height:100%; max-height:78vh; object-fit:cover; display:block}
+/* ---- 04 music: stripped column, now-playing, off-air ---- */
+#musicpane .woofer{left:50%; right:auto; top:auto; bottom:6%; transform:translateX(-50%); width:30%}
+@keyframes thump{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.045)}}
+.np-src{margin-top:10px; font-size:11px; font-style:italic; color:var(--ink-soft); line-height:1.6; max-width:34ch}
+#np-status{text-transform:uppercase; letter-spacing:.08em}
+#music.offair .woofer{animation:none}
+/* the equalizer ("animated music thing") always animates in the now-playing card */
+#music.offair #np-status{color:var(--ink-soft)}
+#music:not(.offair) #np-status{color:var(--accent)}
+
+/* ---- 05 vault: inset image (slim white margins) with the text below it ---- */
+.vault-v2{display:flex; align-items:center; justify-content:center; min-height:100vh; padding:2vh 1vw; background:var(--paper)}
+.vault-inner{display:flex; flex-direction:column; align-items:center; gap:22px; width:100%; max-width:none}
+.vault-img{display:block; max-width:100%; max-height:88vh; width:auto; height:auto; margin:0 auto}
+.vault-caption{text-align:center}
+.vault-caption .title{color:var(--ink); margin-bottom:8px}
+.vault-caption .lede{color:var(--ink); max-width:none; margin:0; font-size:clamp(15px,1.5vw,19px)}
+.vault-note{line-height:1.7}
+.vault-caption .vault-note{color:var(--ink-soft); margin-top:6px}
+
+@media(max-width:760px){
+  .obj-collage{margin-top:24px}
+  .vbox{height:52vh}
+  .po-carousel{height:50vh}
+  .wave-flower{width:38px}
+}
+
+/* ---- pre-orders block (the preorder site's opening, re-dressed) ---- */
+/* garment-image carousel (left), inset with margin; images shared with the live preorder site */
+.po-imgpanel{position:relative; display:flex; align-items:center; justify-content:center; padding:9vh 4vw; background:var(--paper)}
+.po-carousel{position:relative; width:100%; height:78vh; max-height:80vh; overflow:hidden; background:#000}
+.po-carousel .po-slide{width:100%; height:100%; object-fit:cover; display:block; filter:saturate(.96); transition:opacity .2s}
+/* large clean white arrows — no box, no border */
+.po-arrow{
+  position:absolute; top:50%; transform:translateY(-50%); z-index:4;
+  background:none; border:none; padding:0 10px; cursor:pointer;
+  font-family:var(--mono-ui); font-size:clamp(42px,4.4vw,62px); line-height:1; color:#fff;
+  text-shadow:0 1px 12px rgba(0,0,0,.5); transition:transform .15s ease;
+}
+.po-arrow:hover{transform:translateY(-50%) scale(1.16)}
+.po-prev{left:6px} .po-next{right:6px}
+.po-caption{
+  position:absolute; left:16px; bottom:14px; z-index:4; display:flex; gap:12px; align-items:baseline;
+  font-family:var(--mono-ui); font-size:11px; letter-spacing:.1em; color:#fff; text-shadow:0 1px 6px rgba(0,0,0,.55);
+}
+.po-count{opacity:.7}
+.preorders-v2 .preorder-text{align-items:flex-start; text-align:left}
+.po-status{display:flex; align-items:center; gap:9px; font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--ink-soft); margin-bottom:14px}
+.po-status::before{content:""; width:6px; height:6px; border-radius:50%; background:var(--accent)}
+.po-sizes{display:flex; gap:7px; margin:22px 0 20px}
+.po-size{font-family:var(--mono); font-size:14px; border:1px solid var(--rule); background:none; color:var(--ink); padding:9px 15px; cursor:pointer; transition:border-color .15s,background .15s,color .15s}
+.po-size:hover{border-color:var(--ink)}
+.po-size.selected{border-color:var(--ink); background:var(--ink); color:var(--paper)}
+.po-cta{display:inline-block; width:max-content; font-family:var(--mono); font-size:13px; letter-spacing:.04em; border:1px solid var(--ink); background:var(--ink); color:var(--paper); padding:14px 28px; text-decoration:none; transition:background .2s,color .2s}
+.po-cta:hover{background:transparent; color:var(--ink)}
+.po-ship{margin-top:14px; font-family:var(--mono); font-size:12px; color:var(--ink-soft)}
+
+/* ---- footer (precise replication of shopandson.com — design only) ---- */
+/* wavy divider between the last block and the footer (moved from the vault) */
+.footer-wave{display:block; width:100%; height:30px; color:#1a1a1a; margin:0}
+.site-footer{background:#ffffff; color:#1a1a1a; font-family:var(--mono-ui); padding:44px 5vw 28px}
+/* newsletter block — centered column */
+.footer-newsletter{display:flex; flex-direction:column; align-items:center; text-align:center; gap:18px; max-width:520px; margin:0 auto}
+.footer-mark{width:280px; max-width:80%; height:auto; display:block}
+.footer-subheading p{font-style:italic; font-size:14px; line-height:1.6; margin:0}
+.footer-form{width:min(360px,100%)}
+.footer-field{display:flex; align-items:stretch; border:1px solid #1a1a1a}
+.footer-field input{flex:1; min-width:0; border:none; background:transparent; font-family:var(--mono-ui); font-size:13px; padding:12px 13px; color:#1a1a1a; outline:none}
+.footer-field input::placeholder{color:#1a1a1a; opacity:.6}
+.footer-subscribe{border:none; border-left:1px solid #1a1a1a; background:transparent; font-family:var(--mono-ui); font-size:13px; padding:12px 18px; color:#1a1a1a; cursor:pointer; transition:background .2s,color .2s}
+.footer-subscribe:hover{background:#1a1a1a; color:#fff}
+/* primary horizontal link list */
+.footer-linklist{display:flex; flex-wrap:wrap; justify-content:center; gap:8px 22px; list-style:none; margin:34px 0 0; padding:0}
+.footer-linklist a{color:#1a1a1a; text-decoration:none; font-size:13px}
+.footer-linklist a:hover{text-decoration:underline}
+/* sub-footer — two columns: policies + currency (left), copyright (right) */
+.sub-footer{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px 24px; margin-top:32px; font-size:12px}
+.footer-policies{display:flex; flex-wrap:wrap; align-items:center; gap:6px 18px; list-style:none; margin:0; padding:0}
+.footer-policies a,.market-selector{color:#1a1a1a; font-size:12px; font-family:var(--mono-ui)}
+.footer-policies a{text-decoration:none}
+.footer-policies a:hover{text-decoration:underline}
+.market-selector{background:none; border:none; padding:0; cursor:pointer; text-decoration:underline}
+.footer-copyright{font-size:12px}
+@media(max-width:760px){
+  .sub-footer{justify-content:center; text-align:center}
+  .footer-policies{justify-content:center}
+}

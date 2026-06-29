@@ -1,0 +1,113 @@
+---
+import { clothing, site } from "../../data/content.ts";
+import { withBase } from "../../lib/url.ts";
+const { designers } = clothing;
+const num = (i: number) => String(i + 1).padStart(2, "0");
+const searchUrl = (name: string) => `${site.shopUrl}/search?q=${encodeURIComponent(name)}`;
+// Categories tier reuses v1's "wear" category menu as the source of truth.
+const wear = site.nav.left.find((n) => n.label === "wear");
+const categories = wear?.children ?? [];
+const newArrivalsUrl = `${site.shopUrl}/collections/new-arrivals`;
+---
+<section class="block clothing-v2" id="clothing">
+  <!-- text LEFT -->
+  <div class="right cloth-text">
+    <div class="title">Clothes &amp; Accessories</div>
+    <p class="sub">Independent design, sourced worldwide.</p>
+
+    <!-- progressive disclosure: collapsed by default, expand for the full tool -->
+    <div class="disc">
+      <div class="drow" id="cat">
+        <button class="dhead" type="button" aria-expanded="false">categories <span class="sign">+</span></button>
+        <div class="dbody"><div class="dinner">
+          <div class="catlist">
+            {categories.map((c) => (
+              <a href={c.href} target="_blank" rel="noopener">{c.label}</a>
+            ))}
+          </div>
+        </div></div>
+      </div>
+
+      <div class="drow" id="des">
+        <button class="dhead" type="button" aria-expanded="false">designers <span class="sign">+</span></button>
+        <div class="dbody"><div class="dinner">
+          <div class="idxhead">
+            <button class="idxctl on" data-sort="az">a–z</button>
+            <button class="idxctl" data-sort="za">z–a</button>
+            <span class="idxcount"><span id="idxCount">{designers.length}</span> designers</span>
+          </div>
+          <input id="idxSearch" class="idxsearch" type="text" placeholder="search designer…" autocomplete="off" />
+          <div class="idxcols" id="idxList">
+            {designers.map((name, i) => (
+              <a class="row" href={searchUrl(name)} target="_blank" rel="noopener" data-name={name.toLowerCase()}>
+                <span class="num">{num(i)}</span><span class="nm">{name}</span>
+              </a>
+            ))}
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- new-arrivals video RIGHT, inset within the panel -->
+  <div class="cloth-img">
+    <a class="shopnew" href={newArrivalsUrl} target="_blank" rel="noopener" aria-label="shop new arrivals">
+      <video class="shopnew-media" autoplay muted loop playsinline preload="metadata" poster={withBase("/videos/new-arrivals-poster.jpg")}>
+        <source src={withBase("/videos/new-arrivals.mp4")} type="video/mp4" />
+      </video>
+      <span class="shopnew__label">shop<br />new<br />arrivals</span>
+    </a>
+  </div>
+</section>
+
+<script>
+  // accordion: each .dhead toggles its row open/closed
+  document.querySelectorAll<HTMLElement>(".disc .dhead").forEach((head) => {
+    head.addEventListener("click", () => {
+      const row = head.closest(".drow");
+      if (!row) return;
+      const open = row.classList.toggle("open");
+      head.setAttribute("aria-expanded", String(open));
+    });
+  });
+
+  // designer index: a–z / z–a sort + live search, renumbering as it changes
+  const list = document.getElementById("idxList");
+  const search = document.getElementById("idxSearch") as HTMLInputElement | null;
+  const countEl = document.getElementById("idxCount");
+
+  if (list) {
+    const renumber = () => {
+      let n = 0;
+      Array.from(list.children).forEach((r) => {
+        const el = r as HTMLElement;
+        if (el.style.display !== "none") {
+          n += 1;
+          const cell = el.querySelector(".num");
+          if (cell) cell.textContent = String(n).padStart(2, "0");
+        }
+      });
+      if (countEl) countEl.textContent = String(n);
+    };
+    const sort = (dir: string) => {
+      Array.from(list.querySelectorAll<HTMLElement>(".row"))
+        .sort((a, b) => (a.dataset.name || "").localeCompare(b.dataset.name || "") * (dir === "za" ? -1 : 1))
+        .forEach((r) => list.appendChild(r));
+      renumber();
+    };
+    document.querySelectorAll<HTMLElement>(".idxctl[data-sort]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".idxctl[data-sort]").forEach((b) => b.classList.remove("on"));
+        btn.classList.add("on");
+        sort(btn.dataset.sort || "az");
+      });
+    });
+    search?.addEventListener("input", () => {
+      const q = search.value.trim().toLowerCase();
+      list.querySelectorAll<HTMLElement>(".row").forEach((r) => {
+        r.style.display = (r.dataset.name || "").includes(q) ? "" : "none";
+      });
+      renumber();
+    });
+  }
+</script>

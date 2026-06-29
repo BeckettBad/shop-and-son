@@ -27,17 +27,17 @@ jobs:
           node-version: 22
       - name: Configure Pages
         uses: actions/configure-pages@v5
-      - name: Build site (homepage-v2 → root /shop-and-son/)
+      - name: Build site (homepage → root /shop-and-son/)
         run: |
-          cd homepage-v2
+          cd homepage
           npm ci
           npm run build
       - name: "Bundle the pre-order site at /preorders/ (single source: public/preorders)"
-        run: cp -R public/preorders homepage-v2/dist/preorders
+        run: cp -R public/preorders homepage/dist/preorders
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./homepage-v2/dist
+          path: ./homepage/dist
 
   deploy:
     needs: build
