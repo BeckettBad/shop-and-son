@@ -1,3 +1,8 @@
+# archived, out-of-scope material (retired generations, shelved homepage-v3,
+# raw asset masters, scratch docs). Kept on disk so it can be drawn upon, but
+# out of version control to keep the tracked scope = the homepage + deploy.
+archive/
+
 # build output
 dist/
 # generated types
