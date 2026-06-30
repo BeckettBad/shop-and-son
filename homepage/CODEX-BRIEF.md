@@ -50,34 +50,22 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## ACTIVE BRIEF
 
-**Status:** ✅ committed `468f53d` (revision) + `9a0311f` (resilient fetch). Claude reviewed clean; verified real data baked (clothing 60 + house 27, all CDN images). On dev, not pushed. Animation feel still needs operator's eyes (no headless browser here).
-**Task:** Phase C-rev — revise the C1 catalogue (`47ded3b`): (1) REAL products + images from the live store, (2) the stencil exits the screen FULLY, (3) larger 3-up cards filling the right region, (4) a scroll-PAGED row interaction (one row of 3 at a time; scrolling spawns the next 3 animating upward). Keep C1's open/close + slide-in framework; change data, card size, and scroll behavior.
+**Status:** ready for Codex
+**Task:** Phase C-rev3 — interaction polish: (1) clicked menu fields turn a darker-hued neon green, (2) clicking a top-level menu header while the catalogue is open EXITS it so the house stencil animates back to center (reverse) — make this return smooth. Files: `HeroVideo.astro` (script) + `global.css`.
 
-**Layout:** menu (`.hero__overlay`) is on the LEFT (42vw); catalogue fills the area to its right. Default landing must stay identical to Phase B. Build + `astro check` green.
+**1 — Click feedback: darker-hued neon green.**
+- When the user clicks a menu field, that field's TEXT turns a darker-hued neon green (vivid but a shade deeper than pure neon — around `#1faa2e`; define a CSS var, e.g. `--neon-green:#1faa2e`, tune to taste). It indicates the active/selected field and persists while selected; reverts when deselected.
+- Apply to: the open section header (`.hero__menu-section.is-open > .hero__menu-header`) and the active SHOP ALL / selected item (`.hero__menu-link.is-active`). Keep it consistent so any clicked field reads green while active.
 
-**1 — REAL products + images (build-time fetch, NO token needed).**
-- Rework `src/lib/catalog.ts` to fetch the store's PUBLIC product feed at BUILD time (Node fetch in Astro frontmatter — NOT in the browser; the feed has no CORS so client-side is blocked, but build-time and the `cdn.shopify.com` `<img>` URLs both work fine):
-  `https://shopandson.com/collections/<handle>/products.json?limit=250`. Confirmed handles: CLOTHES→`clothing`, OBJECTS→`house`.
-- Map each product → `{ title, vendor, price, image, url }`:
-  `title`=`product.title`; `vendor`=`product.vendor`; `price`=`"$"+product.variants[0].price` with a trailing `.00` stripped (`355.00`→`$355`, keep non-zero cents); `image`=`product.images[0]?.src` (placeholder box if absent); `url`=`https://shopandson.com/products/${product.handle}`.
-- Cap at **60 products per collection** for now (note the cap in a comment; house=27, clothing=250 — we can raise/paginate later).
-- Bake the data into the page so the client reads it without a runtime fetch: fetch in `HeroVideo.astro` frontmatter and emit `<script type="application/json" id="catalog-data" set:html={JSON.stringify(data)}></script>` (escape any `<` to avoid breaking out of the script tag); the client script parses that instead of the old async mock. Keep one clean seam so a future LIVE Storefront swap (C2) is easy.
+**2 — Exit reverses the house animation (this is the crucial bit — make it smooth).**
+- TODAY: clicking a SHOP ALL opens the catalogue → house slides off-LEFT (`.hero-video.is-catalog .hero__stencil`). BUG: clicking a top-level header (CLOTHES/OBJECTS/MUSIC/& FAM) while the catalogue is open only toggles the dropdown — it does NOT close the catalogue, so the house never comes back.
+- FIX: when the catalogue is open and the user clicks ANY top-level menu header, also close the catalogue (remove `is-catalog`) — in addition to the normal dropdown toggle — so the house animates back to center. (The existing close "×" should keep working too.)
+- The house must REAPPEAR smoothly and settle CENTER (where it sits on first load). Operator's stated preference: it sweeps in from the RIGHT, moving right→left to center. Implement that cleanly: while the stencil is still off-screen, with its `transition` momentarily disabled, reposition it to off-screen-RIGHT (`translateX(calc(50vw + 100%))`), force a reflow, then re-enable the transition and move it to center (`translateX(0)`) — the off-screen left→right jump is invisible, so the user only sees a smooth right→left glide in. As the house enters, the catalogue panel slides out to the right (its existing reverse). **Priority is SMOOTHNESS** — if a flicker-free right-entry isn't achievable, fall back to the clean reverse (house glides back from the left to center) rather than ship anything janky. Tune easing (ease-in-out) + duration (~.55s) so house-in and catalogue-out feel coordinated.
+- Reset state cleanly (active collection cleared, `is-active`/green cleared, `rowIndex`=0) on exit.
 
-**2 — Stencil exits FULLY.** Change `.hero-video.is-catalog .hero__stencil` so the drawing leaves the viewport completely (e.g. `transform:translateX(calc(-50vw - 100%))` or `-200%` — no sliver left). Keep the existing transition.
+**Keep unchanged:** everything from `cf32922` (real sized products, big portrait cards, row-pager), Phase A/B, non-destructive default landing.
 
-**3 — Larger cards, exactly 3 visible.** The catalogue (right of the menu) shows ONE row of 3 LARGE cards filling the width with comfortable outer padding + a gap, and most of the height. The image is dominant (`object-fit:cover`, fills the card), title/vendor/price beneath. NOT the small overflow grid from C1.
-
-**4 — Scroll = paged rows of 3, animating upward.** Replace C1's `overflow-y:auto` grid with a vertical ROW-PAGER:
-- `.hero__catalog-viewport` (overflow hidden, fills height under the header) → `.hero__catalog-track` (`transform:translateY(calc(-100% * rowIndex))`, `transition:transform ~.5s ease`) → one `.hero__catalog-row` per 3 products (`height:100%; display:grid; grid-template-columns:repeat(3,1fr)`).
-- Wheel/touch advances ONE row per gesture: wheel down → `rowIndex++` (clamp to last), wheel up → `rowIndex--`; `preventDefault` so the page doesn't scroll; throttle so one gesture = one row (ignore further wheel until the transition ends). Add touch swipe (up=next, down=prev). `rowIndex`=0 on open / collection switch.
-- The next row slides UP from below into place as the old one moves up and out (the translateY track does exactly this).
-- Mobile (≤760px): skip the scroll-jacking — fall back to a simple vertical scroll of the cards (1–2 columns).
-
-**5 — Keep from C1:** open on SHOP ALL, slide-in from the right, close (×), collection switching, menu on top (`z-index:3`) and clickable, non-destructive default landing.
-
-**Style / structure constraints:** Keep the editorial/brutalist skin. Don't change Phase A type sizes or Phase B's base stencil rule (only its `.is-catalog` transform). No instructional/internal text. Keep the data seam clean for the future live (C2) swap.
-
-**Done when:** `npm run build` + `npx astro check` green; SHOP ALL shows REAL products with REAL images (3 large cards filling the right region); the stencil fully leaves the screen; scrolling down advances to the next 3 (animating upward), up goes back; close returns to landing; default landing unchanged.
+**Done when:** `npm run build` + `npx astro check` green; clicking a menu field turns its text the neon green; with the catalogue open, clicking a top-level header (or ×) smoothly brings the house back to center while the catalogue slides out; no flicker/jank; default landing unchanged.
 
 ---
 
@@ -107,6 +95,7 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## Log (Codex appends newest at top: date — task — result/commit)
 
+- 2026-06-29 — Phase C-rev2: image lag fix + bigger portrait cards — cf32922 — build:green check:green — CDN width-resize (1.7MB→~120-210KB) via getSizedShopifyImageUrl (cdn.shopify.com only) + srcset 700/1100/1600; catalogue left 42vw→36.5vw, padding/gap cut so 3 cards dominate. Menu-left confirmed in docs. Reviewed clean. Not pushed.
 - 2026-06-29 — Phase C-rev fix: resilient build-time fetch — 9a0311f — build:green check:green — getCatalogProducts now try/catches → warn + return [] (deploy can't break on a network blip). Not pushed.
 - 2026-06-29 — Phase C-rev: real products+images, full stencil exit, large 3-up cards, scroll-paged rows — 468f53d — build:green check:green — build-time fetch of shopandson.com products.json (clothing 60 + house 27, real CDN images), translateY row-pager (wheel/touch, CSS-var driven), mobile scroll fallback. Reviewed clean (caught + fixed the throw-on-fetch-fail in 9a0311f). Not pushed.
 - 2026-06-29 — Phase C1: catalogue interaction + slide animation + mock grid — 47ded3b — build:green check:green — Codex implemented per brief; reviewed clean by Claude (gated on .is-catalog, menu z-index→3, rows of 3, race-guarded render, getCatalogProducts isolates data for C2). Superseded by C-rev. Not pushed.

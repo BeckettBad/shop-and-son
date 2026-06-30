@@ -37,7 +37,7 @@ CSS/JS. Base path `/shop-and-son` via `withBase()` (`src/lib/url.ts`).
 - **Clean hero video:** swap the current stencil-baked `homepage-hero.mp4` for a
   clean, no-stencil looping video. The house/shop **stencil becomes a separate,
   centered overlay layer** above the video (so it can be animated independently).
-- **Right-hand hero menu** (`CLOTHES / OBJECTS / MUSIC / & FAM`, in
+- **Left-hand hero menu** (on the LEFT — confirmed/intended; `CLOTHES / OBJECTS / MUSIC / & FAM`, in
   `src/data/content.ts` → `heroMenu`) currently links nowhere; we are wiring it.
 - **Shoppable tabs:** **CLOTHES and OBJECTS** open a product catalogue. **MUSIC**
   and **& FAM** are not products — they link out, no grid.
@@ -45,7 +45,7 @@ CSS/JS. Base path `/shop-and-son` via `withBase()` (`src/lib/url.ts`).
   stencil **slides off to the left** while a **row of 3 live products slides in
   from the right**, over the still-looping video. The catalogue scrolls in **rows
   of 3** (up/down) to browse the collection, under the collection header. The
-  **right-hand menu stays visible** so the user can switch collections.
+  **left-hand menu stays visible** so the user can switch collections.
 - **Product data:** **live in-browser fetch** to the Shopify Storefront API (the
   public read-only token is safe in the browser). Always current — new Shopify
   products appear with no rebuild/redeploy.
