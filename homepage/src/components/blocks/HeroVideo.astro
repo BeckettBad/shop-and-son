@@ -50,66 +50,68 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     <ul class="hero__menu">
       {
         heroMenu.map((section) => (
-          <li class="hero__menu-section" data-hero-dropdown>
+          <li class="hero__menu-section" data-hero-dropdown data-preorder={section.preorder ? "true" : undefined}>
             <button type="button" class="hero__menu-header" aria-expanded="false">
               {section.label} <span class="hero__menu-toggle">+</span>
             </button>
-            <ul class="hero__menu-panel">
-              {
-                section.items.map((item) => (
-                  <li class={`hero__menu-item${item.children && item.children.length > 0 ? " hero__menu-item--group" : ""}`}>
-                    {item.collection ? (
-                      <button
-                        type="button"
-                        class="hero__menu-link hero__menu-link--dash"
-                        data-shop-all
-                        data-collection={item.collection}
-                        data-collection-label={item.collectionLabel ?? item.label}
-                        aria-pressed="false"
-                      >
-                        {item.label}{item.suffix ?? ""}
-                      </button>
-                    ) : item.href ? (
-                      <a class="hero__menu-link hero__menu-link--dash" href={item.href}>
-                        {item.label}{item.suffix ?? ""}
-                      </a>
-                    ) : (
-                      <span class="hero__menu-link hero__menu-link--dash">
-                        {item.label}{item.suffix ?? ""}
-                      </span>
-                    )}
-                    {item.children && item.children.length > 0 && (
-                      <ul class="hero__menu-nested">
-                        {
-                          item.children.map((child) => (
-                            <li>
-                              {child.collection ? (
-                                <button
-                                  type="button"
-                                  class="hero__menu-link hero__menu-link--bullet"
-                                  data-shop-all
-                                  data-collection={child.collection}
-                                  data-collection-label={child.collectionLabel ?? child.label}
-                                  aria-pressed="false"
-                                >
-                                  {child.label}
-                                </button>
-                              ) : child.href ? (
-                                <a class="hero__menu-link hero__menu-link--bullet" href={child.href}>
-                                  {child.label}
-                                </a>
-                              ) : (
-                                <span class="hero__menu-link hero__menu-link--bullet">{child.label}</span>
-                              )}
-                            </li>
-                          ))
-                        }
-                      </ul>
-                    )}
-                  </li>
-                ))
-              }
-            </ul>
+            {!section.preorder && (
+              <ul class="hero__menu-panel">
+                {
+                  section.items.map((item) => (
+                    <li class={`hero__menu-item${item.children && item.children.length > 0 ? " hero__menu-item--group" : ""}`}>
+                      {item.collection ? (
+                        <button
+                          type="button"
+                          class="hero__menu-link hero__menu-link--dash"
+                          data-shop-all
+                          data-collection={item.collection}
+                          data-collection-label={item.collectionLabel ?? item.label}
+                          aria-pressed="false"
+                        >
+                          {item.label}{item.suffix ?? ""}
+                        </button>
+                      ) : item.href ? (
+                        <a class="hero__menu-link hero__menu-link--dash" href={item.href}>
+                          {item.label}{item.suffix ?? ""}
+                        </a>
+                      ) : (
+                        <span class="hero__menu-link hero__menu-link--dash">
+                          {item.label}{item.suffix ?? ""}
+                        </span>
+                      )}
+                      {item.children && item.children.length > 0 && (
+                        <ul class="hero__menu-nested">
+                          {
+                            item.children.map((child) => (
+                              <li>
+                                {child.collection ? (
+                                  <button
+                                    type="button"
+                                    class="hero__menu-link hero__menu-link--bullet"
+                                    data-shop-all
+                                    data-collection={child.collection}
+                                    data-collection-label={child.collectionLabel ?? child.label}
+                                    aria-pressed="false"
+                                  >
+                                    {child.label}
+                                  </button>
+                                ) : child.href ? (
+                                  <a class="hero__menu-link hero__menu-link--bullet" href={child.href}>
+                                    {child.label}
+                                  </a>
+                                ) : (
+                                  <span class="hero__menu-link hero__menu-link--bullet">{child.label}</span>
+                                )}
+                              </li>
+                            ))
+                          }
+                        </ul>
+                      )}
+                    </li>
+                  ))
+                }
+              </ul>
+            )}
           </li>
         ))
       }
@@ -123,6 +125,18 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     </div>
     <div class="hero__catalog-viewport" data-catalog-viewport>
       <div class="hero__catalog-track" data-catalog-track></div>
+    </div>
+  </aside>
+
+  <aside class="hero__preorder" aria-hidden="true">
+    <button type="button" class="hero__preorder-close" data-preorder-close aria-label="Close preorder">&times;</button>
+    <div class="hero__preorder-shell" data-preorder-shell>
+      <iframe
+        class="hero__preorder-frame"
+        src={withBase("/preorders/")}
+        title="Pre-order"
+        loading="lazy"
+      ></iframe>
     </div>
   </aside>
 
@@ -146,16 +160,25 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
   const catalogViewport = hero?.querySelector<HTMLElement>("[data-catalog-viewport]");
   const catalogTrack = hero?.querySelector<HTMLElement>("[data-catalog-track]");
   const catalogClose = hero?.querySelector<HTMLButtonElement>("[data-catalog-close]");
+  const preorder = hero?.querySelector<HTMLElement>(".hero__preorder");
+  const preorderShell = hero?.querySelector<HTMLElement>("[data-preorder-shell]");
+  const preorderFrame = hero?.querySelector<HTMLIFrameElement>(".hero__preorder-frame");
+  const preorderClose = hero?.querySelector<HTMLButtonElement>("[data-preorder-close]");
   const catalogDataNode = hero?.querySelector<HTMLScriptElement>("#catalog-data");
   const collectionButtons = hero
     ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-shop-all]"))
     : [];
+  const menuSections = hero ? Array.from(hero.querySelectorAll<HTMLElement>("[data-hero-dropdown]")) : [];
   const desktopPagerQuery = window.matchMedia("(min-width: 761px)");
+  const preorderDesktopWidth = 1280;
+  const stageDuration = 550;
   let rowIndex = 0;
   let lastRowIndex = 0;
   let isPaging = false;
   let pagingFallback: ReturnType<typeof window.setTimeout> | undefined;
   let stencilReturnCleanup: (() => void) | undefined;
+  let stageCleanup: ReturnType<typeof window.setTimeout> | undefined;
+  let activeStage: "landing" | "catalog" | "preorder" = "landing";
   let touchStartY: number | null = null;
 
   const parseCatalogData = (): Record<string, CatalogProduct[]> => {
@@ -202,6 +225,33 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     });
   };
 
+  const setMenuSectionState = (activeSection: HTMLElement | null) => {
+    menuSections.forEach((section) => {
+      const isOpen = section === activeSection;
+      const trigger = section.querySelector(".hero__menu-header");
+      const toggle = section.querySelector(".hero__menu-toggle");
+      section.classList.toggle("is-open", isOpen);
+      trigger?.setAttribute("aria-expanded", String(isOpen));
+      if (toggle) {
+        toggle.textContent = isOpen ? "\u2013" : "+";
+      }
+    });
+  };
+
+  const setPanelHidden = (stage: "catalog" | "preorder", isHidden: boolean) => {
+    const panel = stage === "catalog" ? catalog : preorder;
+    panel?.setAttribute("aria-hidden", String(isHidden));
+  };
+
+  const clearStageCleanup = () => {
+    if (stageCleanup) {
+      window.clearTimeout(stageCleanup);
+      stageCleanup = undefined;
+    }
+    catalog?.classList.remove("is-exiting-left");
+    preorder?.classList.remove("is-exiting-left");
+  };
+
   const clearStencilReturn = () => {
     stencilReturnCleanup?.();
     stencilReturnCleanup = undefined;
@@ -212,15 +262,16 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
   const returnStencilFromRight = () => {
     if (!hero) return;
 
-    if (!stencil || !hero.classList.contains("is-catalog")) {
-      hero.classList.remove("is-catalog");
+    const hasActiveStage = hero.classList.contains("is-catalog") || hero.classList.contains("is-preorder");
+    if (!stencil || !hasActiveStage) {
+      hero.classList.remove("is-catalog", "is-preorder");
       return;
     }
 
     clearStencilReturn();
     stencil.style.transition = "none";
     stencil.style.transform = "translateX(calc(50vw + 100%))";
-    hero.classList.remove("is-catalog");
+    hero.classList.remove("is-catalog", "is-preorder");
     void stencil.offsetWidth;
 
     const finishReturn = (event?: TransitionEvent) => {
@@ -243,6 +294,81 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
       stencil.style.removeProperty("transition");
       stencil.style.transform = "translateX(0)";
     });
+  };
+
+  const resizePreorderFrame = () => {
+    if (!preorderShell || !preorderFrame) return;
+
+    if (!desktopPagerQuery.matches) {
+      preorderShell.style.removeProperty("--preorder-scale");
+      preorderFrame.style.removeProperty("width");
+      preorderFrame.style.removeProperty("height");
+      return;
+    }
+
+    const shellWidth = preorderShell.clientWidth;
+    const shellHeight = preorderShell.clientHeight;
+    if (shellWidth <= 0 || shellHeight <= 0) return;
+
+    const scale = Math.min(1, shellWidth / preorderDesktopWidth);
+    preorderShell.style.setProperty("--preorder-scale", String(scale));
+    preorderFrame.style.width = `${preorderDesktopWidth}px`;
+    preorderFrame.style.height = `${Math.ceil(shellHeight / scale)}px`;
+  };
+
+  const activatePanel = (stage: "catalog" | "preorder") => {
+    hero?.classList.add(stage === "catalog" ? "is-catalog" : "is-preorder");
+    setPanelHidden(stage, false);
+  };
+
+  const deactivatePanel = (stage: "catalog" | "preorder") => {
+    hero?.classList.remove(stage === "catalog" ? "is-catalog" : "is-preorder");
+    setPanelHidden(stage, true);
+  };
+
+  const transitionToStage = (nextStage: "catalog" | "preorder", prepareIncoming: () => void) => {
+    if (!hero) return;
+
+    clearStageCleanup();
+    clearStencilReturn();
+
+    const previousStage = activeStage;
+    const previousPanel =
+      previousStage === "catalog" ? catalog : previousStage === "preorder" ? preorder : undefined;
+
+    if (previousStage === nextStage) {
+      previousPanel?.classList.add("is-exiting-left");
+      setPanelHidden(nextStage, true);
+      stageCleanup = window.setTimeout(() => {
+        deactivatePanel(nextStage);
+        previousPanel?.classList.remove("is-exiting-left");
+        prepareIncoming();
+        void previousPanel?.offsetWidth;
+        activatePanel(nextStage);
+        if (nextStage === "preorder") resizePreorderFrame();
+        activeStage = nextStage;
+        stageCleanup = undefined;
+      }, stageDuration);
+      return;
+    }
+
+    if (previousPanel) {
+      previousPanel.classList.add("is-exiting-left");
+      setPanelHidden(previousStage as "catalog" | "preorder", true);
+    }
+
+    prepareIncoming();
+    activatePanel(nextStage);
+    if (nextStage === "preorder") resizePreorderFrame();
+    activeStage = nextStage;
+
+    if (previousStage === "catalog" || previousStage === "preorder") {
+      stageCleanup = window.setTimeout(() => {
+        deactivatePanel(previousStage);
+        previousPanel?.classList.remove("is-exiting-left");
+        stageCleanup = undefined;
+      }, stageDuration);
+    }
   };
 
   const createProductCard = (product: CatalogProduct) => {
@@ -285,13 +411,10 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     return card;
   };
 
-  const renderCatalog = (collection: string, label: string) => {
-    if (!hero || !catalog || !catalogTitle || !catalogTrack) return;
+  const renderCatalogContent = (collection: string, label: string) => {
+    if (!hero || !catalogTitle || !catalogTrack) return;
 
-    clearStencilReturn();
-    hero.classList.add("is-catalog");
     hero.dataset.activeCollection = collection;
-    catalog.setAttribute("aria-hidden", "false");
     catalogTitle.textContent = label;
     setActiveButton(collection);
 
@@ -312,15 +435,34 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     setRowIndex(0);
   };
 
-  const closeCatalog = () => {
-    if (!hero || !catalog) return;
+  const openCatalog = (collection: string, label: string) => {
+    if (!hero || !catalog || !catalogTitle || !catalogTrack) return;
 
+    transitionToStage("catalog", () => renderCatalogContent(collection, label));
+  };
+
+  const openPreorder = () => {
+    if (!hero || !preorder) return;
+
+    delete hero.dataset.activeCollection;
+    setActiveButton(null);
+    setPagingReady();
+    setRowIndex(0);
+    transitionToStage("preorder", resizePreorderFrame);
+  };
+
+  const closeStage = () => {
+    if (!hero) return;
+
+    clearStageCleanup();
     setPagingReady();
     setRowIndex(0);
     returnStencilFromRight();
     delete hero.dataset.activeCollection;
-    catalog.setAttribute("aria-hidden", "true");
+    catalog?.setAttribute("aria-hidden", "true");
+    preorder?.setAttribute("aria-hidden", "true");
     setActiveButton(null);
+    activeStage = "landing";
   };
 
   collectionButtons.forEach((button) => {
@@ -328,11 +470,18 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
       const collection = button.dataset.collection;
       const label = button.dataset.collectionLabel ?? button.textContent?.trim() ?? "";
       if (!collection) return;
-      renderCatalog(collection, label);
+      openCatalog(collection, label);
     });
   });
 
-  catalogClose?.addEventListener("click", closeCatalog);
+  catalogClose?.addEventListener("click", () => {
+    setMenuSectionState(null);
+    closeStage();
+  });
+  preorderClose?.addEventListener("click", () => {
+    setMenuSectionState(null);
+    closeStage();
+  });
 
   catalogViewport?.addEventListener(
     "wheel",
@@ -370,27 +519,32 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     }
   });
 
-  const menuSections = Array.from(document.querySelectorAll<HTMLElement>("[data-hero-dropdown]"));
-
   menuSections.forEach((section) => {
     const trigger = section.querySelector(".hero__menu-header");
     const toggle = section.querySelector(".hero__menu-toggle");
     if (!trigger || !toggle) return;
 
     trigger.addEventListener("click", () => {
+      const isPreorderSection = section.dataset.preorder === "true";
       const isOpen = !section.classList.contains("is-open");
-      menuSections.forEach((otherSection) => {
-        const otherTrigger = otherSection.querySelector(".hero__menu-header");
-        const otherToggle = otherSection.querySelector(".hero__menu-toggle");
-        otherSection.classList.toggle("is-open", otherSection === section && isOpen);
-        otherTrigger?.setAttribute("aria-expanded", String(otherSection === section && isOpen));
-        if (otherToggle) {
-          otherToggle.textContent = otherSection === section && isOpen ? "\u2013" : "+";
-        }
-      });
-      trigger.setAttribute("aria-expanded", String(isOpen));
-      toggle.textContent = isOpen ? "\u2013" : "+";
-      closeCatalog();
+
+      if (isPreorderSection && isOpen) {
+        setMenuSectionState(section);
+        openPreorder();
+        return;
+      }
+
+      setMenuSectionState(isOpen ? section : null);
+      closeStage();
     });
   });
+
+  const preorderObserver =
+    preorderShell && "ResizeObserver" in window
+      ? new ResizeObserver(() => resizePreorderFrame())
+      : undefined;
+  if (preorderShell) {
+    preorderObserver?.observe(preorderShell);
+    window.addEventListener("resize", resizePreorderFrame);
+  }
 </script>

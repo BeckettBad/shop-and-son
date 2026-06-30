@@ -119,6 +119,7 @@ export interface HeroMenuSubItem {
 
 export interface HeroMenuSection {
   label: string;
+  preorder?: boolean;
   items: HeroMenuSubItem[];
 }
 
@@ -208,6 +209,11 @@ export const heroMenu: HeroMenuSection[] = [
       { label: "LIV RYAN INTERVIEW" },
       { label: "ETC..." },
     ],
+  },
+  {
+    label: "PRE-ORDER",
+    preorder: true,
+    items: [],
   },
 ];
 
