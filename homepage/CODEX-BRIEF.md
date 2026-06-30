@@ -50,22 +50,35 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## ACTIVE BRIEF
 
-**Status:** ✅ committed `e0c4689`. Reviewed clean: neon-green active states (`--neon-green:#1faa2e`), header-click exits catalogue, `returnStencilFromRight()` does the flicker-free off-screen reposition → smooth right→left glide to center. Build+check green. On dev, not pushed. Live motion needs operator's eyes.
-**Task:** Phase C-rev3 — interaction polish: (1) clicked menu fields turn a darker-hued neon green, (2) clicking a top-level menu header while the catalogue is open EXITS it so the house stencil animates back to center (reverse) — make this return smooth. Files: `HeroVideo.astro` (script) + `global.css`.
+**Status:** ready for Codex
+**Task:** Phase D — category nav. Make every wear subcategory, designer, and objects subcategory a clickable item that opens the EXISTING animated catalogue (its own collection, its own header). Replace the placeholder items in `content.ts` `heroMenu` with the REAL lists (exact handles below). And make clicking a top-level header (CLOTHES/OBJECTS/MUSIC/& FAM) expand its subsections into the left side in an ENLARGED, left-anchored version of the menu font (accordion — one open at a time). Structure stays the 4 tabs; Designers is a sub-group under CLOTHES.
 
-**1 — Click feedback: darker-hued neon green.**
-- When the user clicks a menu field, that field's TEXT turns a darker-hued neon green (vivid but a shade deeper than pure neon — around `#1faa2e`; define a CSS var, e.g. `--neon-green:#1faa2e`, tune to taste). It indicates the active/selected field and persists while selected; reverts when deselected.
-- Apply to: the open section header (`.hero__menu-section.is-open > .hero__menu-header`) and the active SHOP ALL / selected item (`.hero__menu-link.is-active`). Keep it consistent so any clicked field reads green while active.
+**Reuse, don't reinvent:** the catalogue (open / slide / rows / close / house-return / neon-green) already works off `data-shop-all` + `data-collection` + `data-collection-label` on a `<button>`. Generalize so ANY leaf item that has a `collection` renders as that same button → a designer or subcategory click opens its catalogue exactly like SHOP ALL does today. Don't touch the catalogue/card/animation code beyond making more items trigger it.
 
-**2 — Exit reverses the house animation (this is the crucial bit — make it smooth).**
-- TODAY: clicking a SHOP ALL opens the catalogue → house slides off-LEFT (`.hero-video.is-catalog .hero__stencil`). BUG: clicking a top-level header (CLOTHES/OBJECTS/MUSIC/& FAM) while the catalogue is open only toggles the dropdown — it does NOT close the catalogue, so the house never comes back.
-- FIX: when the catalogue is open and the user clicks ANY top-level menu header, also close the catalogue (remove `is-catalog`) — in addition to the normal dropdown toggle — so the house animates back to center. (The existing close "×" should keep working too.)
-- The house must REAPPEAR smoothly and settle CENTER (where it sits on first load). Operator's stated preference: it sweeps in from the RIGHT, moving right→left to center. Implement that cleanly: while the stencil is still off-screen, with its `transition` momentarily disabled, reposition it to off-screen-RIGHT (`translateX(calc(50vw + 100%))`), force a reflow, then re-enable the transition and move it to center (`translateX(0)`) — the off-screen left→right jump is invisible, so the user only sees a smooth right→left glide in. As the house enters, the catalogue panel slides out to the right (its existing reverse). **Priority is SMOOTHNESS** — if a flicker-free right-entry isn't achievable, fall back to the clean reverse (house glides back from the left to center) rather than ship anything janky. Tune easing (ease-in-out) + duration (~.55s) so house-in and catalogue-out feel coordinated.
-- Reset state cleanly (active collection cleared, `is-active`/green cleared, `rowIndex`=0) on exit.
+**1 — content.ts `heroMenu` data (exact handles — copy verbatim).**
+CLOTHES items:
+- SHOP ALL → collection `clothing`, label `CLOTHES — SHOP ALL`
+- group `CATEGORIES` (suffix " |") children (each clickable): JACKETS / OUTERWEAR→`jackets-outerwear`, SHIRTS · BUTTONS / SNAPS→`shirts-with-buttons-snaps`, KNITWEAR→`knitwear`, TEES→`tees`, TROUSERS→`trousers`, SHORTS→`shorts`, SHOES & ACCESSORIES→`accessories`, SUNGLASSES→`sunglasses`, APOTHECARY→`apothecary`, JEWELRY→`jewelry`
+- group `DESIGNERS` children (each clickable), IN THIS ORDER: 11.11→`11-11`, AN IRRATIONAL ELEMENT→`an-irrational-element`, ARCHIE→`archie`, AURORA→`aurora`, BINU BINU→`binu-binu`, CARTER YOUNG→`carter-young`, FAIRLY NORMAL→`fairly-normal`, HENDER SCHEME→`hender-scheme`, HEREU→`hereu`, KUON→`kuon`, MATSUFUJI→`matsufuji`, MONOSTEREO→`monostereo`, NEVER CURSED→`never-cursed`, OSHIN→`oshin`, PARATODO→`paratodo`, REFOMED→`refomed`, RICE NINE TEN→`rice-nine-ten`, SAGE NATION→`sage-nation`, SAMUEL FALZONE→`samuel-falzone`, SATTA→`satta`, SEVEN X SEVEN→`seven-by-seven`, SILPHIUM→`silphium`, SMALL TALK→`small-talk`, SONNY→`sonny`, URU→`uru`, WILLIAM FREDERICK→`william-frederick`, XENIA TELUNTS→`xenia-telunts`, YAHAE→`yahae-1`, YUKETEN→`yuketen`
 
-**Keep unchanged:** everything from `cf32922` (real sized products, big portrait cards, row-pager), Phase A/B, non-destructive default landing.
+OBJECTS items:
+- SHOP ALL → collection `house`, label `OBJECTS — SHOP ALL`
+- subcategories (clickable): LIVING→`house`, KITCHEN→`kitchen`, LIBRARY→`library`, SEATING→`seating`, TABLES→`tables`, LIGHTING→`lighting`, FURNITURE→`furniture`
 
-**Done when:** `npm run build` + `npx astro check` green; clicking a menu field turns its text the neon green; with the catalogue open, clicking a top-level header (or ×) smoothly brings the house back to center while the catalogue slides out; no flicker/jank; default landing unchanged.
+MUSIC and & FAM: leave their items unchanged (not products). Each clickable item's `collectionLabel` is the header shown over its catalogue (e.g. `KNITWEAR`, `HENDER SCHEME`).
+Note: the nested `HeroMenuNestedItem` type needs `collection?` + `collectionLabel?` added (like `HeroMenuSubItem` already has), and the component must render nested children that HAVE a `collection` as the catalogue `<button>` (today only top-level items do).
+
+**2 — Left-nav expand (enlarged, left-anchored, accordion).**
+- Clicking a top-level header opens that section and CLOSES the others (one open at a time). Keep all 4 headers visible so the user can switch.
+- An open section renders its subsections (the CATEGORIES + DESIGNERS sub-groups and their items) in an ENLARGED version of the current menu font — clearly bigger than the Phase-A sizes — text anchored LEFT, filling the left side. Size so the full list fits where reasonable; if long (Designers = 29), let the open panel scroll vertically within the left column rather than overflow the page. Enlarged baseline to tune: headers ~`clamp(20px,2vw,30px)`, items ~`clamp(14px,1.3vw,18px)`.
+- Sub-group headers (CATEGORIES, DESIGNERS) stay smaller labels above their items.
+- Clicking a leaf item with a `collection` opens its catalogue on the right (existing animation + neon-green active). Catalogue/stencil behavior unchanged.
+
+**Keep unchanged:** the whole catalogue system (rows, sized images, close, house return), Phase A/B, neon-green, and the default landing (on load nothing is expanded — same as now). Mobile: keep the horizontal-tab behavior usable; the enlarged-expand is a desktop concern — don't break mobile.
+
+**Style / structure constraints:** keep the editorial skin + the existing menu font family (just larger when expanded), left-anchored. No instructional/internal text. Don't rewrite the catalogue card/animation code.
+
+**Done when:** build + `astro check` green; CLOTHES expands to the real subcategories + 29 designers (OBJECTS to its subcategories) in an enlarged left-anchored list, one section open at a time; clicking any subcategory/designer opens its collection's catalogue with the correct header; default landing unchanged.
 
 ---
 
@@ -95,6 +108,7 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## Log (Codex appends newest at top: date — task — result/commit)
 
+- 2026-06-29 — Phase C-rev3: neon-green click feedback + smooth house return on exit — e0c4689 — build:green check:green — --neon-green active states; header-click exits catalogue; returnStencilFromRight() flicker-free right→left glide (transition-off → off-right → reflow → rAF → center). Reviewed clean. Not pushed.
 - 2026-06-29 — Phase C-rev2: image lag fix + bigger portrait cards — cf32922 — build:green check:green — CDN width-resize (1.7MB→~120-210KB) via getSizedShopifyImageUrl (cdn.shopify.com only) + srcset 700/1100/1600; catalogue left 42vw→36.5vw, padding/gap cut so 3 cards dominate. Menu-left confirmed in docs. Reviewed clean. Not pushed.
 - 2026-06-29 — Phase C-rev fix: resilient build-time fetch — 9a0311f — build:green check:green — getCatalogProducts now try/catches → warn + return [] (deploy can't break on a network blip). Not pushed.
 - 2026-06-29 — Phase C-rev: real products+images, full stencil exit, large 3-up cards, scroll-paged rows — 468f53d — build:green check:green — build-time fetch of shopandson.com products.json (clothing 60 + house 27, real CDN images), translateY row-pager (wheel/touch, CSS-var driven), mobile scroll fallback. Reviewed clean (caught + fixed the throw-on-fetch-fail in 9a0311f). Not pushed.
