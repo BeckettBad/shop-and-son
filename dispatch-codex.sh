@@ -36,7 +36,7 @@ Report exactly these four things, each on its own line: \
 (2) the first line of CODEX-BRIEF.md; \
 (3) the output of \`node -v\`; \
 (4) the output of \`npm -v\`. \
-Then stop."
+Then stop." </dev/null
 fi
 
 # Real dispatch: implement the active brief (or a free-form instruction).
@@ -56,4 +56,4 @@ Verify: run \`npm run build\` AND \`npx astro check\`, and fix until BOTH are gr
 Commit: confirm you are on \`dev\` first, then make ONE focused commit of your change
 (do not create other branches).
 Do NOT push and do NOT merge to main — Claude and the operator own the dev→main deploy PR.
-When done: print the files you changed, the build/check results, and the commit hash."
+When done: print the files you changed, the build/check results, and the commit hash." </dev/null
