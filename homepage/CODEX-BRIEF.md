@@ -50,35 +50,30 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## ACTIVE BRIEF
 
-**Status:** ✅ committed `3089b11`. Reviewed clean: all 10 wear subcats + 29 designers + 7 object subcats wired to the catalogue (47 collections, 678 real products baked at build); accordion (one open, exits catalogue); enlarged left-anchored expand. 7 collections genuinely empty on the store (11.11/kuon/xenia-telunts/yuketen, tables/lighting/furniture). SHIPPED to main.
-**Task:** Phase D — category nav. Make every wear subcategory, designer, and objects subcategory a clickable item that opens the EXISTING animated catalogue (its own collection, its own header). Replace the placeholder items in `content.ts` `heroMenu` with the REAL lists (exact handles below). And make clicking a top-level header (CLOTHES/OBJECTS/MUSIC/& FAM) expand its subsections into the left side in an ENLARGED, left-anchored version of the menu font (accordion — one open at a time). Structure stays the 4 tabs; Designers is a sub-group under CLOTHES.
+**Status:** ready for Codex
+**Task:** Phase E — PRE-ORDER section. Add a 5th hero-menu top-level **PRE-ORDER** (after `& FAM`). Clicking it opens the existing preorders page — embedded as a SCALED desktop view in the right-side panel — using the same "stage" transition as the catalogue (whatever's on the right exits LEFT + fades; the new content enters from the RIGHT). The preorders source has ALREADY been stripped of its top nav (by Claude) and is served at `/preorders/` (via a symlink); you only build the homepage embed.
 
-**Reuse, don't reinvent:** the catalogue (open / slide / rows / close / house-return / neon-green) already works off `data-shop-all` + `data-collection` + `data-collection-label` on a `<button>`. Generalize so ANY leaf item that has a `collection` renders as that same button → a designer or subcategory click opens its catalogue exactly like SHOP ALL does today. Don't touch the catalogue/card/animation code beyond making more items trigger it.
+**Files:** `src/data/content.ts`, `src/components/blocks/HeroVideo.astro`, `src/styles/global.css`. (Do NOT touch `public/preorders/` — already done.)
 
-**1 — content.ts `heroMenu` data (exact handles — copy verbatim).**
-CLOTHES items:
-- SHOP ALL → collection `clothing`, label `CLOTHES — SHOP ALL`
-- group `CATEGORIES` (suffix " |") children (each clickable): JACKETS / OUTERWEAR→`jackets-outerwear`, SHIRTS · BUTTONS / SNAPS→`shirts-with-buttons-snaps`, KNITWEAR→`knitwear`, TEES→`tees`, TROUSERS→`trousers`, SHORTS→`shorts`, SHOES & ACCESSORIES→`accessories`, SUNGLASSES→`sunglasses`, APOTHECARY→`apothecary`, JEWELRY→`jewelry`
-- group `DESIGNERS` children (each clickable), IN THIS ORDER: 11.11→`11-11`, AN IRRATIONAL ELEMENT→`an-irrational-element`, ARCHIE→`archie`, AURORA→`aurora`, BINU BINU→`binu-binu`, CARTER YOUNG→`carter-young`, FAIRLY NORMAL→`fairly-normal`, HENDER SCHEME→`hender-scheme`, HEREU→`hereu`, KUON→`kuon`, MATSUFUJI→`matsufuji`, MONOSTEREO→`monostereo`, NEVER CURSED→`never-cursed`, OSHIN→`oshin`, PARATODO→`paratodo`, REFOMED→`refomed`, RICE NINE TEN→`rice-nine-ten`, SAGE NATION→`sage-nation`, SAMUEL FALZONE→`samuel-falzone`, SATTA→`satta`, SEVEN X SEVEN→`seven-by-seven`, SILPHIUM→`silphium`, SMALL TALK→`small-talk`, SONNY→`sonny`, URU→`uru`, WILLIAM FREDERICK→`william-frederick`, XENIA TELUNTS→`xenia-telunts`, YAHAE→`yahae-1`, YUKETEN→`yuketen`
+**1 — content.ts:** add `preorder?: boolean` to the `HeroMenuSection` type, and a 5th `heroMenu` section AFTER `& FAM`: `{ label: "PRE-ORDER", preorder: true, items: [] }`. No sub-items.
 
-OBJECTS items:
-- SHOP ALL → collection `house`, label `OBJECTS — SHOP ALL`
-- subcategories (clickable): LIVING→`house`, KITCHEN→`kitchen`, LIBRARY→`library`, SEATING→`seating`, TABLES→`tables`, LIGHTING→`lighting`, FURNITURE→`furniture`
+**2 — Markup + open behavior:**
+- Render the PRE-ORDER header like the other top-level headers (same style + `+`/`–` toggle for parity) but mark it `data-preorder`; it renders NO panel/sub-list.
+- Add a right-side panel `<aside class="hero__preorder" aria-hidden="true">` holding `<iframe class="hero__preorder-frame" src={withBase("/preorders/")} title="Pre-order" loading="lazy"></iframe>`.
+- Clicking PRE-ORDER opens the preorder stage (does NOT expand a list); it closes any open menu section and replaces any open catalogue. Reuse the neon-green active state on the header while preorder is the active stage. The existing close (×) / clicking another header returns to landing (house returns) — same as catalogue.
 
-MUSIC and & FAM: leave their items unchanged (not products). Each clickable item's `collectionLabel` is the header shown over its catalogue (e.g. `KNITWEAR`, `HENDER SCHEME`).
-Note: the nested `HeroMenuNestedItem` type needs `collection?` + `collectionLabel?` added (like `HeroMenuSubItem` already has), and the component must render nested children that HAVE a `collection` as the catalogue `<button>` (today only top-level items do).
+**3 — Scaled desktop embed (keep it horizontal):** show the FULL desktop preorders rendering scaled DOWN to fit the panel (NOT reflowed to narrow). Approach: iframe at a fixed desktop base `width:1280px`, `transform:scale(<panelWidth/1280>); transform-origin:top left;`, iframe height sized so the scaled result fills the panel height; wrap in `.hero__preorder` with `overflow:hidden` + a small margin (slight background gutter), occupying the same right-of-menu area as `.hero__catalog` (left ~36.5vw). Scroll + video inside the iframe must still work. Mobile (≤760px): allow it to reflow/scroll normally — don't force the desktop scale if it breaks.
 
-**2 — Left-nav expand (enlarged, left-anchored, accordion).**
-- Clicking a top-level header opens that section and CLOSES the others (one open at a time). Keep all 4 headers visible so the user can switch.
-- An open section renders its subsections (the CATEGORIES + DESIGNERS sub-groups and their items) in an ENLARGED version of the current menu font — clearly bigger than the Phase-A sizes — text anchored LEFT, filling the left side. Size so the full list fits where reasonable; if long (Designers = 29), let the open panel scroll vertically within the left column rather than overflow the page. Enlarged baseline to tune: headers ~`clamp(20px,2vw,30px)`, items ~`clamp(14px,1.3vw,18px)`.
-- Sub-group headers (CATEGORIES, DESIGNERS) stay smaller labels above their items.
-- Clicking a leaf item with a `collection` opens its catalogue on the right (existing animation + neon-green active). Catalogue/stencil behavior unchanged.
+**4 — The "stage" transition (operator's key ask — match the homepage feel).** The right side is a single "stage" holding ONE of: centered stencil (landing), a catalogue, or the preorder embed. When the active content CHANGES, the OUTGOING slides out to the LEFT + fades and the INCOMING slides in from the RIGHT:
+- landing → preorder: stencil exits left (reuse the existing `.is-catalog` stencil transform), preorder enters from right.
+- catalogue → preorder (e.g. on SHIRTS, click PRE-ORDER): the catalogue panel exits LEFT + fades (NEW — today it only exits right on close), preorder enters from right.
+- preorder → catalogue, and catalogue → catalogue: same rule (outgoing exits left, incoming enters right).
+- ANY → landing (× / collapse the active header): keep EXISTING behavior — active panel exits and the house returns from the right (`returnStencilFromRight`).
+Implement as a small shared helper so catalogue + preorder share the exit-left / enter-right treatment. Smooth (ease-in-out, ~.55s), no flicker; prefer a simpler version over anything janky.
 
-**Keep unchanged:** the whole catalogue system (rows, sized images, close, house return), Phase A/B, neon-green, and the default landing (on load nothing is expanded — same as now). Mobile: keep the horizontal-tab behavior usable; the enlarged-expand is a desktop concern — don't break mobile.
+**Keep unchanged:** catalogue data/rows/images, Phase A–D, neon-green, house return, default landing (on load: stencil centered, nothing open).
 
-**Style / structure constraints:** keep the editorial skin + the existing menu font family (just larger when expanded), left-anchored. No instructional/internal text. Don't rewrite the catalogue card/animation code.
-
-**Done when:** build + `astro check` green; CLOTHES expands to the real subcategories + 29 designers (OBJECTS to its subcategories) in an enlarged left-anchored list, one section open at a time; clicking any subcategory/designer opens its collection's catalogue with the correct header; default landing unchanged.
+**Done when:** build + `astro check` green; PRE-ORDER is the 5th section; clicking it slides the current right-side content off-left and slides the scaled, menu-less preorders embed in from the right; the embed is interactive (scroll/video work); ×/switching follows the stage rules; default landing unchanged.
 
 ---
 
