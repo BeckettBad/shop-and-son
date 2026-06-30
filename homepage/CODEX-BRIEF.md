@@ -50,35 +50,25 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## ACTIVE BRIEF
 
-**Status:** ✅ committed `3089b11`. Reviewed clean: all 10 wear subcats + 29 designers + 7 object subcats wired to the catalogue (47 collections, 678 real products baked at build); accordion (one open, exits catalogue); enlarged left-anchored expand. 7 collections genuinely empty on the store (11.11/kuon/xenia-telunts/yuketen, tables/lighting/furniture). SHIPPED to main.
-**Task:** Phase D — category nav. Make every wear subcategory, designer, and objects subcategory a clickable item that opens the EXISTING animated catalogue (its own collection, its own header). Replace the placeholder items in `content.ts` `heroMenu` with the REAL lists (exact handles below). And make clicking a top-level header (CLOTHES/OBJECTS/MUSIC/& FAM) expand its subsections into the left side in an ENLARGED, left-anchored version of the menu font (accordion — one open at a time). Structure stays the 4 tabs; Designers is a sub-group under CLOTHES.
+**Status:** ready for Codex
+**Task:** Phase F — three fixes after Phase E: (1) FIX the enlarged-expand crowding regression (open subfolder list overlaps the lower headers now that there are 5 sections), (2) remove "ETC..." from & FAM, (3) widen the preorder embed so it fills more of the page (seamless "site within a site").
 
-**Reuse, don't reinvent:** the catalogue (open / slide / rows / close / house-return / neon-green) already works off `data-shop-all` + `data-collection` + `data-collection-label` on a `<button>`. Generalize so ANY leaf item that has a `collection` renders as that same button → a designer or subcategory click opens its catalogue exactly like SHOP ALL does today. Don't touch the catalogue/card/animation code beyond making more items trigger it.
+**Files:** `src/styles/global.css` (expand fix + preorder width), `src/data/content.ts` (& FAM), `src/components/blocks/HeroVideo.astro` (only if needed for the preorder scale var).
 
-**1 — content.ts `heroMenu` data (exact handles — copy verbatim).**
-CLOTHES items:
-- SHOP ALL → collection `clothing`, label `CLOTHES — SHOP ALL`
-- group `CATEGORIES` (suffix " |") children (each clickable): JACKETS / OUTERWEAR→`jackets-outerwear`, SHIRTS · BUTTONS / SNAPS→`shirts-with-buttons-snaps`, KNITWEAR→`knitwear`, TEES→`tees`, TROUSERS→`trousers`, SHORTS→`shorts`, SHOES & ACCESSORIES→`accessories`, SUNGLASSES→`sunglasses`, APOTHECARY→`apothecary`, JEWELRY→`jewelry`
-- group `DESIGNERS` children (each clickable), IN THIS ORDER: 11.11→`11-11`, AN IRRATIONAL ELEMENT→`an-irrational-element`, ARCHIE→`archie`, AURORA→`aurora`, BINU BINU→`binu-binu`, CARTER YOUNG→`carter-young`, FAIRLY NORMAL→`fairly-normal`, HENDER SCHEME→`hender-scheme`, HEREU→`hereu`, KUON→`kuon`, MATSUFUJI→`matsufuji`, MONOSTEREO→`monostereo`, NEVER CURSED→`never-cursed`, OSHIN→`oshin`, PARATODO→`paratodo`, REFOMED→`refomed`, RICE NINE TEN→`rice-nine-ten`, SAGE NATION→`sage-nation`, SAMUEL FALZONE→`samuel-falzone`, SATTA→`satta`, SEVEN X SEVEN→`seven-by-seven`, SILPHIUM→`silphium`, SMALL TALK→`small-talk`, SONNY→`sonny`, URU→`uru`, WILLIAM FREDERICK→`william-frederick`, XENIA TELUNTS→`xenia-telunts`, YAHAE→`yahae-1`, YUKETEN→`yuketen`
+**1 — FIX the enlarged-expand crowding (regression).**
+- Symptom: with a section open (e.g. OBJECTS), its enlarged subfolder list (SHOP ALL, LIVING, … FURNITURE) sits too close to / overlaps the lower top-level headers (MUSIC, & FAM, PRE-ORDER). Worked with 4 sections; adding the 5th (PRE-ORDER) broke it.
+- Cause: in `@media(min-width:761px)` the open `.hero__menu-panel` is `position:absolute; top:clamp(112px,11.5vw,162px); bottom:0` — a FIXED top that assumed 4 headers; with 5 it starts inside the header stack.
+- Fix (robust to header count, not a hard-coded bump): drop the absolute positioning and let the open panel sit in NORMAL FLOW directly under its own header (accordion — pushes the lower headers down), still enlarged + left-anchored, with comfortable spacing (~0.5–0.8em above the list, ~0.35–0.5em between items). Remove the `overflow:hidden` the absolute approach put on `.hero__overlay` and let the overlay scroll (`overflow-y:auto`) when a long list (29 designers) exceeds the viewport. Net: every section's subfolder text sits lower with breathing room and never crowds PRE-ORDER. Keep the enlarged sizes (open header ~clamp(20px,2vw,30px), items ~clamp(14px,1.3vw,18px)).
 
-OBJECTS items:
-- SHOP ALL → collection `house`, label `OBJECTS — SHOP ALL`
-- subcategories (clickable): LIVING→`house`, KITCHEN→`kitchen`, LIBRARY→`library`, SEATING→`seating`, TABLES→`tables`, LIGHTING→`lighting`, FURNITURE→`furniture`
+**2 — content.ts:** remove the `"ETC..."` item from the `& FAM` section's items.
 
-MUSIC and & FAM: leave their items unchanged (not products). Each clickable item's `collectionLabel` is the header shown over its catalogue (e.g. `KNITWEAR`, `HENDER SCHEME`).
-Note: the nested `HeroMenuNestedItem` type needs `collection?` + `collectionLabel?` added (like `HeroMenuSubItem` already has), and the component must render nested children that HAVE a `collection` as the catalogue `<button>` (today only top-level items do).
+**3 — Widen the preorder embed ("site within a site").**
+- The preorder panel should fill MORE of the page to the RIGHT than the catalogue does — start it a bit left of the catalogue (`.hero__preorder` left ~30–32vw vs the catalogue's ~36.5vw) and trim outer margins so it spans most of the width to near the right edge, with only a slight background gutter. It should read as a seamless embedded site, NOT an obvious framed box — avoid heavy borders/frames.
+- The embed scale auto-derives from panel width ÷ `preorderDesktopWidth`, so a wider panel already enlarges it; if it still reads small, lower `preorderDesktopWidth` toward ~1100–1200. Keep it interactive (scroll/video).
 
-**2 — Left-nav expand (enlarged, left-anchored, accordion).**
-- Clicking a top-level header opens that section and CLOSES the others (one open at a time). Keep all 4 headers visible so the user can switch.
-- An open section renders its subsections (the CATEGORIES + DESIGNERS sub-groups and their items) in an ENLARGED version of the current menu font — clearly bigger than the Phase-A sizes — text anchored LEFT, filling the left side. Size so the full list fits where reasonable; if long (Designers = 29), let the open panel scroll vertically within the left column rather than overflow the page. Enlarged baseline to tune: headers ~`clamp(20px,2vw,30px)`, items ~`clamp(14px,1.3vw,18px)`.
-- Sub-group headers (CATEGORIES, DESIGNERS) stay smaller labels above their items.
-- Clicking a leaf item with a `collection` opens its catalogue on the right (existing animation + neon-green active). Catalogue/stencil behavior unchanged.
+**Keep unchanged:** the catalogue, the stage transition (exit-left/enter-right), the stencil/house animation, all Phase A–E behavior, default landing.
 
-**Keep unchanged:** the whole catalogue system (rows, sized images, close, house return), Phase A/B, neon-green, and the default landing (on load nothing is expanded — same as now). Mobile: keep the horizontal-tab behavior usable; the enlarged-expand is a desktop concern — don't break mobile.
-
-**Style / structure constraints:** keep the editorial skin + the existing menu font family (just larger when expanded), left-anchored. No instructional/internal text. Don't rewrite the catalogue card/animation code.
-
-**Done when:** build + `astro check` green; CLOTHES expands to the real subcategories + 29 designers (OBJECTS to its subcategories) in an enlarged left-anchored list, one section open at a time; clicking any subcategory/designer opens its collection's catalogue with the correct header; default landing unchanged.
+**Done when:** build + `astro check` green; opening any section shows its subfolder list clearly BELOW all 5 headers with breathing room (no crowding of PRE-ORDER), long lists scroll; `& FAM` no longer shows ETC...; the preorder embed fills noticeably more of the page to the right than the catalogue and feels like a seamless site-within-a-site.
 
 ---
 

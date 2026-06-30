@@ -32,8 +32,9 @@ jobs:
           cd homepage
           npm ci
           npm run build
-      - name: "Bundle the pre-order site at /preorders/ (single source: public/preorders)"
-        run: cp -R public/preorders homepage/dist/preorders
+      # The pre-order site is served via homepage/public/preorders (a symlink to the
+      # single source at repo-root public/preorders), so `astro build` already emits
+      # it to dist/preorders — no separate copy step needed.
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
