@@ -795,3 +795,34 @@ body{
 
 /* preorder embed sits on the hero video (beige texture) — no white fill */
 .hero__preorder,.hero__preorder-frame{background:transparent}
+
+/* ── default-state store info, bottom-left (aligned to the nav column); hidden once any section/stage opens ── */
+.hero-info{
+  position:absolute; left:5.7vw; bottom:6vh; z-index:3; max-width:30ch;
+  font-family:var(--mono); font-size:11px; line-height:1.5; font-weight:400;
+  letter-spacing:.02em; color:#000; text-transform:lowercase;
+  pointer-events:none;
+  transform:translateX(0); visibility:visible;       /* landing: in place */
+  transition:transform .55s ease-in-out, visibility 0s;
+}
+.hero-info p{margin:0 0 1em}
+.hero-info p:last-child{margin-bottom:0}
+.hero-info a{color:inherit; text-decoration:underline; text-underline-offset:2px; pointer-events:auto}
+/* hide whenever it's NOT the default landing (a section is open or a stage is active) */
+.hero-video.is-catalog .hero-info,
+.hero-video.is-preorder .hero-info,
+.hero-video.is-music .hero-info,
+.hero-video:has(.hero__menu-section.is-open) .hero-info{
+  transform:translateX(calc(-100% - 6vw)); visibility:hidden;   /* slide off-screen left */
+  transition:transform .55s ease-in-out, visibility 0s linear .55s;
+}
+@media(max-width:760px){
+  .hero-info{left:4vw; bottom:4vh; font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+  .hero-info,
+  .hero-video.is-catalog .hero-info,
+  .hero-video.is-preorder .hero-info,
+  .hero-video.is-music .hero-info,
+  .hero-video:has(.hero__menu-section.is-open) .hero-info{transition:none}
+}
