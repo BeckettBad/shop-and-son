@@ -50,7 +50,7 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## ACTIVE BRIEF
 
-**Status:** ready for Codex
+**Status:** ✅ committed `3089b11`. Reviewed clean: all 10 wear subcats + 29 designers + 7 object subcats wired to the catalogue (47 collections, 678 real products baked at build); accordion (one open, exits catalogue); enlarged left-anchored expand. 7 collections genuinely empty on the store (11.11/kuon/xenia-telunts/yuketen, tables/lighting/furniture). SHIPPED to main.
 **Task:** Phase D — category nav. Make every wear subcategory, designer, and objects subcategory a clickable item that opens the EXISTING animated catalogue (its own collection, its own header). Replace the placeholder items in `content.ts` `heroMenu` with the REAL lists (exact handles below). And make clicking a top-level header (CLOTHES/OBJECTS/MUSIC/& FAM) expand its subsections into the left side in an ENLARGED, left-anchored version of the menu font (accordion — one open at a time). Structure stays the 4 tabs; Designers is a sub-group under CLOTHES.
 
 **Reuse, don't reinvent:** the catalogue (open / slide / rows / close / house-return / neon-green) already works off `data-shop-all` + `data-collection` + `data-collection-label` on a `<button>`. Generalize so ANY leaf item that has a `collection` renders as that same button → a designer or subcategory click opens its catalogue exactly like SHOP ALL does today. Don't touch the catalogue/card/animation code beyond making more items trigger it.
