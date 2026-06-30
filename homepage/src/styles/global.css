@@ -381,6 +381,39 @@ body{
 .hero__menu-link--dash::before{content:"- "}
 .hero__menu-link--bullet::before{content:"o "}
 .hero__menu-nested{padding-left:1.4em; margin-top:0.15em}
+@media(min-width:761px){
+  .hero__overlay{overflow:hidden}
+  .hero__menu{position:relative; height:100%}
+  .hero__menu-section{margin-bottom:.72em}
+  .hero__menu-section.is-open > .hero__menu-header{
+    font-size:clamp(20px,2vw,30px);
+  }
+  .hero__menu-section.is-open .hero__menu-panel{
+    position:absolute; left:0; right:0; top:clamp(112px,11.5vw,162px); bottom:0;
+    display:block; overflow-y:auto; padding:0;
+    -webkit-overflow-scrolling:touch;
+  }
+  .hero__menu-section.is-open .hero__menu-panel > .hero__menu-item{
+    margin-bottom:.2em;
+  }
+  .hero__menu-section.is-open .hero__menu-panel > .hero__menu-item > .hero__menu-link,
+  .hero__menu-section.is-open .hero__menu-nested .hero__menu-link{
+    font-size:clamp(14px,1.3vw,18px); line-height:1.22;
+  }
+  .hero__menu-section.is-open .hero__menu-item--group{
+    margin-top:.7em;
+  }
+  .hero__menu-section.is-open .hero__menu-item--group:first-child{
+    margin-top:0;
+  }
+  .hero__menu-section.is-open .hero__menu-item--group > .hero__menu-link{
+    font-size:clamp(10px,.95vw,13px); line-height:1.2;
+    margin-bottom:.22em;
+  }
+  .hero__menu-section.is-open .hero__menu-nested{
+    padding-left:0; margin-top:0;
+  }
+}
 @media(max-width:760px){
   .hero-video__media--desktop{display:none}
   .hero-video__media--mobile{

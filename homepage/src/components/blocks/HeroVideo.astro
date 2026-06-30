@@ -3,7 +3,16 @@ import { heroMenu } from "../../data/content.ts";
 import { getCatalogProducts, type CatalogProduct } from "../../lib/catalog";
 import { withBase } from "../../lib/url.ts";
 
-const catalogCollections = ["clothing", "house"] as const;
+const catalogCollections = Array.from(
+  new Set(
+    heroMenu.flatMap((section) =>
+      section.items.flatMap((item) => [
+        ...(item.collection ? [item.collection] : []),
+        ...(item.children?.flatMap((child) => (child.collection ? [child.collection] : [])) ?? []),
+      ]),
+    ),
+  ),
+);
 const catalogEntries = await Promise.all(
   catalogCollections.map(async (collection) => [collection, await getCatalogProducts(collection)] as const),
 );
@@ -48,7 +57,7 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
             <ul class="hero__menu-panel">
               {
                 section.items.map((item) => (
-                  <li class="hero__menu-item">
+                  <li class={`hero__menu-item${item.children && item.children.length > 0 ? " hero__menu-item--group" : ""}`}>
                     {item.collection ? (
                       <button
                         type="button"
@@ -74,7 +83,18 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
                         {
                           item.children.map((child) => (
                             <li>
-                              {child.href ? (
+                              {child.collection ? (
+                                <button
+                                  type="button"
+                                  class="hero__menu-link hero__menu-link--bullet"
+                                  data-shop-all
+                                  data-collection={child.collection}
+                                  data-collection-label={child.collectionLabel ?? child.label}
+                                  aria-pressed="false"
+                                >
+                                  {child.label}
+                                </button>
+                              ) : child.href ? (
                                 <a class="hero__menu-link hero__menu-link--bullet" href={child.href}>
                                   {child.label}
                                 </a>
@@ -127,7 +147,7 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
   const catalogTrack = hero?.querySelector<HTMLElement>("[data-catalog-track]");
   const catalogClose = hero?.querySelector<HTMLButtonElement>("[data-catalog-close]");
   const catalogDataNode = hero?.querySelector<HTMLScriptElement>("#catalog-data");
-  const shopAllButtons = hero
+  const collectionButtons = hero
     ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-shop-all]"))
     : [];
   const desktopPagerQuery = window.matchMedia("(min-width: 761px)");
@@ -175,7 +195,7 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
   };
 
   const setActiveButton = (collection: string | null) => {
-    shopAllButtons.forEach((button) => {
+    collectionButtons.forEach((button) => {
       const isActive = Boolean(collection && button.dataset.collection === collection);
       button.classList.toggle("is-active", isActive);
       button.setAttribute("aria-pressed", String(isActive));
@@ -303,7 +323,7 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     setActiveButton(null);
   };
 
-  shopAllButtons.forEach((button) => {
+  collectionButtons.forEach((button) => {
     button.addEventListener("click", () => {
       const collection = button.dataset.collection;
       const label = button.dataset.collectionLabel ?? button.textContent?.trim() ?? "";
@@ -350,13 +370,24 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     }
   });
 
-  document.querySelectorAll("[data-hero-dropdown]").forEach((section) => {
+  const menuSections = Array.from(document.querySelectorAll<HTMLElement>("[data-hero-dropdown]"));
+
+  menuSections.forEach((section) => {
     const trigger = section.querySelector(".hero__menu-header");
     const toggle = section.querySelector(".hero__menu-toggle");
     if (!trigger || !toggle) return;
 
     trigger.addEventListener("click", () => {
-      const isOpen = section.classList.toggle("is-open");
+      const isOpen = !section.classList.contains("is-open");
+      menuSections.forEach((otherSection) => {
+        const otherTrigger = otherSection.querySelector(".hero__menu-header");
+        const otherToggle = otherSection.querySelector(".hero__menu-toggle");
+        otherSection.classList.toggle("is-open", otherSection === section && isOpen);
+        otherTrigger?.setAttribute("aria-expanded", String(otherSection === section && isOpen));
+        if (otherToggle) {
+          otherToggle.textContent = otherSection === section && isOpen ? "\u2013" : "+";
+        }
+      });
       trigger.setAttribute("aria-expanded", String(isOpen));
       toggle.textContent = isOpen ? "\u2013" : "+";
       closeCatalog();

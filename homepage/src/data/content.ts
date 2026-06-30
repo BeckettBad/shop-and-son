@@ -103,6 +103,8 @@ export interface DetailRow {
 export interface HeroMenuNestedItem {
   label: string;
   href?: string;
+  collection?: string;
+  collectionLabel?: string;
 }
 
 export interface HeroMenuSubItem {
@@ -124,22 +126,55 @@ export const heroMenu: HeroMenuSection[] = [
   {
     label: "CLOTHES",
     items: [
-      { label: "SHOP ALL", collection: "clothing", collectionLabel: "CLOTHES" },
+      { label: "SHOP ALL", collection: "clothing", collectionLabel: "CLOTHES — SHOP ALL" },
       {
         label: "CATEGORIES",
         suffix: " |",
         children: [
-          { label: "SHIRTS" },
-          { label: "OUTERWEAR / JACKETS" },
-          { label: "ETC...." },
+          { label: "JACKETS / OUTERWEAR", collection: "jackets-outerwear", collectionLabel: "JACKETS / OUTERWEAR" },
+          { label: "SHIRTS · BUTTONS / SNAPS", collection: "shirts-with-buttons-snaps", collectionLabel: "SHIRTS · BUTTONS / SNAPS" },
+          { label: "KNITWEAR", collection: "knitwear", collectionLabel: "KNITWEAR" },
+          { label: "TEES", collection: "tees", collectionLabel: "TEES" },
+          { label: "TROUSERS", collection: "trousers", collectionLabel: "TROUSERS" },
+          { label: "SHORTS", collection: "shorts", collectionLabel: "SHORTS" },
+          { label: "SHOES & ACCESSORIES", collection: "accessories", collectionLabel: "SHOES & ACCESSORIES" },
+          { label: "SUNGLASSES", collection: "sunglasses", collectionLabel: "SUNGLASSES" },
+          { label: "APOTHECARY", collection: "apothecary", collectionLabel: "APOTHECARY" },
+          { label: "JEWELRY", collection: "jewelry", collectionLabel: "JEWELRY" },
         ],
       },
       {
         label: "DESIGNERS",
         children: [
-          { label: "DESIGNER 1" },
-          { label: "DESIGNER 2" },
-          { label: "ETC." },
+          { label: "11.11", collection: "11-11", collectionLabel: "11.11" },
+          { label: "AN IRRATIONAL ELEMENT", collection: "an-irrational-element", collectionLabel: "AN IRRATIONAL ELEMENT" },
+          { label: "ARCHIE", collection: "archie", collectionLabel: "ARCHIE" },
+          { label: "AURORA", collection: "aurora", collectionLabel: "AURORA" },
+          { label: "BINU BINU", collection: "binu-binu", collectionLabel: "BINU BINU" },
+          { label: "CARTER YOUNG", collection: "carter-young", collectionLabel: "CARTER YOUNG" },
+          { label: "FAIRLY NORMAL", collection: "fairly-normal", collectionLabel: "FAIRLY NORMAL" },
+          { label: "HENDER SCHEME", collection: "hender-scheme", collectionLabel: "HENDER SCHEME" },
+          { label: "HEREU", collection: "hereu", collectionLabel: "HEREU" },
+          { label: "KUON", collection: "kuon", collectionLabel: "KUON" },
+          { label: "MATSUFUJI", collection: "matsufuji", collectionLabel: "MATSUFUJI" },
+          { label: "MONOSTEREO", collection: "monostereo", collectionLabel: "MONOSTEREO" },
+          { label: "NEVER CURSED", collection: "never-cursed", collectionLabel: "NEVER CURSED" },
+          { label: "OSHIN", collection: "oshin", collectionLabel: "OSHIN" },
+          { label: "PARATODO", collection: "paratodo", collectionLabel: "PARATODO" },
+          { label: "REFOMED", collection: "refomed", collectionLabel: "REFOMED" },
+          { label: "RICE NINE TEN", collection: "rice-nine-ten", collectionLabel: "RICE NINE TEN" },
+          { label: "SAGE NATION", collection: "sage-nation", collectionLabel: "SAGE NATION" },
+          { label: "SAMUEL FALZONE", collection: "samuel-falzone", collectionLabel: "SAMUEL FALZONE" },
+          { label: "SATTA", collection: "satta", collectionLabel: "SATTA" },
+          { label: "SEVEN X SEVEN", collection: "seven-by-seven", collectionLabel: "SEVEN X SEVEN" },
+          { label: "SILPHIUM", collection: "silphium", collectionLabel: "SILPHIUM" },
+          { label: "SMALL TALK", collection: "small-talk", collectionLabel: "SMALL TALK" },
+          { label: "SONNY", collection: "sonny", collectionLabel: "SONNY" },
+          { label: "URU", collection: "uru", collectionLabel: "URU" },
+          { label: "WILLIAM FREDERICK", collection: "william-frederick", collectionLabel: "WILLIAM FREDERICK" },
+          { label: "XENIA TELUNTS", collection: "xenia-telunts", collectionLabel: "XENIA TELUNTS" },
+          { label: "YAHAE", collection: "yahae-1", collectionLabel: "YAHAE" },
+          { label: "YUKETEN", collection: "yuketen", collectionLabel: "YUKETEN" },
         ],
       },
     ],
@@ -147,10 +182,14 @@ export const heroMenu: HeroMenuSection[] = [
   {
     label: "OBJECTS",
     items: [
-      { label: "SHOP ALL", collection: "house", collectionLabel: "OBJECTS" },
-      { label: "BINU BINU" },
-      { label: "DANNY D'S MUD SHOP" },
-      { label: "SHINO TAKEDA" },
+      { label: "SHOP ALL", collection: "house", collectionLabel: "OBJECTS — SHOP ALL" },
+      { label: "LIVING", collection: "house", collectionLabel: "LIVING" },
+      { label: "KITCHEN", collection: "kitchen", collectionLabel: "KITCHEN" },
+      { label: "LIBRARY", collection: "library", collectionLabel: "LIBRARY" },
+      { label: "SEATING", collection: "seating", collectionLabel: "SEATING" },
+      { label: "TABLES", collection: "tables", collectionLabel: "TABLES" },
+      { label: "LIGHTING", collection: "lighting", collectionLabel: "LIGHTING" },
+      { label: "FURNITURE", collection: "furniture", collectionLabel: "FURNITURE" },
     ],
   },
   {
