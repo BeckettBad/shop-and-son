@@ -1,6 +1,15 @@
 ---
 import { heroMenu } from "../../data/content.ts";
+import { getCatalogProducts, type CatalogProduct } from "../../lib/catalog";
 import { withBase } from "../../lib/url.ts";
+
+const catalogCollections = ["clothing", "house"] as const;
+const catalogEntries = await Promise.all(
+  catalogCollections.map(async (collection) => [collection, await getCatalogProducts(collection)] as const),
+);
+const catalogData: Record<string, CatalogProduct[]> = Object.fromEntries(catalogEntries);
+const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
+
 // Block 1 — desktop: vertical left menu; mobile: horizontal tabs over fullscreen video.
 ---
 <section class="block hero-video" id="hero">
@@ -92,22 +101,75 @@ import { withBase } from "../../lib/url.ts";
       <h2 class="hero__catalog-title" data-catalog-title></h2>
       <button type="button" class="hero__catalog-close" data-catalog-close aria-label="Close catalogue">&times;</button>
     </div>
-    <div class="hero__catalog-grid" data-catalog-grid></div>
+    <div class="hero__catalog-viewport" data-catalog-viewport>
+      <div class="hero__catalog-track" data-catalog-track></div>
+    </div>
   </aside>
+
+  <script is:inline type="application/json" id="catalog-data" set:html={catalogDataJson}></script>
 </section>
 
 <script>
-  import { getCatalogProducts } from "../../lib/catalog";
+  interface CatalogProduct {
+    title: string;
+    vendor: string;
+    price: string;
+    url: string;
+    image?: string;
+  }
 
   const hero = document.querySelector<HTMLElement>(".hero-video");
   const catalog = hero?.querySelector<HTMLElement>(".hero__catalog");
   const catalogTitle = hero?.querySelector<HTMLElement>("[data-catalog-title]");
-  const catalogGrid = hero?.querySelector<HTMLElement>("[data-catalog-grid]");
+  const catalogViewport = hero?.querySelector<HTMLElement>("[data-catalog-viewport]");
+  const catalogTrack = hero?.querySelector<HTMLElement>("[data-catalog-track]");
   const catalogClose = hero?.querySelector<HTMLButtonElement>("[data-catalog-close]");
+  const catalogDataNode = hero?.querySelector<HTMLScriptElement>("#catalog-data");
   const shopAllButtons = hero
     ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-shop-all]"))
     : [];
-  let renderToken = 0;
+  const desktopPagerQuery = window.matchMedia("(min-width: 761px)");
+  let rowIndex = 0;
+  let lastRowIndex = 0;
+  let isPaging = false;
+  let pagingFallback: ReturnType<typeof window.setTimeout> | undefined;
+  let touchStartY: number | null = null;
+
+  const parseCatalogData = (): Record<string, CatalogProduct[]> => {
+    try {
+      return JSON.parse(catalogDataNode?.textContent ?? "{}") as Record<string, CatalogProduct[]>;
+    } catch {
+      return {};
+    }
+  };
+
+  const catalogData = parseCatalogData();
+
+  const setPagingReady = () => {
+    isPaging = false;
+    if (pagingFallback) {
+      window.clearTimeout(pagingFallback);
+      pagingFallback = undefined;
+    }
+  };
+
+  const setRowIndex = (nextIndex: number) => {
+    if (!catalogTrack) return;
+
+    rowIndex = Math.max(0, Math.min(nextIndex, lastRowIndex));
+    catalogTrack.style.setProperty("--catalog-row-index", String(rowIndex));
+  };
+
+  const pageRows = (direction: number) => {
+    if (!desktopPagerQuery.matches || !catalogTrack || isPaging) return;
+
+    const nextIndex = Math.max(0, Math.min(rowIndex + direction, lastRowIndex));
+    if (nextIndex === rowIndex) return;
+
+    isPaging = true;
+    setRowIndex(nextIndex);
+    pagingFallback = window.setTimeout(setPagingReady, 560);
+  };
 
   const setActiveButton = (collection: string | null) => {
     shopAllButtons.forEach((button) => {
@@ -117,62 +179,73 @@ import { withBase } from "../../lib/url.ts";
     });
   };
 
-  const renderCatalog = async (collection: string, label: string) => {
-    if (!hero || !catalog || !catalogTitle || !catalogGrid) return;
+  const createProductCard = (product: CatalogProduct) => {
+    const card = document.createElement("a");
+    card.className = "product-card";
+    card.href = product.url;
 
-    const token = renderToken + 1;
-    renderToken = token;
+    const media = document.createElement("span");
+    media.className = "product-card__media";
+    if (product.image) {
+      const image = document.createElement("img");
+      image.src = product.image;
+      image.alt = product.title;
+      image.loading = "lazy";
+      image.decoding = "async";
+      media.append(image);
+    }
+
+    const body = document.createElement("span");
+    body.className = "product-card__body";
+
+    const title = document.createElement("span");
+    title.className = "product-card__title";
+    title.textContent = product.title;
+
+    const vendor = document.createElement("span");
+    vendor.className = "product-card__vendor";
+    vendor.textContent = product.vendor;
+
+    const price = document.createElement("span");
+    price.className = "product-card__price";
+    price.textContent = product.price;
+
+    body.append(title, vendor, price);
+    card.append(media, body);
+    return card;
+  };
+
+  const renderCatalog = (collection: string, label: string) => {
+    if (!hero || !catalog || !catalogTitle || !catalogTrack) return;
+
     hero.classList.add("is-catalog");
     hero.dataset.activeCollection = collection;
     catalog.setAttribute("aria-hidden", "false");
     catalogTitle.textContent = label;
-    catalogGrid.replaceChildren();
     setActiveButton(collection);
 
-    const products = await getCatalogProducts(collection);
-    if (token !== renderToken) return;
-
-    const cards = products.map((product) => {
-      const card = document.createElement("a");
-      card.className = "product-card";
-      card.href = product.url;
-
-      const media = document.createElement("span");
-      media.className = "product-card__media";
-      if (product.image) {
-        const image = document.createElement("img");
-        image.src = product.image;
-        image.alt = product.title;
-        image.loading = "lazy";
-        media.append(image);
+    const products = catalogData[collection] ?? [];
+    const rows: HTMLDivElement[] = [];
+    for (let index = 0; index < products.length; index += 3) {
+      const row = document.createElement("div");
+      row.className = "hero__catalog-row";
+      for (const product of products.slice(index, index + 3)) {
+        row.append(createProductCard(product));
       }
+      rows.push(row);
+    }
 
-      const body = document.createElement("span");
-      body.className = "product-card__body";
-
-      const title = document.createElement("span");
-      title.className = "product-card__title";
-      title.textContent = product.title;
-
-      const vendor = document.createElement("span");
-      vendor.className = "product-card__vendor";
-      vendor.textContent = product.vendor;
-
-      const price = document.createElement("span");
-      price.className = "product-card__price";
-      price.textContent = product.price;
-
-      body.append(title, vendor, price);
-      card.append(media, body);
-      return card;
-    });
-
-    catalogGrid.replaceChildren(...cards);
+    catalogTrack.replaceChildren(...rows);
+    lastRowIndex = Math.max(0, rows.length - 1);
+    setPagingReady();
+    setRowIndex(0);
   };
 
   const closeCatalog = () => {
     if (!hero || !catalog) return;
 
+    setPagingReady();
+    setRowIndex(0);
     hero.classList.remove("is-catalog");
     delete hero.dataset.activeCollection;
     catalog.setAttribute("aria-hidden", "true");
@@ -184,11 +257,47 @@ import { withBase } from "../../lib/url.ts";
       const collection = button.dataset.collection;
       const label = button.dataset.collectionLabel ?? button.textContent?.trim() ?? "";
       if (!collection) return;
-      void renderCatalog(collection, label);
+      renderCatalog(collection, label);
     });
   });
 
   catalogClose?.addEventListener("click", closeCatalog);
+
+  catalogViewport?.addEventListener(
+    "wheel",
+    (event) => {
+      if (!desktopPagerQuery.matches) return;
+
+      event.preventDefault();
+      if (Math.abs(event.deltaY) < 8) return;
+
+      pageRows(event.deltaY > 0 ? 1 : -1);
+    },
+    { passive: false },
+  );
+
+  catalogViewport?.addEventListener("touchstart", (event) => {
+    if (!desktopPagerQuery.matches) return;
+
+    touchStartY = event.touches[0]?.clientY ?? null;
+  });
+
+  catalogViewport?.addEventListener("touchend", (event) => {
+    if (!desktopPagerQuery.matches || touchStartY === null) return;
+
+    const touchEndY = event.changedTouches[0]?.clientY ?? touchStartY;
+    const deltaY = touchStartY - touchEndY;
+    touchStartY = null;
+    if (Math.abs(deltaY) < 32) return;
+
+    pageRows(deltaY > 0 ? 1 : -1);
+  });
+
+  catalogTrack?.addEventListener("transitionend", (event) => {
+    if (event.propertyName === "transform") {
+      setPagingReady();
+    }
+  });
 
   document.querySelectorAll("[data-hero-dropdown]").forEach((section) => {
     const trigger = section.querySelector(".hero__menu-header");

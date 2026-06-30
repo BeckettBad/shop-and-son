@@ -6,122 +6,53 @@ export interface CatalogProduct {
   image?: string;
 }
 
-const catalogProducts: Record<string, CatalogProduct[]> = {
-  clothing: [
-    {
-      title: "Boxy poplin shirt",
-      vendor: "William Frederick",
-      price: "$248",
-      url: "https://shopandson.com/collections/clothing",
-    },
-    {
-      title: "Washed chore jacket",
-      vendor: "Document",
-      price: "$420",
-      url: "https://shopandson.com/collections/clothing",
-    },
-    {
-      title: "Cotton rib vest",
-      vendor: "Yahae",
-      price: "$112",
-      url: "https://shopandson.com/collections/clothing",
-    },
-    {
-      title: "Relaxed wool trouser",
-      vendor: "Sage Nation",
-      price: "$365",
-      url: "https://shopandson.com/collections/clothing",
-    },
-    {
-      title: "Canvas deck shoe",
-      vendor: "Hender Scheme",
-      price: "$310",
-      url: "https://shopandson.com/collections/clothing",
-    },
-    {
-      title: "Open-collar overshirt",
-      vendor: "Blanc YM",
-      price: "$285",
-      url: "https://shopandson.com/collections/clothing",
-    },
-    {
-      title: "Garment-dyed tee",
-      vendor: "Mittan",
-      price: "$96",
-      url: "https://shopandson.com/collections/clothing",
-    },
-    {
-      title: "Linen work short",
-      vendor: "Ancellm",
-      price: "$198",
-      url: "https://shopandson.com/collections/clothing",
-    },
-    {
-      title: "Fine cotton sock",
-      vendor: "Yleve",
-      price: "$42",
-      url: "https://shopandson.com/collections/clothing",
-    },
-  ],
-  house: [
-    {
-      title: "Hand-thrown cup",
-      vendor: "Shino Takeda",
-      price: "$74",
-      url: "https://shopandson.com/collections/house",
-    },
-    {
-      title: "Cypress bath soap",
-      vendor: "Binu Binu",
-      price: "$22",
-      url: "https://shopandson.com/collections/house",
-    },
-    {
-      title: "Small stoneware bowl",
-      vendor: "Danny D's Mud Shop",
-      price: "$96",
-      url: "https://shopandson.com/collections/house",
-    },
-    {
-      title: "Folded linen towel",
-      vendor: "Miscellaneous",
-      price: "$58",
-      url: "https://shopandson.com/collections/house",
-    },
-    {
-      title: "Brass desk tray",
-      vendor: "Mark Patrick Harrington",
-      price: "$135",
-      url: "https://shopandson.com/collections/house",
-    },
-    {
-      title: "Rice paper shade",
-      vendor: "Miscellaneous",
-      price: "$188",
-      url: "https://shopandson.com/collections/house",
-    },
-    {
-      title: "Cedar incense rest",
-      vendor: "Binu Binu",
-      price: "$34",
-      url: "https://shopandson.com/collections/house",
-    },
-    {
-      title: "Thrown side plate",
-      vendor: "Shino Takeda",
-      price: "$82",
-      url: "https://shopandson.com/collections/house",
-    },
-    {
-      title: "Walnut wall peg",
-      vendor: "Miscellaneous",
-      price: "$48",
-      url: "https://shopandson.com/collections/house",
-    },
-  ],
+interface ShopifyProductFeed {
+  products?: ShopifyProduct[];
+}
+
+interface ShopifyProduct {
+  title?: string;
+  vendor?: string;
+  handle?: string;
+  variants?: ShopifyVariant[];
+  images?: ShopifyImage[];
+}
+
+interface ShopifyVariant {
+  price?: string;
+}
+
+interface ShopifyImage {
+  src?: string;
+}
+
+const PRODUCT_FEED_BASE_URL = "https://shopandson.com/collections";
+const PRODUCT_PAGE_BASE_URL = "https://shopandson.com/products";
+// Cap collection output for now; clothing can return 250 and house 27, and we can raise or paginate later.
+const PRODUCT_CAP = 60;
+
+const formatPrice = (price: string | undefined): string => {
+  return `$${(price ?? "0").replace(/\.00$/, "")}`;
+};
+
+const mapProduct = (product: ShopifyProduct): CatalogProduct => {
+  const handle = product.handle ?? "";
+
+  return {
+    title: product.title ?? "",
+    vendor: product.vendor ?? "",
+    price: formatPrice(product.variants?.[0]?.price),
+    image: product.images?.[0]?.src,
+    url: `${PRODUCT_PAGE_BASE_URL}/${handle}`,
+  };
 };
 
 export async function getCatalogProducts(collection: string): Promise<CatalogProduct[]> {
-  // TODO C2: replace this mock lookup with a Shopify Storefront collection fetch.
-  return catalogProducts[collection] ?? [];
+  const response = await fetch(`${PRODUCT_FEED_BASE_URL}/${collection}/products.json?limit=250`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${collection} products: ${response.status} ${response.statusText}`);
+  }
+
+  const feed = (await response.json()) as ShopifyProductFeed;
+  return (feed.products ?? []).slice(0, PRODUCT_CAP).map(mapProduct);
 }
