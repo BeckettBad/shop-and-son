@@ -50,37 +50,40 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## ACTIVE BRIEF
 
-**Status:** ✅ committed `47ded3b` on dev (Claude reviewed: clean, in-scope, build+check green). Awaiting operator verify on dev + the C2 token. Animation feel/visual polish not browser-verified (no headless browser available) — needs operator's eyes.
-**Task:** Phase C1 — catalogue interaction + slide animation, with MOCK product data (live Shopify fetch is C2, blocked on the token). Clicking SHOP ALL under CLOTHES or OBJECTS slides the stencil off-left and slides a scrollable product catalogue (rows of 3) in from the right over the still-looping video. The menu stays visible (user can switch collections); a close control returns to the landing stencil.
+**Status:** ✅ committed `468f53d` (revision) + `9a0311f` (resilient fetch). Claude reviewed clean; verified real data baked (clothing 60 + house 27, all CDN images). On dev, not pushed. Animation feel still needs operator's eyes (no headless browser here).
+**Task:** Phase C-rev — revise the C1 catalogue (`47ded3b`): (1) REAL products + images from the live store, (2) the stencil exits the screen FULLY, (3) larger 3-up cards filling the right region, (4) a scroll-PAGED row interaction (one row of 3 at a time; scrolling spawns the next 3 animating upward). Keep C1's open/close + slide-in framework; change data, card size, and scroll behavior.
 
-**Layout reality (important):** `.hero__overlay` (the menu) is on the LEFT — `left:0; width:42vw; max-width:560px` desktop; horizontal tabs at the top on mobile (`max-width:760px`). The stencil is centered (`.hero__stencil`, z-index 1, with `transform`/`transition` already in place from Phase B). Build the catalogue to fill the area to the RIGHT of the menu so the menu stays visible and clickable.
+**Layout:** menu (`.hero__overlay`) is on the LEFT (42vw); catalogue fills the area to its right. Default landing must stay identical to Phase B. Build + `astro check` green.
 
-**Files / area:**
-- `src/data/content.ts` — give the CLOTHES and OBJECTS `SHOP ALL` items a `collection` handle + a display label (use `"clothing"` / `"house"` as placeholders — to be confirmed for C2).
-- `src/components/blocks/HeroVideo.astro` — render `SHOP ALL` items that have a `collection` as a `<button data-shop-all data-collection data-collection-label>`; add the catalogue panel markup; add a client `<script>` for the interaction.
-- `src/styles/global.css` — catalogue panel + product-card styles + the slide-in/out animation states.
-- `src/lib/catalog.ts` (NEW) — `export async function getCatalogProducts(collection: string)`: for C1 return MOCK data (≈9 items per collection: `{ title, vendor, price, url, image? }`, image optional → card shows a neutral placeholder box). Add a clear `// TODO C2:` marker showing where the live Storefront fetch swaps in. Do NOT wire live Shopify in C1.
+**1 — REAL products + images (build-time fetch, NO token needed).**
+- Rework `src/lib/catalog.ts` to fetch the store's PUBLIC product feed at BUILD time (Node fetch in Astro frontmatter — NOT in the browser; the feed has no CORS so client-side is blocked, but build-time and the `cdn.shopify.com` `<img>` URLs both work fine):
+  `https://shopandson.com/collections/<handle>/products.json?limit=250`. Confirmed handles: CLOTHES→`clothing`, OBJECTS→`house`.
+- Map each product → `{ title, vendor, price, image, url }`:
+  `title`=`product.title`; `vendor`=`product.vendor`; `price`=`"$"+product.variants[0].price` with a trailing `.00` stripped (`355.00`→`$355`, keep non-zero cents); `image`=`product.images[0]?.src` (placeholder box if absent); `url`=`https://shopandson.com/products/${product.handle}`.
+- Cap at **60 products per collection** for now (note the cap in a comment; house=27, clothing=250 — we can raise/paginate later).
+- Bake the data into the page so the client reads it without a runtime fetch: fetch in `HeroVideo.astro` frontmatter and emit `<script type="application/json" id="catalog-data" set:html={JSON.stringify(data)}></script>` (escape any `<` to avoid breaking out of the script tag); the client script parses that instead of the old async mock. Keep one clean seam so a future LIVE Storefront swap (C2) is easy.
 
-**Behavior:**
-1. State on the `.hero-video` section: toggle class `is-catalog` (+ keep the active collection). Default (no `is-catalog`) MUST render identically to Phase B — catalogue only appears on click.
-2. Click a SHOP ALL button → add `is-catalog`, set the catalogue header to its label, render the grid from `getCatalogProducts(collection)`.
-3. Stencil slides off-left: `.hero-video.is-catalog .hero__stencil{ transform:translateX(-130%) }` (reuses the existing transition).
-4. Catalogue panel `.hero__catalog`: absolutely positioned, `z-index:2` (below the menu), occupies right of the menu (desktop `left:max(42vw,280px)` → right edge; mobile full width below the tabs). Default off-screen right + hidden (`transform:translateX(110%); opacity:0; visibility:hidden`); active `.hero-video.is-catalog .hero__catalog{ transform:translateX(0); opacity:1; visibility:visible }`. Transition transform+opacity ~.55s.
-5. Catalogue contains a header (collection label + a close "×" button `[data-catalog-close]`) and a scrollable grid `.hero__catalog-grid` — `grid-template-columns:repeat(3,1fr)` with `overflow-y:auto` (rows of 3, scroll for more). Mobile: 2 columns (or 1 on very narrow).
-6. Product card `.product-card`: placeholder image area (neutral box if no image) + title + vendor + price; whole card links to `url`. Editorial/brutalist mono styling consistent with the site.
-7. Close button → remove `is-catalog` → stencil slides back in, catalogue slides out.
-8. Switching collections while open: clicking another SHOP ALL just repopulates header + grid.
-9. Z-order: video 0 < stencil 1 < catalogue 2 < menu/overlay (bump `.hero__overlay` to `z-index:3`). Menu stays clickable throughout.
+**2 — Stencil exits FULLY.** Change `.hero-video.is-catalog .hero__stencil` so the drawing leaves the viewport completely (e.g. `transform:translateX(calc(-50vw - 100%))` or `-200%` — no sliver left). Keep the existing transition.
 
-**Style / structure constraints:** Default landing unchanged (Phase B look). Keep the existing skin (mono fonts, restrained palette, the menu styling). Don't change Phase A type sizes or the stencil rule except adding the `.is-catalog` transform. No live Shopify, no external image dependencies, no instructional/internal text on the page.
+**3 — Larger cards, exactly 3 visible.** The catalogue (right of the menu) shows ONE row of 3 LARGE cards filling the width with comfortable outer padding + a gap, and most of the height. The image is dominant (`object-fit:cover`, fills the card), title/vendor/price beneath. NOT the small overflow grid from C1.
 
-**Done when:** `npm run build` and `npx astro check` both green; default landing identical to Phase B; clicking CLOTHES→SHOP ALL or OBJECTS→SHOP ALL slides the stencil out and a 3-up scrollable mock catalogue in from the right; close returns to landing; menu stays usable; `getCatalogProducts` isolates the data source for an easy C2 swap.
+**4 — Scroll = paged rows of 3, animating upward.** Replace C1's `overflow-y:auto` grid with a vertical ROW-PAGER:
+- `.hero__catalog-viewport` (overflow hidden, fills height under the header) → `.hero__catalog-track` (`transform:translateY(calc(-100% * rowIndex))`, `transition:transform ~.5s ease`) → one `.hero__catalog-row` per 3 products (`height:100%; display:grid; grid-template-columns:repeat(3,1fr)`).
+- Wheel/touch advances ONE row per gesture: wheel down → `rowIndex++` (clamp to last), wheel up → `rowIndex--`; `preventDefault` so the page doesn't scroll; throttle so one gesture = one row (ignore further wheel until the transition ends). Add touch swipe (up=next, down=prev). `rowIndex`=0 on open / collection switch.
+- The next row slides UP from below into place as the old one moves up and out (the translateY track does exactly this).
+- Mobile (≤760px): skip the scroll-jacking — fall back to a simple vertical scroll of the cards (1–2 columns).
+
+**5 — Keep from C1:** open on SHOP ALL, slide-in from the right, close (×), collection switching, menu on top (`z-index:3`) and clickable, non-destructive default landing.
+
+**Style / structure constraints:** Keep the editorial/brutalist skin. Don't change Phase A type sizes or Phase B's base stencil rule (only its `.is-catalog` transform). No instructional/internal text. Keep the data seam clean for the future live (C2) swap.
+
+**Done when:** `npm run build` + `npx astro check` green; SHOP ALL shows REAL products with REAL images (3 large cards filling the right region); the stencil fully leaves the screen; scrolling down advances to the next 3 (animating upward), up goes back; close returns to landing; default landing unchanged.
 
 ---
 
 ### QUEUED (do not start — blocked)
 
-- **Phase C2 — live Shopify fetch.** Replace the mock in `getCatalogProducts` with a client-side Storefront API fetch (public `PUBLIC_SHOPIFY_STORE_DOMAIN` + `PUBLIC_SHOPIFY_STOREFRONT_API_TOKEN`, exposed to the browser since it's read-only), querying by collection handle, mapping to the card shape. Blocked: no token/domain in `homepage/.env`, and need the confirmed CLOTHES/OBJECTS collection handles. Everything else (the panel, animation, cards) is done in C1.
+- **Phase C2 — (optional) always-current data.** Real products+images already flow via the BUILD-TIME fetch of `shopandson.com/collections/<handle>/products.json` (refreshes on each deploy). C2 is now only needed if the operator wants products to update WITHOUT a redeploy → switch the data seam to a client-side **Storefront API** fetch (`PUBLIC_SHOPIFY_STORE_DOMAIN` + `PUBLIC_SHOPIFY_STOREFRONT_API_TOKEN`; Storefront API IS CORS-enabled, unlike products.json). Needs the token. Not blocking anything visual now.
 
 ### SHIPPED / committed on dev (awaiting operator verify + deploy)
 - **Phase A** — hero menu type → 2/3. Committed `a2f93f8`, pushed, in PR #1 (`dev → main`).
@@ -104,7 +107,9 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## Log (Codex appends newest at top: date — task — result/commit)
 
-- 2026-06-29 — Phase C1: catalogue interaction + slide animation + mock grid — 47ded3b — build:green check:green — Codex implemented per brief; reviewed clean by Claude (gated on .is-catalog, menu z-index→3, rows of 3, race-guarded render, getCatalogProducts isolates data for C2). Not pushed.
+- 2026-06-29 — Phase C-rev fix: resilient build-time fetch — 9a0311f — build:green check:green — getCatalogProducts now try/catches → warn + return [] (deploy can't break on a network blip). Not pushed.
+- 2026-06-29 — Phase C-rev: real products+images, full stencil exit, large 3-up cards, scroll-paged rows — 468f53d — build:green check:green — build-time fetch of shopandson.com products.json (clothing 60 + house 27, real CDN images), translateY row-pager (wheel/touch, CSS-var driven), mobile scroll fallback. Reviewed clean (caught + fixed the throw-on-fetch-fail in 9a0311f). Not pushed.
+- 2026-06-29 — Phase C1: catalogue interaction + slide animation + mock grid — 47ded3b — build:green check:green — Codex implemented per brief; reviewed clean by Claude (gated on .is-catalog, menu z-index→3, rows of 3, race-guarded render, getCatalogProducts isolates data for C2). Superseded by C-rev. Not pushed.
 - 2026-06-29 — Phase B: clean video + separate centered stencil overlay — f4276a8 — build:green check:green — Claude prepped assets (4K→1080p 2.5MB, white stencil IMG_4242→hero-stencil.png); Codex did HeroVideo.astro + CSS; reviewed clean + composite-previewed. Not pushed.
 - 2026-06-29 — Codex commit access enabled — `--add-dir` could not lift the seatbelt `.git` block, so per operator's informed choice the dispatch now runs Codex unsandboxed (`--dangerously-bypass-approvals-and-sandbox`); Codex committed this scaffolding itself on `dev`. Commits stay on dev (no push/merge); Claude reviews after.
 - 2026-06-29 — shrink hero menu typography (Phase A) — a2f93f8 — build:green check:green — Codex implemented per brief; reviewed clean by Claude (exactly the 4 font-size values, nothing else); Codex sandbox couldn't write repo-root .git, so Claude committed
