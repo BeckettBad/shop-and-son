@@ -4,6 +4,7 @@ export interface CatalogProduct {
   price: string;
   url: string;
   image?: string;
+  imageSrcset?: string;
 }
 
 interface ShopifyProductFeed {
@@ -30,19 +31,48 @@ const PRODUCT_FEED_BASE_URL = "https://shopandson.com/collections";
 const PRODUCT_PAGE_BASE_URL = "https://shopandson.com/products";
 // Cap collection output for now; clothing can return 250 and house 27, and we can raise or paginate later.
 const PRODUCT_CAP = 60;
+const SHOPIFY_IMAGE_WIDTHS = [700, 1100, 1600] as const;
 
 const formatPrice = (price: string | undefined): string => {
   return `$${(price ?? "0").replace(/\.00$/, "")}`;
 };
 
+const getSizedShopifyImageUrl = (src: string | undefined, width: number): string | undefined => {
+  if (!src) return undefined;
+
+  try {
+    const url = new URL(src);
+    if (url.hostname !== "cdn.shopify.com") return src;
+
+    url.searchParams.set("width", String(width));
+    return url.toString();
+  } catch {
+    return src;
+  }
+};
+
+const getShopifyImageSrcset = (src: string | undefined): string | undefined => {
+  if (!src) return undefined;
+
+  return SHOPIFY_IMAGE_WIDTHS
+    .map((width) => {
+      const sizedUrl = getSizedShopifyImageUrl(src, width);
+      return sizedUrl === src ? undefined : `${sizedUrl} ${width}w`;
+    })
+    .filter((entry): entry is string => Boolean(entry))
+    .join(", ") || undefined;
+};
+
 const mapProduct = (product: ShopifyProduct): CatalogProduct => {
   const handle = product.handle ?? "";
+  const imageSrc = product.images?.[0]?.src;
 
   return {
     title: product.title ?? "",
     vendor: product.vendor ?? "",
     price: formatPrice(product.variants?.[0]?.price),
-    image: product.images?.[0]?.src,
+    image: getSizedShopifyImageUrl(imageSrc, 1100),
+    imageSrcset: getShopifyImageSrcset(imageSrc),
     url: `${PRODUCT_PAGE_BASE_URL}/${handle}`,
   };
 };

@@ -116,6 +116,7 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     price: string;
     url: string;
     image?: string;
+    imageSrcset?: string;
   }
 
   const hero = document.querySelector<HTMLElement>(".hero-video");
@@ -189,6 +190,10 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     if (product.image) {
       const image = document.createElement("img");
       image.src = product.image;
+      if (product.imageSrcset) {
+        image.srcset = product.imageSrcset;
+        image.sizes = "(max-width: 760px) 92vw, 20vw";
+      }
       image.alt = product.title;
       image.loading = "lazy";
       image.decoding = "async";
