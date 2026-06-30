@@ -120,6 +120,7 @@ export interface HeroMenuSubItem {
 export interface HeroMenuSection {
   label: string;
   preorder?: boolean;
+  music?: boolean;
   items: HeroMenuSubItem[];
 }
 
@@ -195,6 +196,7 @@ export const heroMenu: HeroMenuSection[] = [
   },
   {
     label: "MUSIC",
+    music: true,
     items: [
       { label: "& SON OFFICIAL PLAYLIST" },
       { label: "WILLIAM FREDERICK PLAYLIST" },
