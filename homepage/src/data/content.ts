@@ -207,7 +207,6 @@ export const heroMenu: HeroMenuSection[] = [
       { label: "SMALL TALK STUDIO INTERVIEW" },
       { label: "WILLIAM FREDERICK INTERVIEW" },
       { label: "LIV RYAN INTERVIEW" },
-      { label: "ETC..." },
     ],
   },
   {
