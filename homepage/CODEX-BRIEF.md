@@ -51,29 +51,24 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 ## ACTIVE BRIEF
 
 **Status:** ready for Codex
-**Task:** Phase E — PRE-ORDER section. Add a 5th hero-menu top-level **PRE-ORDER** (after `& FAM`). Clicking it opens the existing preorders page — embedded as a SCALED desktop view in the right-side panel — using the same "stage" transition as the catalogue (whatever's on the right exits LEFT + fades; the new content enters from the RIGHT). The preorders source has ALREADY been stripped of its top nav (by Claude) and is served at `/preorders/` (via a symlink); you only build the homepage embed.
+**Task:** Phase F — three fixes after Phase E: (1) FIX the enlarged-expand crowding regression (open subfolder list overlaps the lower headers now that there are 5 sections), (2) remove "ETC..." from & FAM, (3) widen the preorder embed so it fills more of the page (seamless "site within a site").
 
-**Files:** `src/data/content.ts`, `src/components/blocks/HeroVideo.astro`, `src/styles/global.css`. (Do NOT touch `public/preorders/` — already done.)
+**Files:** `src/styles/global.css` (expand fix + preorder width), `src/data/content.ts` (& FAM), `src/components/blocks/HeroVideo.astro` (only if needed for the preorder scale var).
 
-**1 — content.ts:** add `preorder?: boolean` to the `HeroMenuSection` type, and a 5th `heroMenu` section AFTER `& FAM`: `{ label: "PRE-ORDER", preorder: true, items: [] }`. No sub-items.
+**1 — FIX the enlarged-expand crowding (regression).**
+- Symptom: with a section open (e.g. OBJECTS), its enlarged subfolder list (SHOP ALL, LIVING, … FURNITURE) sits too close to / overlaps the lower top-level headers (MUSIC, & FAM, PRE-ORDER). Worked with 4 sections; adding the 5th (PRE-ORDER) broke it.
+- Cause: in `@media(min-width:761px)` the open `.hero__menu-panel` is `position:absolute; top:clamp(112px,11.5vw,162px); bottom:0` — a FIXED top that assumed 4 headers; with 5 it starts inside the header stack.
+- Fix (robust to header count, not a hard-coded bump): drop the absolute positioning and let the open panel sit in NORMAL FLOW directly under its own header (accordion — pushes the lower headers down), still enlarged + left-anchored, with comfortable spacing (~0.5–0.8em above the list, ~0.35–0.5em between items). Remove the `overflow:hidden` the absolute approach put on `.hero__overlay` and let the overlay scroll (`overflow-y:auto`) when a long list (29 designers) exceeds the viewport. Net: every section's subfolder text sits lower with breathing room and never crowds PRE-ORDER. Keep the enlarged sizes (open header ~clamp(20px,2vw,30px), items ~clamp(14px,1.3vw,18px)).
 
-**2 — Markup + open behavior:**
-- Render the PRE-ORDER header like the other top-level headers (same style + `+`/`–` toggle for parity) but mark it `data-preorder`; it renders NO panel/sub-list.
-- Add a right-side panel `<aside class="hero__preorder" aria-hidden="true">` holding `<iframe class="hero__preorder-frame" src={withBase("/preorders/")} title="Pre-order" loading="lazy"></iframe>`.
-- Clicking PRE-ORDER opens the preorder stage (does NOT expand a list); it closes any open menu section and replaces any open catalogue. Reuse the neon-green active state on the header while preorder is the active stage. The existing close (×) / clicking another header returns to landing (house returns) — same as catalogue.
+**2 — content.ts:** remove the `"ETC..."` item from the `& FAM` section's items.
 
-**3 — Scaled desktop embed (keep it horizontal):** show the FULL desktop preorders rendering scaled DOWN to fit the panel (NOT reflowed to narrow). Approach: iframe at a fixed desktop base `width:1280px`, `transform:scale(<panelWidth/1280>); transform-origin:top left;`, iframe height sized so the scaled result fills the panel height; wrap in `.hero__preorder` with `overflow:hidden` + a small margin (slight background gutter), occupying the same right-of-menu area as `.hero__catalog` (left ~36.5vw). Scroll + video inside the iframe must still work. Mobile (≤760px): allow it to reflow/scroll normally — don't force the desktop scale if it breaks.
+**3 — Widen the preorder embed ("site within a site").**
+- The preorder panel should fill MORE of the page to the RIGHT than the catalogue does — start it a bit left of the catalogue (`.hero__preorder` left ~30–32vw vs the catalogue's ~36.5vw) and trim outer margins so it spans most of the width to near the right edge, with only a slight background gutter. It should read as a seamless embedded site, NOT an obvious framed box — avoid heavy borders/frames.
+- The embed scale auto-derives from panel width ÷ `preorderDesktopWidth`, so a wider panel already enlarges it; if it still reads small, lower `preorderDesktopWidth` toward ~1100–1200. Keep it interactive (scroll/video).
 
-**4 — The "stage" transition (operator's key ask — match the homepage feel).** The right side is a single "stage" holding ONE of: centered stencil (landing), a catalogue, or the preorder embed. When the active content CHANGES, the OUTGOING slides out to the LEFT + fades and the INCOMING slides in from the RIGHT:
-- landing → preorder: stencil exits left (reuse the existing `.is-catalog` stencil transform), preorder enters from right.
-- catalogue → preorder (e.g. on SHIRTS, click PRE-ORDER): the catalogue panel exits LEFT + fades (NEW — today it only exits right on close), preorder enters from right.
-- preorder → catalogue, and catalogue → catalogue: same rule (outgoing exits left, incoming enters right).
-- ANY → landing (× / collapse the active header): keep EXISTING behavior — active panel exits and the house returns from the right (`returnStencilFromRight`).
-Implement as a small shared helper so catalogue + preorder share the exit-left / enter-right treatment. Smooth (ease-in-out, ~.55s), no flicker; prefer a simpler version over anything janky.
+**Keep unchanged:** the catalogue, the stage transition (exit-left/enter-right), the stencil/house animation, all Phase A–E behavior, default landing.
 
-**Keep unchanged:** catalogue data/rows/images, Phase A–D, neon-green, house return, default landing (on load: stencil centered, nothing open).
-
-**Done when:** build + `astro check` green; PRE-ORDER is the 5th section; clicking it slides the current right-side content off-left and slides the scaled, menu-less preorders embed in from the right; the embed is interactive (scroll/video work); ×/switching follows the stage rules; default landing unchanged.
+**Done when:** build + `astro check` green; opening any section shows its subfolder list clearly BELOW all 5 headers with breathing room (no crowding of PRE-ORDER), long lists scroll; `& FAM` no longer shows ETC...; the preorder embed fills noticeably more of the page to the right than the catalogue and feels like a seamless site-within-a-site.
 
 ---
 
