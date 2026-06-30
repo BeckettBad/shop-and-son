@@ -7,6 +7,7 @@
   --paper:#ffffff; --paper-2:#eae9e7; --ink:#006BB6; --ink-soft:rgba(0,107,182,.62);
   --rule:rgba(0,0,0,.15); --line:#000000; --tag:#ffffff;
   --photo-tint:rgba(0,0,0,0); --accent:#F58426;
+  --neon-green:#1faa2e;
   /* type: body text is Roboto Mono; the header keeps Anonymous Pro (--mono-ui);
      serif is reserved for the display titles */
   --mono:'Roboto Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
@@ -281,7 +282,7 @@ body{
   width:auto; height:min(82vh,76vw); max-width:84vw;
   margin:auto; object-fit:contain; pointer-events:none;
   transform:translateX(0);
-  transition:transform .55s ease;
+  transition:transform .55s ease-in-out;
 }
 .hero-video.is-catalog .hero__stencil{transform:translateX(calc(-50vw - 100%))}
 .hero__overlay{
@@ -300,11 +301,11 @@ body{
   color:#000000;
   font-family:"Helvetica Now","Helvetica Neue",Helvetica,Arial,sans-serif;
   transform:translateX(110%); opacity:0; visibility:hidden; pointer-events:none;
-  transition:transform .55s ease,opacity .55s ease,visibility 0s linear .55s;
+  transition:transform .55s ease-in-out,opacity .55s ease-in-out,visibility 0s linear .55s;
 }
 .hero-video.is-catalog .hero__catalog{
   transform:translateX(0); opacity:1; visibility:visible; pointer-events:auto;
-  transition:transform .55s ease,opacity .55s ease,visibility 0s;
+  transition:transform .55s ease-in-out,opacity .55s ease-in-out,visibility 0s;
 }
 .hero__catalog-head{
   display:flex; align-items:flex-start; justify-content:space-between;
@@ -365,6 +366,7 @@ body{
   text-transform:uppercase;
 }
 .hero__menu-header:hover{text-decoration:underline}
+.hero__menu-section.is-open > .hero__menu-header{color:var(--neon-green)}
 .hero__menu-panel{display:none; padding:0.35em 0 0}
 .hero__menu-section.is-open .hero__menu-panel{display:block}
 .hero__menu-link{
@@ -375,7 +377,7 @@ body{
 }
 .hero__menu-link:hover{text-decoration:underline}
 .hero__menu-link[data-shop-all]{cursor:pointer}
-.hero__menu-link.is-active{text-decoration:underline}
+.hero__menu-link.is-active{color:var(--neon-green); text-decoration:underline}
 .hero__menu-link--dash::before{content:"- "}
 .hero__menu-link--bullet::before{content:"o "}
 .hero__menu-nested{padding-left:1.4em; margin-top:0.15em}
