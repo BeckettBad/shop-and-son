@@ -51,24 +51,38 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 ## ACTIVE BRIEF
 
 **Status:** ready for Codex
-**Task:** Phase F — three fixes after Phase E: (1) FIX the enlarged-expand crowding regression (open subfolder list overlaps the lower headers now that there are 5 sections), (2) remove "ETC..." from & FAM, (3) widen the preorder embed so it fills more of the page (seamless "site within a site").
+**Task:** Phase G — MUSIC/DJ centered stage. Pressing MUSIC swaps the center house stencil for a transparent DJ cutout (same exit-left/enter-right stage transition we already have); once it settles, a subtle shake + floating SVG music notes loop near the booth speakers. Asset is ready (Claude placed + made transparent): `homepage/public/images/dj-in-action-cutout.png` (RGBA, 1124×1399), reference via `withBase("/images/dj-in-action-cutout.png")`.
 
-**Files:** `src/styles/global.css` (expand fix + preorder width), `src/data/content.ts` (& FAM), `src/components/blocks/HeroVideo.astro` (only if needed for the preorder scale var).
+**Files:** `src/components/blocks/HeroVideo.astro` (markup + script), `src/styles/global.css`, `src/data/content.ts` (mark the MUSIC section). Do NOT touch the catalogue/preorder/data — only ADD the DJ stage. Do NOT change nav typography/spacing/layout/behavior except wiring MUSIC.
 
-**1 — FIX the enlarged-expand crowding (regression).**
-- Symptom: with a section open (e.g. OBJECTS), its enlarged subfolder list (SHOP ALL, LIVING, … FURNITURE) sits too close to / overlaps the lower top-level headers (MUSIC, & FAM, PRE-ORDER). Worked with 4 sections; adding the 5th (PRE-ORDER) broke it.
-- Cause: in `@media(min-width:761px)` the open `.hero__menu-panel` is `position:absolute; top:clamp(112px,11.5vw,162px); bottom:0` — a FIXED top that assumed 4 headers; with 5 it starts inside the header stack.
-- Fix (robust to header count, not a hard-coded bump): drop the absolute positioning and let the open panel sit in NORMAL FLOW directly under its own header (accordion — pushes the lower headers down), still enlarged + left-anchored, with comfortable spacing (~0.5–0.8em above the list, ~0.35–0.5em between items). Remove the `overflow:hidden` the absolute approach put on `.hero__overlay` and let the overlay scroll (`overflow-y:auto`) when a long list (29 designers) exceeds the viewport. Net: every section's subfolder text sits lower with breathing room and never crowds PRE-ORDER. Keep the enlarged sizes (open header ~clamp(20px,2vw,30px), items ~clamp(14px,1.3vw,18px)).
+**Reuse our existing stage system.** The hero already has `activeStage` ('landing'|'catalog'|'preorder'), `transitionToStage(next, prepareIncoming)` (outgoing exits LEFT + fades via `is-exiting-left`, incoming enters from the RIGHT), `is-catalog`/`is-preorder` on `.hero-video`, the stencil exits-left when a stage is active, and `returnStencilFromRight()` on close. ADD `'music'` as a new stage that works the same way but its panel is CENTERED (in the stencil's zone), not right-anchored.
 
-**2 — content.ts:** remove the `"ETC..."` item from the `& FAM` section's items.
+**1 — DJ markup (centered, transparent, over the video):** inside `.hero-video`, add
+`<div class="hero__dj dj-content-wrapper" aria-hidden="true"><img class="dj-cutout-image" src={withBase("/images/dj-in-action-cutout.png")} alt="" /><span class="music-notes-layer">…inline SVG notes…</span></div>`.
+- Centered like `.hero__stencil` (absolute, centered), the central object — slightly LARGER/amplified than the stencil (e.g. `height:min(88vh,82vw)`), `object-fit:contain` so the raised arm (upper-right) and booth bottom are NEVER cropped. z-index just above the video, BELOW the menu overlay.
+- NO card/box/border/background/glow/frame behind it — transparent only. `pointer-events:none` on the wrapper so the left nav stays clickable.
+- The `.music-notes-layer` overlays exactly the image box (inset:0 within the wrapper), `pointer-events:none`.
 
-**3 — Widen the preorder embed ("site within a site").**
-- The preorder panel should fill MORE of the page to the RIGHT than the catalogue does — start it a bit left of the catalogue (`.hero__preorder` left ~30–32vw vs the catalogue's ~36.5vw) and trim outer margins so it spans most of the width to near the right edge, with only a slight background gutter. It should read as a seamless embedded site, NOT an obvious framed box — avoid heavy borders/frames.
-- The embed scale auto-derives from panel width ÷ `preorderDesktopWidth`, so a wider panel already enlarges it; if it still reads small, lower `preorderDesktopWidth` toward ~1100–1200. Keep it interactive (scroll/video).
+**2 — Wire MUSIC → the music stage.** Add `music?: boolean` to the `HeroMenuSection` type and set it on the MUSIC section. When the MUSIC header is clicked: keep its normal accordion open (playlists stay in the left menu) AND `transitionToStage('music', …)` so the stencil exits-left and the DJ enters from the right and settles centered. Opening another section/stage, or ×, leaves the music stage and returns to landing (`returnStencilFromRight`, which must also clear `is-music`). Neon-green active state on the MUSIC header while active. Default landing unchanged (stencil centered, DJ hidden).
 
-**Keep unchanged:** the catalogue, the stage transition (exit-left/enter-right), the stencil/house animation, all Phase A–E behavior, default landing.
+**3 — SVG music notes (in code, crisp, editorial).** Create 3 inline-SVG variants as `.music-note`: (a) single eighth note, (b) double/beamed eighth note, (c) small beamed note. Thin, minimal, monochrome — use `currentColor` (near-black) so CSS controls color/opacity. No glow, no color, no cartoon.
+- Place ~5–6 notes via PERCENT positions relative to the wrapper/image box, in TWO clusters near the speakers (float upward from there):
+  - Left woofer: ~(22%,55%), (16%,61%), (29%,52%)
+  - Right speaker/tweeter: ~(45%,57%), (50%,53%), (42%,61%)
+- AVOID (do not overlap): face ~(48%,17%), raised fist ~(86%,8%), hands/decks ~(20–55%, 40–46%), and the nav/category text. Keep notes close to the booth, not scattered.
 
-**Done when:** build + `astro check` green; opening any section shows its subfolder list clearly BELOW all 5 headers with breathing room (no crowding of PRE-ORDER), long lists scroll; `& FAM` no longer shows ETC...; the preorder embed fills noticeably more of the page to the right than the catalogue and feels like a seamless site-within-a-site.
+**4 — Animation (start ONLY after settle).** Use the stage-transition completion (the `transitionToStage` settle — the stageDuration timeout / `transitionend`) to add `is-settled` to `.hero-video` (or the DJ wrapper). Only then:
+- DJ shake: subtle loop on `.dj-cutout-image` (or an inner wrapper) — translate 1–2px max, optional rotation <0.3deg. Alive, barely noticeable.
+- Notes: gently float UP a small distance + slight horizontal drift, fade-in then fade-out, looped, STAGGERED delays (not all at once). Hidden until `is-settled`.
+- Do NOT animate while the DJ is still sliding in. Stop/hide shake + notes when leaving the music stage (clear `is-settled`/`is-music`).
+
+**5 — Reduced motion:** under `@media (prefers-reduced-motion:reduce)` disable the shake and the floating-note animation; either hide the notes or show them static + very subtle.
+
+**6 — Responsive:** DJ scales down on small screens (`min(...vh,...vw)` + object-fit:contain), arm + booth bottom never cropped, image stays attached to the center zone; notes stay attached to the speakers (they're %-positioned within the image box, so they scale with it).
+
+**Keep unchanged:** the stencil/catalogue/preorder/house animations, Phase A–F behavior, the empty-collection hiding, default landing. Reuse existing transition/state logic; add only the DJ classes (`dj-content-wrapper`, `dj-cutout-image`, `music-notes-layer`, `music-note`, `is-settled`).
+
+**Done when:** build + `astro check` green; default house stencil still correct; pressing MUSIC swaps the center to the transparent DJ cutout (no box/halo) with the existing slide transition; nav stays clickable; arm + booth not cropped; notes are crisp SVGs only around the speaker clusters (not over face/hands/nav); shake ≤2px; shake+notes run only once settled and stop when switching away; `prefers-reduced-motion` disables them; all existing animations intact.
 
 ---
 
