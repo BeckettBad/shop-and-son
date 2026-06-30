@@ -50,7 +50,7 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## ACTIVE BRIEF
 
-**Status:** ready for Codex
+**Status:** ✅ committed `e0c4689`. Reviewed clean: neon-green active states (`--neon-green:#1faa2e`), header-click exits catalogue, `returnStencilFromRight()` does the flicker-free off-screen reposition → smooth right→left glide to center. Build+check green. On dev, not pushed. Live motion needs operator's eyes.
 **Task:** Phase C-rev3 — interaction polish: (1) clicked menu fields turn a darker-hued neon green, (2) clicking a top-level menu header while the catalogue is open EXITS it so the house stencil animates back to center (reverse) — make this return smooth. Files: `HeroVideo.astro` (script) + `global.css`.
 
 **1 — Click feedback: darker-hued neon green.**
