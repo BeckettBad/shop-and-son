@@ -28,8 +28,8 @@
   --line:     #000000;
   --hair:     rgba(0,0,0,.15);
   --font:     "Anonymous Pro", monospace;
-  --hh:       80px; /* --site-header-height-desktop: 80px */
-  --hh-mob:   60px; /* --site-header-height-mobile: 60px  */
+  --hh:       0px; /* header removed for embed (was 80px) */
+  --hh-mob:   0px; /* header removed for embed (was 60px) */
 }
 
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -630,78 +630,7 @@ dt.seq-active { color:var(--ink); }
 <div class="prog" id="prog"></div>
 
 <!-- ═══════════════ HEADER ═══════════════ -->
-<header class="site-header">
-  <nav class="site-nav">
-
-    <!-- ── left nav ── -->
-    <ul class="nav-list">
-
-      <li class="nav-item">
-        <a href="https://shopandson.com/collections/clothing">wear</a>
-        <ul class="nav-dropdown">
-          <li><a href="https://shopandson.com/collections/clothing">shop all</a></li>
-          <li><a href="https://shopandson.com/collections/jackets-outerwear">jackets / outerwear</a></li>
-          <li><a href="https://shopandson.com/collections/shirts-with-buttons-snaps">shirts with buttons / snaps</a></li>
-          <li><a href="https://shopandson.com/collections/knitwear">knitwear</a></li>
-          <li><a href="https://shopandson.com/collections/tees">tees</a></li>
-          <li><a href="https://shopandson.com/collections/trousers">trousers</a></li>
-          <li><a href="https://shopandson.com/collections/shorts">shorts</a></li>
-          <li><a href="https://shopandson.com/collections/accessories">shoes &amp; accessories</a></li>
-          <li><a href="https://shopandson.com/collections/sunglasses">sunglasses</a></li>
-          <li><a href="https://shopandson.com/collections/apothecary">apothecary</a></li>
-          <li><a href="https://shopandson.com/collections/jewelry">jewelry</a></li>
-          <li><a href="https://shopandson.com/collections/clothing-sale">sale</a></li>
-        </ul>
-      </li>
-
-      <li class="nav-item">
-        <a href="https://shopandson.com/collections/house">house</a>
-        <ul class="nav-dropdown">
-          <li><a href="https://shopandson.com/collections/house">shop all</a></li>
-          <li><a href="https://shopandson.com/collections/house">living</a></li>
-          <li><a href="https://shopandson.com/collections/kitchen">kitchen</a></li>
-          <li><a href="https://shopandson.com/collections/library">library</a></li>
-          <li><a href="https://shopandson.com/collections/seating">seating</a></li>
-          <li><a href="https://shopandson.com/collections/tables">tables</a></li>
-          <li><a href="https://shopandson.com/collections/lighting">lighting</a></li>
-          <li><a href="https://shopandson.com/collections/house-sale">sale</a></li>
-        </ul>
-      </li>
-
-      <li class="nav-item">
-        <a href="https://shopandson.com/pages/designers">designers</a>
-      </li>
-
-      <!-- EDIT: pre-order dropdown — update drop names / status as new drops open -->
-      <li class="nav-item nav-item--preorder">
-        <a href="#">pre-order</a>
-        <ul class="nav-dropdown">
-          <li class="drop-label">drop 01 — open now</li>
-          <li><a href="#">washed canvas blouson</a></li>
-          <li class="drop-rule"></li>
-          <li class="drop-soon">week 02 — coming soon</li>
-          <li class="drop-soon">week 03 — coming soon</li>
-          <li class="drop-soon">week 04 — coming soon</li>
-          <li class="drop-soon">week 05 — coming soon</li>
-        </ul>
-      </li>
-
-    </ul>
-
-    <!-- ── logo (centre) ── -->
-    <a href="https://shopandson.com/" class="nav-logo" target="_blank" rel="noopener">
-      <img src="images/logo.gif" alt="Shop And Son">
-    </a>
-
-    <!-- ── right nav ── -->
-    <ul class="nav-list nav-list--right">
-      <li class="nav-item"><a href="https://shopandson.com/account">account</a></li>
-      <li class="nav-item"><a href="https://shopandson.com/cart">cart</a></li>
-      <li class="nav-item" style="color:var(--ink-soft);font-size:11px;letter-spacing:.05em;font-family:var(--font)" id="hudpct">00%</li>
-    </ul>
-
-  </nav>
-</header>
+<!-- top nav/header removed per operator request — no menu in the standalone page or the homepage embed -->
 
 <!-- ═══════════════════════════════════════════════════════
      SPLIT LAYOUT
@@ -996,7 +925,7 @@ dt.seq-active { color:var(--ink); }
     var max = (doc.scrollHeight - vh) || 1;
     var p   = clamp(st / max, 0, 1);
     prog.style.width = (p * 100) + '%';
-    hudpct.textContent = (p * 100 < 10 ? '0' : '') + Math.round(p * 100) + '%';
+    if (hudpct) hudpct.textContent = (p * 100 < 10 ? '0' : '') + Math.round(p * 100) + '%';
   }
 
   /* parallax zoom on the active left image */
