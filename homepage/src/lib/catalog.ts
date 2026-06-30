@@ -48,11 +48,19 @@ const mapProduct = (product: ShopifyProduct): CatalogProduct => {
 };
 
 export async function getCatalogProducts(collection: string): Promise<CatalogProduct[]> {
-  const response = await fetch(`${PRODUCT_FEED_BASE_URL}/${collection}/products.json?limit=250`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${collection} products: ${response.status} ${response.statusText}`);
-  }
+  try {
+    const response = await fetch(`${PRODUCT_FEED_BASE_URL}/${collection}/products.json?limit=250`);
+    if (!response.ok) {
+      console.warn(
+        `[catalog] Failed to fetch ${collection} products: ${response.status} ${response.statusText}`,
+      );
+      return [];
+    }
 
-  const feed = (await response.json()) as ShopifyProductFeed;
-  return (feed.products ?? []).slice(0, PRODUCT_CAP).map(mapProduct);
+    const feed = (await response.json()) as ShopifyProductFeed;
+    return (feed.products ?? []).slice(0, PRODUCT_CAP).map(mapProduct);
+  } catch (err) {
+    console.warn(`[catalog] Failed to fetch ${collection} products:`, err);
+    return [];
+  }
 }
