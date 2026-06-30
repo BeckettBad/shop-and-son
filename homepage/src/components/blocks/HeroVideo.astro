@@ -46,11 +46,54 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
 
   <img class="hero__stencil" src={withBase("/images/hero-stencil.png")} alt="" aria-hidden="true" />
 
+  <div class="hero__dj dj-content-wrapper" aria-hidden="true">
+    <img class="dj-cutout-image" src={withBase("/images/dj-in-action-cutout.png")} alt="" />
+    <span class="music-notes-layer">
+      <span class="music-note music-note--single music-note--1" aria-hidden="true">
+        <svg viewBox="0 0 24 32" focusable="false">
+          <path d="M16 4v18.5a5 5 0 1 1-2-4V8l8-2v4z" />
+        </svg>
+      </span>
+      <span class="music-note music-note--double music-note--2" aria-hidden="true">
+        <svg viewBox="0 0 40 32" focusable="false">
+          <path d="M13 6v18a5 5 0 1 1-2-4V8l18-3v17a5 5 0 1 1-2-4V9z" />
+          <path d="M12 8l18-3" />
+        </svg>
+      </span>
+      <span class="music-note music-note--small music-note--3" aria-hidden="true">
+        <svg viewBox="0 0 32 28" focusable="false">
+          <path d="M10 5v15a4 4 0 1 1-1.7-3.3V7l13-2v13.5a4 4 0 1 1-1.7-3.2V6.6z" />
+        </svg>
+      </span>
+      <span class="music-note music-note--single music-note--4" aria-hidden="true">
+        <svg viewBox="0 0 24 32" focusable="false">
+          <path d="M16 4v18.5a5 5 0 1 1-2-4V8l8-2v4z" />
+        </svg>
+      </span>
+      <span class="music-note music-note--double music-note--5" aria-hidden="true">
+        <svg viewBox="0 0 40 32" focusable="false">
+          <path d="M13 6v18a5 5 0 1 1-2-4V8l18-3v17a5 5 0 1 1-2-4V9z" />
+          <path d="M12 8l18-3" />
+        </svg>
+      </span>
+      <span class="music-note music-note--small music-note--6" aria-hidden="true">
+        <svg viewBox="0 0 32 28" focusable="false">
+          <path d="M10 5v15a4 4 0 1 1-1.7-3.3V7l13-2v13.5a4 4 0 1 1-1.7-3.2V6.6z" />
+        </svg>
+      </span>
+    </span>
+  </div>
+
   <nav class="hero__overlay" aria-label="Site sections">
     <ul class="hero__menu">
       {
         heroMenu.map((section) => (
-          <li class="hero__menu-section" data-hero-dropdown data-preorder={section.preorder ? "true" : undefined}>
+          <li
+            class="hero__menu-section"
+            data-hero-dropdown
+            data-preorder={section.preorder ? "true" : undefined}
+            data-music={section.music ? "true" : undefined}
+          >
             <button type="button" class="hero__menu-header" aria-expanded="false">
               {section.label} <span class="hero__menu-toggle">+</span>
             </button>
@@ -155,6 +198,7 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
 
   const hero = document.querySelector<HTMLElement>(".hero-video");
   const stencil = hero?.querySelector<HTMLElement>(".hero__stencil");
+  const dj = hero?.querySelector<HTMLElement>(".hero__dj");
   const catalog = hero?.querySelector<HTMLElement>(".hero__catalog");
   const catalogTitle = hero?.querySelector<HTMLElement>("[data-catalog-title]");
   const catalogViewport = hero?.querySelector<HTMLElement>("[data-catalog-viewport]");
@@ -178,7 +222,10 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
   let pagingFallback: ReturnType<typeof window.setTimeout> | undefined;
   let stencilReturnCleanup: (() => void) | undefined;
   let stageCleanup: ReturnType<typeof window.setTimeout> | undefined;
-  let activeStage: "landing" | "catalog" | "preorder" = "landing";
+  type HeroStage = "landing" | "catalog" | "preorder" | "music";
+  type PanelStage = "catalog" | "preorder" | "music";
+
+  let activeStage: HeroStage = "landing";
   let touchStartY: number | null = null;
 
   const parseCatalogData = (): Record<string, CatalogProduct[]> => {
@@ -238,9 +285,16 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     });
   };
 
-  const setPanelHidden = (stage: "catalog" | "preorder", isHidden: boolean) => {
-    const panel = stage === "catalog" ? catalog : preorder;
+  const getStagePanel = (stage: PanelStage) =>
+    stage === "catalog" ? catalog : stage === "preorder" ? preorder : dj;
+
+  const setPanelHidden = (stage: PanelStage, isHidden: boolean) => {
+    const panel = getStagePanel(stage);
     panel?.setAttribute("aria-hidden", String(isHidden));
+  };
+
+  const setMusicSettled = (isSettled: boolean) => {
+    hero?.classList.toggle("is-settled", isSettled && activeStage === "music");
   };
 
   const clearStageCleanup = () => {
@@ -250,6 +304,8 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     }
     catalog?.classList.remove("is-exiting-left");
     preorder?.classList.remove("is-exiting-left");
+    dj?.classList.remove("is-exiting-left");
+    setMusicSettled(false);
   };
 
   const clearStencilReturn = () => {
@@ -262,16 +318,19 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
   const returnStencilFromRight = () => {
     if (!hero) return;
 
-    const hasActiveStage = hero.classList.contains("is-catalog") || hero.classList.contains("is-preorder");
+    const hasActiveStage =
+      hero.classList.contains("is-catalog") ||
+      hero.classList.contains("is-preorder") ||
+      hero.classList.contains("is-music");
     if (!stencil || !hasActiveStage) {
-      hero.classList.remove("is-catalog", "is-preorder");
+      hero.classList.remove("is-catalog", "is-preorder", "is-music", "is-settled");
       return;
     }
 
     clearStencilReturn();
     stencil.style.transition = "none";
     stencil.style.transform = "translateX(calc(50vw + 100%))";
-    hero.classList.remove("is-catalog", "is-preorder");
+    hero.classList.remove("is-catalog", "is-preorder", "is-music", "is-settled");
     void stencil.offsetWidth;
 
     const finishReturn = (event?: TransitionEvent) => {
@@ -316,25 +375,28 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     preorderFrame.style.height = `${Math.ceil(shellHeight / scale)}px`;
   };
 
-  const activatePanel = (stage: "catalog" | "preorder") => {
-    hero?.classList.add(stage === "catalog" ? "is-catalog" : "is-preorder");
+  const getStageClass = (stage: PanelStage) =>
+    stage === "catalog" ? "is-catalog" : stage === "preorder" ? "is-preorder" : "is-music";
+
+  const activatePanel = (stage: PanelStage) => {
+    hero?.classList.add(getStageClass(stage));
     setPanelHidden(stage, false);
   };
 
-  const deactivatePanel = (stage: "catalog" | "preorder") => {
-    hero?.classList.remove(stage === "catalog" ? "is-catalog" : "is-preorder");
+  const deactivatePanel = (stage: PanelStage) => {
+    hero?.classList.remove(getStageClass(stage));
     setPanelHidden(stage, true);
   };
 
-  const transitionToStage = (nextStage: "catalog" | "preorder", prepareIncoming: () => void) => {
+  const transitionToStage = (nextStage: PanelStage, prepareIncoming: () => void) => {
     if (!hero) return;
 
     clearStageCleanup();
     clearStencilReturn();
 
     const previousStage = activeStage;
-    const previousPanel =
-      previousStage === "catalog" ? catalog : previousStage === "preorder" ? preorder : undefined;
+    const previousPanelStage: PanelStage | undefined = previousStage === "landing" ? undefined : previousStage;
+    const previousPanel = previousPanelStage ? getStagePanel(previousPanelStage) : undefined;
 
     if (previousStage === nextStage) {
       previousPanel?.classList.add("is-exiting-left");
@@ -347,14 +409,21 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
         activatePanel(nextStage);
         if (nextStage === "preorder") resizePreorderFrame();
         activeStage = nextStage;
+        if (nextStage === "music") {
+          stageCleanup = window.setTimeout(() => {
+            setMusicSettled(true);
+            stageCleanup = undefined;
+          }, stageDuration);
+          return;
+        }
         stageCleanup = undefined;
       }, stageDuration);
       return;
     }
 
-    if (previousPanel) {
-      previousPanel.classList.add("is-exiting-left");
-      setPanelHidden(previousStage as "catalog" | "preorder", true);
+    if (previousPanelStage) {
+      previousPanel?.classList.add("is-exiting-left");
+      setPanelHidden(previousPanelStage, true);
     }
 
     prepareIncoming();
@@ -362,10 +431,19 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     if (nextStage === "preorder") resizePreorderFrame();
     activeStage = nextStage;
 
-    if (previousStage === "catalog" || previousStage === "preorder") {
+    if (previousPanelStage) {
       stageCleanup = window.setTimeout(() => {
-        deactivatePanel(previousStage);
+        deactivatePanel(previousPanelStage);
         previousPanel?.classList.remove("is-exiting-left");
+        if (nextStage === "music") setMusicSettled(true);
+        stageCleanup = undefined;
+      }, stageDuration);
+      return;
+    }
+
+    if (nextStage === "music") {
+      stageCleanup = window.setTimeout(() => {
+        setMusicSettled(true);
         stageCleanup = undefined;
       }, stageDuration);
     }
@@ -451,6 +529,16 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     transitionToStage("preorder", resizePreorderFrame);
   };
 
+  const openMusic = () => {
+    if (!hero || !dj) return;
+
+    delete hero.dataset.activeCollection;
+    setActiveButton(null);
+    setPagingReady();
+    setRowIndex(0);
+    transitionToStage("music", () => undefined);
+  };
+
   const closeStage = () => {
     if (!hero) return;
 
@@ -461,6 +549,7 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     delete hero.dataset.activeCollection;
     catalog?.setAttribute("aria-hidden", "true");
     preorder?.setAttribute("aria-hidden", "true");
+    dj?.setAttribute("aria-hidden", "true");
     setActiveButton(null);
     activeStage = "landing";
   };
@@ -526,11 +615,18 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
 
     trigger.addEventListener("click", () => {
       const isPreorderSection = section.dataset.preorder === "true";
+      const isMusicSection = section.dataset.music === "true";
       const isOpen = !section.classList.contains("is-open");
 
       if (isPreorderSection && isOpen) {
         setMenuSectionState(section);
         openPreorder();
+        return;
+      }
+
+      if (isMusicSection && isOpen) {
+        setMenuSectionState(section);
+        openMusic();
         return;
       }
 

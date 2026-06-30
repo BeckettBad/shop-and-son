@@ -120,6 +120,7 @@ export interface HeroMenuSubItem {
 export interface HeroMenuSection {
   label: string;
   preorder?: boolean;
+  music?: boolean;
   items: HeroMenuSubItem[];
 }
 
@@ -147,7 +148,7 @@ export const heroMenu: HeroMenuSection[] = [
       {
         label: "DESIGNERS",
         children: [
-          { label: "11.11", collection: "11-11", collectionLabel: "11.11" },
+          // hidden — no current listings (re-enable when restocked): { label: "11.11", collection: "11-11", collectionLabel: "11.11" },
           { label: "AN IRRATIONAL ELEMENT", collection: "an-irrational-element", collectionLabel: "AN IRRATIONAL ELEMENT" },
           { label: "ARCHIE", collection: "archie", collectionLabel: "ARCHIE" },
           { label: "AURORA", collection: "aurora", collectionLabel: "AURORA" },
@@ -156,7 +157,7 @@ export const heroMenu: HeroMenuSection[] = [
           { label: "FAIRLY NORMAL", collection: "fairly-normal", collectionLabel: "FAIRLY NORMAL" },
           { label: "HENDER SCHEME", collection: "hender-scheme", collectionLabel: "HENDER SCHEME" },
           { label: "HEREU", collection: "hereu", collectionLabel: "HEREU" },
-          { label: "KUON", collection: "kuon", collectionLabel: "KUON" },
+          // hidden — no current listings (re-enable when restocked): { label: "KUON", collection: "kuon", collectionLabel: "KUON" },
           { label: "MATSUFUJI", collection: "matsufuji", collectionLabel: "MATSUFUJI" },
           { label: "MONOSTEREO", collection: "monostereo", collectionLabel: "MONOSTEREO" },
           { label: "NEVER CURSED", collection: "never-cursed", collectionLabel: "NEVER CURSED" },
@@ -173,9 +174,9 @@ export const heroMenu: HeroMenuSection[] = [
           { label: "SONNY", collection: "sonny", collectionLabel: "SONNY" },
           { label: "URU", collection: "uru", collectionLabel: "URU" },
           { label: "WILLIAM FREDERICK", collection: "william-frederick", collectionLabel: "WILLIAM FREDERICK" },
-          { label: "XENIA TELUNTS", collection: "xenia-telunts", collectionLabel: "XENIA TELUNTS" },
+          // hidden — no current listings (re-enable when restocked): { label: "XENIA TELUNTS", collection: "xenia-telunts", collectionLabel: "XENIA TELUNTS" },
           { label: "YAHAE", collection: "yahae-1", collectionLabel: "YAHAE" },
-          { label: "YUKETEN", collection: "yuketen", collectionLabel: "YUKETEN" },
+          // hidden — no current listings (re-enable when restocked): { label: "YUKETEN", collection: "yuketen", collectionLabel: "YUKETEN" },
         ],
       },
     ],
@@ -188,13 +189,14 @@ export const heroMenu: HeroMenuSection[] = [
       { label: "KITCHEN", collection: "kitchen", collectionLabel: "KITCHEN" },
       { label: "LIBRARY", collection: "library", collectionLabel: "LIBRARY" },
       { label: "SEATING", collection: "seating", collectionLabel: "SEATING" },
-      { label: "TABLES", collection: "tables", collectionLabel: "TABLES" },
-      { label: "LIGHTING", collection: "lighting", collectionLabel: "LIGHTING" },
-      { label: "FURNITURE", collection: "furniture", collectionLabel: "FURNITURE" },
+      // hidden — no current listings (re-enable when restocked): { label: "TABLES", collection: "tables", collectionLabel: "TABLES" },
+      // hidden — no current listings (re-enable when restocked): { label: "LIGHTING", collection: "lighting", collectionLabel: "LIGHTING" },
+      // hidden — no current listings (re-enable when restocked): { label: "FURNITURE", collection: "furniture", collectionLabel: "FURNITURE" },
     ],
   },
   {
     label: "MUSIC",
+    music: true,
     items: [
       { label: "& SON OFFICIAL PLAYLIST" },
       { label: "WILLIAM FREDERICK PLAYLIST" },
