@@ -623,6 +623,12 @@ dt.seq-active { color:var(--ink); }
   .panel { min-height:calc(100vh - var(--hh-mob)); }
   .prog { top:var(--hh-mob); }
 }
+
+/* ── embed: clear white surfaces so the site's beige textured background shows through (no white box / band) ── */
+body,.spec-scroll__right,.sched,.sched__cell{background:transparent !important}
+/* ── hide scrollbars everywhere (scrolling stays fully functional) ── */
+::-webkit-scrollbar{width:0; height:0; display:none}
+*{scrollbar-width:none; -ms-overflow-style:none}
 </style>
 </head>
 <body>

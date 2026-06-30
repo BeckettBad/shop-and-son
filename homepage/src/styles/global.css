@@ -330,7 +330,7 @@ body{
 .hero__preorder-close:hover{background:rgba(255,255,255,.94)}
 .hero__preorder-shell{
   flex:1 1 auto; min-height:0; width:100%;
-  overflow:hidden; background:#ffffff;
+  overflow:hidden; background:transparent;
 }
 .hero__preorder-frame{
   display:block; border:0;
@@ -707,3 +707,10 @@ body{
   .sub-footer{justify-content:center; text-align:center}
   .footer-policies{justify-content:center}
 }
+
+/* ── hide scrollbars site-wide (scrolling stays fully functional) ── */
+::-webkit-scrollbar{width:0; height:0; display:none}
+*{scrollbar-width:none; -ms-overflow-style:none}
+
+/* preorder embed sits on the hero video (beige texture) — no white fill */
+.hero__preorder,.hero__preorder-frame{background:transparent}
