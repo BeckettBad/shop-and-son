@@ -50,55 +50,284 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## ACTIVE BRIEF
 
-> **Note on Phase G (MUSIC/DJ stage):** its markup/script/CSS already appear
-> implemented in `HeroVideo.astro` (dj-content-wrapper, music-notes-layer,
-> `is-settled`, `'music'` stage). Treat Phase G as done pending operator verify —
-> do NOT re-do it. (Prior Phase G brief text is in this file's git history.)
+> **Phases G–J are SHIPPED** (merged `dev → main` @ `012f918`, live). Do not re-do
+> any of them; their brief text lives in this file's git history + the sections below.
 
-**Status:** ready for Codex
-**Task:** Phase J — footer scroll gate. ONE focused commit. `npm run build` **and**
-`npx astro check` green. Scope: `homepage/` only.
+**Status:** ready for Codex — **K0 is an operator prerequisite** (Storefront token).
+K1 and the snapshot half of K2 can start without it; K2's live-refresh, K3's live
+fetch, and all of K4 need the token in `homepage/.env` to be testable.
+**Task:** Phase K — commerce core. The homepage becomes a proper selling site:
+in-site product pages, on-site cart, checkout handed to Shopify. FIVE sub-tasks
+(K1–K5), **in order, one focused commit each**, `npm run build` **and**
+`npx astro check` green after every one. Scope: `homepage/` only — EXCEPT K5,
+which (with operator awareness) touches `.github/workflows/deploy.yml`.
+
+**The model (decided with the operator 2026-07-01):**
+- **Cart = on-site drawer** via the Shopify **Storefront Cart API**; only the final
+  CHECKOUT click leaves for Shopify's hosted checkout (`cart.checkoutUrl`). The cart
+  icon stops linking out to `shopandson.com/cart`.
+- **Product pages = ONE live client-driven page** at `/product/?handle=<handle>`
+  (query param, NOT a static route per product) that fetches full product data from
+  the Storefront API at view time. A listing the owner adds in Shopify admin works
+  on our site immediately — no redeploy. Catalogue cards navigate there in-site
+  instead of out to `shopandson.com/products/<handle>`.
+- **Sold-out items stay visible**, marked `sold out`, with add-to-cart disabled.
+- **Data freshness = layered:** build-time snapshot (existing `products.json` fetch)
+  paints instantly → client-side Storefront re-fetch revalidates on open → a daily
+  scheduled rebuild keeps the snapshot itself from going stale.
 
 ---
 
-### J1 — Only scroll to the footer from the clean hero state
+### K0 — OPERATOR prerequisite: Storefront API token with cart scopes
 
-**Why:** the homepage now scrolls past the 100vh hero to reveal `<Footer />` (H5).
-But the catalogue wheel row-pager and the pre-order `<iframe>` capture the wheel, so
-page-scroll to the footer fights them whenever a panel/stage is open. Fix: **page
-scroll (to the footer) is allowed ONLY when the hero is in its clean/base state** —
-`activeStage === "landing"` AND no `.hero__menu-section.is-open`. Whenever any menu
-section is open OR a stage (catalog/preorder/music) is active, **re-lock the page**
-(`overflow:hidden`) so nothing fights the wheel; closing everything back to the bare
-hero re-enables scroll → the user reaches the footer. Footer stays **main-page-only**
-(do NOT add it to other `landing` pages).
+Not a Codex task — Beckett does this once; Codex consumes the values.
 
-**Files:** `src/components/blocks/HeroVideo.astro` (client script), `src/styles/global.css`.
+- Shopify admin → Settings → Apps and sales channels → Develop apps → (the app) →
+  **Storefront API** → enable scopes: `unauthenticated_read_product_listings`,
+  `unauthenticated_read_checkouts`, `unauthenticated_write_checkouts` (the Cart API
+  mutations ride the checkout scopes). Install/reinstall the app, copy the
+  **Storefront access token** (this is the PUBLIC token — safe to ship in the page;
+  it is NOT the Admin key/secret).
+- Add to `homepage/.env` (and Codex mirrors the names into `.env.example` in K1):
+  `PUBLIC_SHOPIFY_STORE_DOMAIN=shopandson.com` and
+  `PUBLIC_SHOPIFY_STOREFRONT_API_TOKEN=<token>`. The `PUBLIC_` prefix is what lets
+  Astro inline them into client code — deliberate, the token is public-by-design.
+  The private `SHOPIFY_API_KEY`/`SHOPIFY_API_SECRET` are NOT used anywhere in Phase K.
+- For deploys: add the same two values in GitHub → repo Settings → Secrets and
+  variables → Actions → **Variables** (they're public; variables, not secrets, is
+  fine). K5 wires them into the Pages build.
+- Sanity check the endpoint `https://shopandson.com/api/2025-01/graphql.json` accepts
+  the token; if the custom domain ever doesn't serve the API, use the store's
+  `*.myshopify.com` domain in `PUBLIC_SHOPIFY_STORE_DOMAIN` instead.
 
-- **Script:** add a helper `updatePageScrollLock()` that computes "clean" =
-  `activeStage === "landing"` **and** `!hero.querySelector(".hero__menu-section.is-open")`,
-  then toggles a class on `document.documentElement` — e.g.
-  `document.documentElement.classList.toggle("is-scroll-locked", !clean)`. Call it at
-  the END of `setMenuSectionState`, at the end of `transitionToStage` (after
-  `activeStage` is set), and in `closeStage` (after `activeStage = "landing"`). When it
-  ENGAGES the lock (transitions to not-clean), also `window.scrollTo(0, 0)` (instant,
-  not smooth) so the hero is reframed if the user had scrolled toward the footer.
-  Guard for SSR/no-hero. Do NOT change the existing pager/iframe/stage logic otherwise.
-- **CSS:** re-lock the page when the class is present, scoped to the homepage only:
-  `html.landing.has-footer.is-scroll-locked,
-   html.landing.has-footer.is-scroll-locked body{ overflow:hidden; height:100% }`.
-  When the class is ABSENT, the existing `html.landing.has-footer{min-height:100%;
-  overflow-x:hidden}` scroll rule applies unchanged. Do NOT touch the
-  `html.landing:not(.has-footer)` lock (other landing pages stay locked, no footer).
-- The hero's inner scroll contexts (menu column `.hero__overlay` overflow, catalogue
-  wheel pager, preorder iframe) must keep working exactly as now — this change only
-  gates the OUTER page scroll. `overscroll-behavior-y:contain` stays.
+---
 
-**Done when:** build+check green; on the clean hero you can scroll down to the footer
-and back; opening any menu section or a catalog/preorder/music stage locks the page
-(cannot scroll to the footer, hero reframes to top); closing everything re-enables
-scroll-to-footer; the catalogue pager and preorder iframe still scroll internally;
-other `landing` pages unchanged (still locked, no footer).
+### K1 — Client-side Storefront data layer
+
+**Why:** everything live (fresh listings, full product detail, cart) needs a
+browser-side Shopify client. The existing `src/lib/shopify.ts` is build-time-shaped
+(non-PUBLIC env, `console` fallbacks) — leave it alone; make a clean client module.
+
+**Files:** new `src/lib/storefront-client.ts`; update `.env.example` with the two
+`PUBLIC_` vars (commented, no values).
+
+- Browser-safe TS module (no Node APIs). Reads
+  `import.meta.env.PUBLIC_SHOPIFY_STORE_DOMAIN` / `PUBLIC_SHOPIFY_STOREFRONT_API_TOKEN`;
+  export `isStorefrontConfigured`. Every function returns `null`/`[]` quietly when
+  unconfigured or on error — the site must keep working from the snapshot.
+- `storefrontFetch<T>(query, variables)` → POST
+  `https://${domain}/api/2025-01/graphql.json` with
+  `X-Shopify-Storefront-Access-Token`; handle non-OK + GraphQL `errors[]`; ~10s
+  timeout via AbortController.
+- `getCollectionProducts(handle, first = 250)` →
+  `collection(handle:){ products(first:){ nodes{ handle title vendor availableForSale
+  featuredImage{ url altText width height } priceRange{ minVariantPrice{ amount
+  currencyCode } } } } }`, paginating with `pageInfo`/cursor past 250 if needed.
+  Map to the SAME `CatalogProduct` shape K2 extends in `catalog.ts` (import the type)
+  so the catalogue can swap data sources transparently.
+- `getProduct(handle)` → `product(handle:){ id handle title vendor descriptionHtml
+  availableForSale images(first:24){ nodes{ url altText width height } }
+  options{ name values } variants(first:100){ nodes{ id title availableForSale
+  price{ amount currencyCode } selectedOptions{ name value } } } }`. Export the
+  mapped `ProductDetail` type for K3/K4.
+- Reuse the width-resize + srcset convention from `catalog.ts`
+  (`?width=` on `cdn.shopify.com` URLs, 700/1100/1600) — export those two helpers
+  from `catalog.ts` and import them; don't fork the logic.
+- Price formatting matches the cards: `$495` (strip `.00`), non-USD shows code.
+
+**Done when:** build+check green; module typechecks and is importable from client
+scripts; with the token in `.env`, a quick manual `getProduct("<any live handle>")`
+from the browser console (or a temporary test snippet, removed before commit)
+returns full data; without the token everything degrades quietly.
+
+---
+
+### K2 — Catalogue: whitespace-free cards, sold-out tags, in-site links, live refresh
+
+**Why:** cards currently letterbox the image inside a bordered gray box and link OUT
+to `shopandson.com/products/<handle>`. Beckett wants: **no whitespace margin — just
+the image, with title/vendor/price below**; sold-out marked; clicks stay on our site;
+and the grid to reflect Shopify changes without waiting for a redeploy.
+
+**Files:** `src/lib/catalog.ts`, `src/components/blocks/HeroVideo.astro`
+(card factory + render + script), `src/styles/global.css`.
+
+- **Snapshot data (`catalog.ts`):** extend `CatalogProduct` with `handle`,
+  `available` (true if ANY variant `available`), and `imageAspect` (width/height from
+  the feed's image dims; fallback 3/4). Raise `PRODUCT_CAP` to 250 and page
+  `products.json?limit=250&page=N` until a short page, so big collections
+  (e.g. `clothing-1`) are complete. Keep `url` for now (unused by cards after this).
+- **Card restyle (whitespace kill):** `.product-card__media` loses the border and the
+  gradient/letterbox background entirely; the media box gets
+  `aspect-ratio: var(--card-aspect)` (set per-card from `imageAspect`) and the image
+  fills it exactly (`object-fit:cover` is safe now — box ratio == image ratio, so
+  nothing crops). Cards top-align. Rows are no longer uniform height → the row pager
+  must **measure**: replace the `--catalog-row-index`-driven uniform translateY with
+  cumulative real row offsets (`offsetTop` of the target row), recomputed on render
+  and on resize. Wheel/touch paging behavior otherwise unchanged; mobile scroll
+  fallback unchanged.
+- **Sold-out tag:** when `available === false`, card gets a small uppercase
+  `sold out` label (skin-consistent: mono/uppercase, black on paper or thin-bordered),
+  overlaid on the image corner or first line of the body — Codex picks the cleaner,
+  operator verifies. Image dims slightly (e.g. `opacity:.55`). Card stays clickable.
+- **In-site links:** `createProductCard` hrefs become
+  `withBase(\`/product/?handle=${handle}\`)` — same tab, no `target=_blank`. Import
+  `withBase` logic into the client script the same way other base-aware URLs are
+  handled (the script is bundled by Astro, so a small inlined base constant from
+  `import.meta.env.BASE_URL` is fine).
+- **Live refresh (stale-while-revalidate):** `renderCatalogContent` paints the
+  snapshot immediately (as now), then fires `getCollectionProducts(collection)`
+  (K1). On resolve: if the panel is still showing THAT collection (race-guard via
+  `hero.dataset.activeCollection`) and the data differs, re-render the rows and
+  clamp `rowIndex` to the new `lastRowIndex`. Cache per-collection in a Map for the
+  session (one live fetch per collection per visit). Unconfigured/failed fetch →
+  snapshot stands, zero user-visible errors.
+
+**Done when:** build+check green; cards show edge-to-edge images with info below (no
+border, no gray letterbox); mixed aspect ratios page correctly by measured rows;
+sold-out items are marked + dimmed; clicking any card goes to
+`/shop-and-son/product/?handle=<handle>` in the same tab; with the token set, a
+product retitled in Shopify admin shows the new title on next catalogue open without
+a rebuild.
+
+---
+
+### K3 — Product detail page: `/product/?handle=<handle>`
+
+**Why:** the in-site listing view. Layout mirrors the pre-order site's split — photos
+on one side, details on the other — restated in the homepage skin (paper, black,
+uppercase mono/serif already in `global.css`; NO new fonts, no preorder CSS imports).
+
+**Files:** new `src/pages/product.astro`; `src/layouts/Base.astro` (one additive
+prop); `src/styles/global.css` (or a scoped style block in the page).
+
+- **Chrome:** add a `bare` prop to `Base.astro` — renders like `landing` (no TopBar,
+  no IndexOverlay) but WITHOUT the `landing` class, so the page scrolls normally.
+  Purely additive: `{!landing && !bare && <TopBar />}` etc.; existing pages
+  untouched. The product page uses `<Base bare title=...>`.
+- **Page top:** minimal header row — left: a `← back` control (`history.length > 1 ?
+  history.back() : location = withBase("/")`); right: the same cart icon/drawer
+  trigger as the homepage (K4 wires it; until then render the icon linking to
+  `withBase("/")`).
+- **Client flow:** read `?handle=` → `getProduct(handle)` (K1). States:
+  - loading: blank paper + a small mono `loading` line (no spinners);
+  - not found / no handle: `this piece is no longer listed` + link back home;
+  - Storefront unconfigured (deploy without token): fall back to a plain link out to
+    `https://shopandson.com/products/<handle>` so the page is never a dead end.
+- **Layout, desktop (≥761px):** two columns ~55/45. **Left:** ALL product images
+  stacked full-column-width, natural aspect ratios, edge-to-edge, no borders
+  (lazy-load below the first; width-resized srcset via the K1 helpers). **Right:**
+  `position:sticky; top:0` details panel: vendor (small, muted) → title → price →
+  variant selector → ADD TO CART → `descriptionHtml` (rendered as-is inside a
+  `.product-detail__desc` wrapper with sane type styles). Page scrolls the image
+  stack; details stay pinned — same reading as the preorder page.
+- **Variant selector:** square bordered uppercase buttons per variant option value
+  (visual language of the preorder `size-btn`, rebuilt in our skin — selected =
+  inverted black/white; unavailable = disabled + struck). Single-variant products
+  auto-select and show no selector. Multi-OPTION products (size × color) may render
+  one button row per option — handle generally, not size-specific.
+- **ADD TO CART:** disabled until a purchasable variant is resolved; label `add to
+  cart`; whole-product `availableForSale === false` → button reads `sold out`,
+  permanently disabled. In THIS commit the click handler is a stub dispatching
+  `document.dispatchEvent(new CustomEvent("cart:add", { detail: { variantId,
+  quantity: 1 } }))` — K4 listens; no dead UI, no console-only behavior.
+- **Mobile:** single column — images first (swipeable horizontal strip or stacked;
+  stacked is fine), details after; sticky-off.
+- No instructional/internal text anywhere on the page.
+
+**Done when:** build+check green; `/product/?handle=<live handle>` renders all images
+left + sticky details right in the homepage skin; variants select; sold-out renders
+disabled; unknown handle shows the not-found state; back control works; a
+handle created in Shopify admin AFTER the build renders fine (that's the point).
+
+---
+
+### K4 — Cart: Storefront Cart API + on-site drawer, checkout hands off to Shopify
+
+**Why:** "everything leading up to checkout" happens on our site. The cart lives
+here; Shopify only takes over at the pay step.
+
+**Files:** new `src/lib/cart.ts`, new `src/components/CartDrawer.astro`;
+`src/components/blocks/HeroVideo.astro` (cart icon rewire), `src/pages/index.astro`
++ `src/pages/product.astro` (mount drawer), `src/styles/global.css`.
+
+- **`cart.ts` (client, on top of K1's `storefrontFetch`):**
+  - Mutations/queries: `cartCreate`, `cartLinesAdd`, `cartLinesUpdate`,
+    `cartLinesRemove`, and a `cart(id:)` query selecting `id checkoutUrl
+    totalQuantity cost{ subtotalAmount{ amount currencyCode } } lines(first:100){
+    nodes{ id quantity merchandise{ ... on ProductVariant{ id title product{ title
+    handle vendor } image{ url width height } price{ amount currencyCode } } }
+    cost{ totalAmount{ amount currencyCode } } } }`.
+  - Persist cart id in `localStorage("andson:cart-id")`. On load, hydrate; if the
+    stored cart errors, is null, or is already checked out → clear the id, lazily
+    recreate on next add. `userErrors` surfaced as a quiet inline message, never an
+    alert.
+  - API: `getCart()`, `addLine(variantId, qty=1)`, `updateLine(lineId, qty)`
+    (qty 0 = remove), `removeLine(lineId)`. After EVERY mutation dispatch
+    `cart:updated` (detail = mapped cart) on `document`; listen for K3's `cart:add`.
+- **`CartDrawer.astro`:** right-edge slide-over (transform transition, matches the
+  550ms stage timing), paper background, 1px black left rule, `z-index` above the
+  hero panels. Header `cart` + `×` close. Lines: thumb (width-resized), title,
+  variant title (skip `Default Title`), qty stepper (`−`/`+`), remove `×`, line
+  price. Footer: `subtotal` + amount, note `shipping + tax at checkout`, full-width
+  black `CHECKOUT` button → `location.href = cart.checkoutUrl` (same tab). Empty
+  state: `nothing yet`. Backdrop click + Esc close. Scroll within the drawer;
+  page behind doesn't scroll while open.
+- **Cart icon:** `.hero__cart` becomes a `<button>` toggling the drawer (keep the
+  exact bag SVG + placement). Add a count badge — small mono superscript number,
+  hidden when 0 — updated from `cart:updated` + initial hydrate. Same trigger on the
+  product page header. Adding to cart auto-opens the drawer. **Keep** the existing
+  hide-while-catalog/preorder-open CSS for now (collision rules from I1) — flag to
+  operator that adding from a catalogue view opens the drawer even while the icon is
+  hidden, and whether the icon should stay visible in panels is an operator call.
+- Buys are otherwise untouched: no payment UI, no customer accounts — Shopify's
+  checkout owns everything after `checkoutUrl`.
+
+**Done when:** build+check green; with the token set: add a variant from a product
+page → drawer opens showing the line; qty stepper + remove work; badge count tracks;
+reload keeps the cart; CHECKOUT lands on Shopify's checkout with those items; a
+completed checkout results in a fresh empty cart on return; without the token the
+drawer shows the empty state and add-to-cart is inert (no crashes).
+
+---
+
+### K5 — Freshness ops: scheduled rebuild + token into the Pages build
+
+**Why:** the build snapshot (instant first paint + no-token fallback) shouldn't rot,
+and the deployed bundle needs the `PUBLIC_` vars inlined at build time.
+
+**File:** `.github/workflows/deploy.yml` — the one Phase K exception to
+homepage-only scope; operator is aware.
+
+- Add `schedule: - cron: "0 8 * * *"` (daily, ~4am ET) alongside the existing
+  `push`/`workflow_dispatch` triggers. It redeploys `main` as-is with a fresh product
+  snapshot — no code change risk.
+- Pass the vars into the build step:
+  `env: PUBLIC_SHOPIFY_STORE_DOMAIN: ${{ vars.PUBLIC_SHOPIFY_STORE_DOMAIN }}` and
+  `PUBLIC_SHOPIFY_STOREFRONT_API_TOKEN: ${{ vars.PUBLIC_SHOPIFY_STOREFRONT_API_TOKEN }}`
+  (repo Actions **variables**, set by the operator in K0). Build must stay green when
+  they're unset (fork/PR builds) — K1's quiet degradation guarantees it.
+
+**Done when:** workflow YAML is valid (`npm run build` locally is unaffected); after
+the operator sets the repo variables and this merges, the deployed site has live
+Storefront features AND the nightly refresh; a build without the vars still succeeds.
+
+---
+
+### Phase K risks / review focus (Claude checks these on every diff)
+
+- **Row pager regression (K2):** measured offsets must survive resize, re-render,
+  and the clamp when a live refresh shrinks a collection.
+- **Race conditions (K2/K4):** stale collection fetch painting over a newer panel;
+  double-click add-to-cart double-adding (disable button while a mutation is in
+  flight).
+- **Base path (K2/K3):** every internal URL through `withBase`/`BASE_URL` — a bare
+  `/product/` link 404s on Pages.
+- **Token absence:** every live feature must no-op gracefully — the deployed site
+  before K0/K5 land must look exactly like today, minus nothing.
+- **Skin discipline:** no new fonts, no preorder-site CSS leakage; paper/black/
+  uppercase; `descriptionHtml` styles contained so Shopify markup can't restyle the
+  page.
 
 ---
 
@@ -218,6 +447,10 @@ above with the address at the bottom and **no overlap**; the block has no animat
 scrolling down reveals it; CLOTHES stays anchored at the top.
 
 ---
+
+## Log (Phase K — Codex appends newest at top)
+
+- (empty)
 
 ## Log (Phase J — Codex appends newest at top)
 
@@ -507,7 +740,8 @@ pages still locked.
 
 ### QUEUED (do not start — blocked)
 
-- **Phase C2 — (optional) always-current data.** Real products+images already flow via the BUILD-TIME fetch of `shopandson.com/collections/<handle>/products.json` (refreshes on each deploy). C2 is now only needed if the operator wants products to update WITHOUT a redeploy → switch the data seam to a client-side **Storefront API** fetch (`PUBLIC_SHOPIFY_STORE_DOMAIN` + `PUBLIC_SHOPIFY_STOREFRONT_API_TOKEN`; Storefront API IS CORS-enabled, unlike products.json). Needs the token. Not blocking anything visual now.
+- **Phase C2 — always-current data.** SUPERSEDED by Phase K (K1/K2 implement exactly
+  this: client-side Storefront fetch over the `PUBLIC_` vars). Kept for history only.
 
 ### SHIPPED / committed on dev (awaiting operator verify + deploy)
 - **Phase A** — hero menu type → 2/3. Committed `a2f93f8`, pushed, in PR #1 (`dev → main`).
