@@ -193,6 +193,11 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     <div class="hero-info">
       <p>138 sullivan st,<br />new york, ny 10012</p>
       <p>contact:<br /><a href="mailto:info@shopandson.com">info@shopandson.com</a></p>
+      <p class="hero-info__legal">
+        <a href="https://shopandson.com/policies/refund-policy" target="_blank" rel="noopener">refund policy</a> &middot;
+        <a href="https://shopandson.com/policies/privacy-policy" target="_blank" rel="noopener">privacy policy</a> &middot;
+        <a href="https://shopandson.com/policies/terms-of-service" target="_blank" rel="noopener">terms of service</a>
+      </p>
     </div>
   </nav>
 
@@ -263,17 +268,6 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   let activeStage: HeroStage = "landing";
   let touchStartY: number | null = null;
-
-  const updatePageScrollLock = () => {
-    if (!hero) return;
-
-    const wasLocked = document.documentElement.classList.contains("is-scroll-locked");
-    const clean = activeStage === "landing" && !hero.querySelector(".hero__menu-section.is-open");
-    document.documentElement.classList.toggle("is-scroll-locked", !clean);
-    if (!clean && !wasLocked) {
-      window.scrollTo(0, 0);
-    }
-  };
 
   const parseCatalogData = (): Record<string, CatalogProduct[]> => {
     try {
@@ -348,7 +342,6 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
         resetMenuSubgroups(section);
       }
     });
-    updatePageScrollLock();
   };
 
   const getStagePanel = (stage: PanelStage) =>
@@ -475,7 +468,6 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
         activatePanel(nextStage);
         if (nextStage === "preorder") resizePreorderFrame();
         activeStage = nextStage;
-        updatePageScrollLock();
         if (nextStage === "music") {
           stageCleanup = window.setTimeout(() => {
             setMusicSettled(true);
@@ -497,7 +489,6 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     activatePanel(nextStage);
     if (nextStage === "preorder") resizePreorderFrame();
     activeStage = nextStage;
-    updatePageScrollLock();
 
     if (previousPanelStage) {
       stageCleanup = window.setTimeout(() => {
@@ -620,7 +611,6 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     dj?.setAttribute("aria-hidden", "true");
     setActiveButton(null);
     activeStage = "landing";
-    updatePageScrollLock();
   };
 
   collectionButtons.forEach((button) => {
