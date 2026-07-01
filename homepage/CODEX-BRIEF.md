@@ -619,6 +619,15 @@ Two candidate architectures (decide at build time):
    part. The site component is identical either way — the data source is
    swappable.
 
+**Ben's on/off switch (part of the idea):** a Shopify SHOP METAFIELD boolean
+(e.g. namespace `site`, key `now_playing_enabled`, storefront access enabled),
+read via the Storefront API like everything else. Ben gets a bookmark straight
+to the field in admin: flip on/off → site follows on next load, no redeploy.
+Display requires ALL THREE gates: switch on AND store hours AND actively
+playing — otherwise the section doesn't render at all. This `site.*` flag
+namespace is the pattern for any future operator toggles (one place, Ben's
+existing login, zero new accounts).
+
 Blocked on: Ben's approval + his one-time account connection. Historical note:
 the retired v1 design mocked exactly this (`content.ts` `music.nowPlaying`).
 
