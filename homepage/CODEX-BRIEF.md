@@ -68,7 +68,7 @@ diff against that sub-task's **Done when** + the risks list before the next
 dispatch. Before each dispatch, Claude updates the line below so Codex has ONE
 target; everything else in this file is context, not instruction.
 
-> **ACTIVE SUB-TASK: (none — Wave 3 COMPLETE + M3-rev landed on dev: M2 193e0b8, M2b 58e8030, M3 0e5a442+32d2e21, L3 5fb0f1f+76efa7d, M3-rev 5b4e851; new-about-homepage.mp4 deleted. All reviewed + built green, held UNPUSHED for operator verify → ship Wave 3 as its own PR (K1 + plan-docs ride along, operator-approved). K2+ paused on token.)**
+> **ACTIVE SUB-TASK: (none — Wave 3 + all film revisions COMPLETE on dev: M2 193e0b8, M2b 58e8030, M3 0e5a442+32d2e21, L3 5fb0f1f+76efa7d, M3-rev 5b4e851, M3-rev2 1a31085. All reviewed + built green, held UNPUSHED for operator verify → ship Wave 3 as its own PR (K1 + plan-docs ride along, approved). K2+ paused on token.)**
 
 Recommended order (three waves, operator verifies on `dev` after each wave and
 ships dev → main per wave, not one giant merge):
@@ -776,6 +776,57 @@ pause the film and glide the house back; mobile sane.
 
 ---
 
+### M3-rev2 — film presence + classic centered play control + mute toggle
+
+**Operator revision (2026-07-01, screenshot-verified after M3-rev):** layout is
+clear of the menu, but the film reads too small (dead paper both sides) and the
+controls should be a classic centered play/pause + a bottom-left mute. **Video
+FILE untouched, as always.** Files: `src/styles/global.css`,
+`src/components/blocks/HeroVideo.astro`.
+
+1. **PRESENCE — the video dominates the area right of the menu.** Size it
+   **width-first**: the video fills the panel's available width, up to
+   `max-height:~86vh`, whichever binds first, native aspect (`contain`, no crop).
+   Trim dead space — the gap between the menu column's right edge and the video's
+   left edge should be a modest margin (~2–3vw), visually similar to the right
+   margin; pull the panel's left edge in (e.g. `left:max(27vw,240px)`) if needed,
+   **but the menu column incl. expanded CLOTHES must stay completely clear** at
+   every width. Vertically centered. **Slide animations unchanged.**
+
+2. **CENTERED CLASSIC PLAY/PAUSE** (replaces the current bottom-left text button
+   as the playback control). Classic glyphs — **solid triangle ▶ play, two bars
+   ⏸ pause** — flat/minimal, blends with the site (NO player chrome, NO circles;
+   ink-style glyph with a subtle legibility treatment over the footage — e.g. a
+   soft shadow/halo, not a background pill), ~56–64px, centered in the video
+   frame. Real `<button>`, `aria-label`. **Exact state machine:**
+   - **Before first play:** centered ▶ visible + persistent. **Never autoplays** —
+     user must press it.
+   - **Playing:** all controls vanish (like a normal player). Clicking anywhere on
+     the video pauses.
+   - **Paused** (user clicked the video or the glyph): centered icon reappears and
+     STAYS until playback resumes. **Per operator spec the paused state shows the
+     PAUSE icon (⏸)** — implement as written **and FLAG in the log** for operator
+     verify (conventional players show ▶ when paused; one-glyph swap if he wants
+     it flipped after seeing it).
+   - **Hover** (hover-capable only): the centered glyph goes neon-green (M1).
+   - Clicking the glyph toggles playback in every state.
+
+3. **MUTE TOGGLE bottom-left** (replaces the play/pause text button that lives
+   there now — SAME position + style: lowercase mono text, real `<button>`,
+   neon-green on hover). Label reflects state and click toggles it: `sound on`
+   (default — audio audible once playing) ⇄ `sound off` (muted), wired to
+   `video.muted`. Persist the choice while the stage stays open; **reset to
+   `sound on` (unmuted) when the stage fully closes** (`closeStage`).
+
+**Done when:** build+check green; the film commands the space right of the menu
+(minimal dead paper both sides, native aspect, sharp, menu untouched at every
+width incl. CLOTHES fully expanded); the centered classic control follows the
+state machine exactly and greens on hover; bottom-left is now `sound on`/`sound
+off` in the old button's style; × and stage switches still pause the film and
+glide the house back; mobile sane.
+
+---
+
 ### Phase K + L + M risks / review focus (Claude checks these on every diff)
 
 - **Row pager regression (K2):** measured offsets must survive resize, re-render,
@@ -939,6 +990,7 @@ scrolling down reveals it; CLOTHES stays anchored at the top.
 
 ## Log (Phase M — Codex appends newest at top)
 
+- 2026-07-01 — Phase M3-rev2: film presence + classic centered play/pause glyph + bottom-left mute (operator revision) — 1a31085 — build:green check:green (Claude re-ran: 0 err/0 warn/6 hints) — video file UNTOUCHED (HeroVideo.astro + global.css only). PRESENCE: .hero__film left:max(30vw→27vw,240px); .hero__film-frame + .hero__film-video now width:100% (width-first, fills panel width), max-height 78vh→86vh, object-fit contain native aspect — video now commands the space, minimal side dead paper. CENTERED PLAYBACK: new <button class="hero__film-playback" data-film-playback> centered in frame (62px, 58px mobile), two inline-SVG glyphs (filled triangle --play / two rounded bars --pause), ink #000 with white drop-shadow halo for legibility (no chrome/circle), neon-green on hover (@media hover:hover). State machine via updateFilmPlayback + filmHasStarted flag: hidden=isPlaying (controls vanish while playing); default(no class)=▶; .is-paused-after-start (filmHasStarted && paused)=⏸; filmHasStarted set on first 'play'; clicking glyph OR video toggles. MUTE: bottom-left .hero__film-toggle repurposed to data-film-mute, same lowercase-mono style + neon hover; label 'sound on'⇄'sound off' wired to video.muted; resetFilmMute() (muted=false) on init + closeStage + on leaving film via transitionToStage. Reviewed clean by Claude (full diff). committed @ 1a31085 — ready for operator verify. Not pushed. FLAGS for operator: (1) PER SPEC the PAUSED-after-start state shows the PAUSE glyph ⏸ (conventional players show ▶ when paused) — one-glyph swap (.is-paused-after-start rule) if you want it flipped after seeing it; (2) 'all controls vanish while playing' implemented as the CENTERED playback glyph hiding while playing — the × and mute stay accessible (so you can close/mute without pausing first); say if you want those to auto-hide-on-play + reveal-on-hover too; (3) mute also resets to sound-on when you switch from film to another stage (not just on ×) — matches 'reset when the stage closes'.
 - 2026-07-01 — Phase M3-rev: film panel contained clear of the menu + visible play control (operator revision, screenshot-verified) — 5b4e851 — build:green check:green (Claude re-ran: 0 err/0 warn/6 hints) — LAYOUT ONLY, video file untouched (only HeroVideo.astro + global.css changed). .hero__film re-geometried from inset:0/margin:auto (centred in full viewport → spilled into menu) to position top:0/right:0/bottom:0/left:max(30vw,240px) (matches .hero__catalog), flex-centred, padding 0 2vw 0 0 — confined RIGHT of the menu, never overlapping menu/about/cart. Slide transforms KEPT byte-identical (off-screen translateX(calc(50vw+100%)), shared active translateX(0), shared exit translateX(-110%)). New wrapper <div class="hero__film-frame"> (position:relative; inline-flex; fit-content; max-height:78vh) shrink-wraps the video so the × (top-right) + play/pause (bottom-left) buttons anchor to the VIDEO corners, not the letterbox — buttons' own CSS unchanged, just reparented. Video: width/height auto, max-width:100%, max-height:78vh, object-fit:contain (native aspect, no crop). .hero__film-toggle:hover stays neon-green in the @media(hover:hover) group; video-click toggle + updateFilmToggle unchanged; no autoplay, audio stays. Mobile: .hero__film top:clamp(88px,16vh,132px)/left:0/right:0, padding 0 4vw (clear of horizontal menu tabs), frame+video max 100%. Reviewed clean by Claude (full diff). committed @ 5b4e851 — ready for operator verify. Not pushed. ASSET HOUSEKEEPING (operator decisions): new-about-homepage.mp4 DELETED (unused, superseded) — commit prior; about-film.mp4 kept at 32MB (preload=metadata → downloads only on demand) — CANDIDATE FOR A LATER OPTIMIZE PASS (lighter encode) when convenient, not blocking.
 - 2026-07-01 — Phase M2b: stencil white by default, neon-green on hover (operator revision to M2) — 58e8030 — build:green check:green — global.css 2 lines: .hero__stencil background-color var(--neon-green)→#ffffff (white house as before, via mask fill); hover rule filter:brightness(1.28)→background-color:var(--neon-green) inside @media(hover:hover). Now matches the menu-text hover language (white→green only while hovered, signals clickable); touch devices stay white (no stuck green). Mask/sizing/aspect-ratio/transform/exit-left untouched. Reviewed clean by Claude. committed @ 58e8030 — ready for operator verify. Not pushed.
 - 2026-07-01 — Phase M3: click house → about film stage (Wave 3; establishes the 4th-stage pattern L3 copies) — 0e5a442 (code) + 32d2e21 (asset) — build:green check:green (Claude re-ran independently: 0 err/0 warn/6 hints; confirmed dist/videos/about-film.mp4 (32MB) + hero__film markup in dist/index.html). ASSET DECISION (operator asked which path): new-about-homepage.mp4 REJECTED — ffprobe showed a different 17.7s cut (vs master 64.4s), 1920×1080 not native, and NO audio track (spec requires audio). Encoded fresh from master about-original.mp4 → public/videos/about-film.mp4: H.264 high, CRF20, native 2048×1152 (16:9), no crop, AAC stereo audio copied, +faststart; 32MB (large but quality was the stated priority). CODE (HeroVideo.astro + global.css): added 'film' to HeroStage+PanelStage; getStagePanel/getStageClass/is-film; element queries filmPanel/filmVideo/filmToggle/filmClose/filmOpen; is-film added to both returnStencilFromRight class-lists + the cart-hide rule + the stencil exit-left rule (house slides out left). openFilm() mirrors openMusic(). Trigger: [data-film-open] (M2 button) guarded to landing-only → setMenuSectionState(null)+openFilm(). <aside class="hero__film"> = <video src=withBase(/videos/about-film.mp4) preload=metadata playsinline, no autoplay/loop/muted, controls hidden> + × close [data-film-close] + lowercase-mono play/pause [data-film-toggle] bottom-left (real buttons, M1 neon hover). Manual playback: click video OR toggle → play/pause; play/pause/ended events keep the label synced; play() promise .catch guarded. PAUSE ON EVERY EXIT verified: transitionToStage pauses when previousStage==='film' (menu-header switch) AND closeStage pauses + resets label; currentTime NEVER reset → reopen resumes from position. Panel box = stencil's (height:min(82vh,76vw)/max-width:84vw) but aspect-ratio:16/9 + max-height:47.25vw so the film shows at native 16:9 centered where the house was, object-fit:contain no crop; enters-from-right 550ms; z-index:2; mobile override. Reviewed clean by Claude (full script+CSS read). committed @ 0e5a442+32d2e21 — ready for operator verify. Not pushed. Operator: (a) browser-verify the film↔catalog/preorder/music/landing matrix is flicker-free + audio plays on user-initiated play; (b) 32MB asset — fine per quality priority, flag if you want a lighter encode; (c) superseded new-about-homepage.mp4 (4.95MB, tracked, now unused) can be deleted — left in place pending your OK.
