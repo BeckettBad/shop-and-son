@@ -61,6 +61,28 @@ nothing; **L3 needs the operator to save the fam photo** to
 in the repo (see M3's asset note) — operator confirms it before M3 is dispatched.
 **Operator priority within Phase M: M3 (the film stage) first**; M2's green
 stencil is best-effort — if the recolor fights back, ship it white and flag.
+
+**DISPATCH PROTOCOL — this brief is 12 sub-tasks, NOT one dispatch.** One
+sub-task per `./dispatch-codex.sh` run, one commit each, Claude reviews the real
+diff against that sub-task's **Done when** + the risks list before the next
+dispatch. Before each dispatch, Claude updates the line below so Codex has ONE
+target; everything else in this file is context, not instruction.
+
+> **ACTIVE SUB-TASK: (none — set me before dispatching)**
+
+Recommended order (three waves, operator verifies on `dev` after each wave and
+ships dev → main per wave, not one giant merge):
+1. **Wave 1 — no prerequisites, quick wins:** L2 → M1 → L1. (L1 is the invasive
+   one: after it, click through every stage + confirm the page can't scroll.)
+2. **Wave 2 — after K0 (token live in `homepage/.env`):** K1 → K2 → K3 → K4 →
+   K6 → K5. Browser-verify K2's pager and K4's cart flow by hand, not just
+   build+check.
+3. **Wave 3 — assets confirmed first:** M2 → M3 → L3 (M3 and L3 both extend the
+   stage machinery — keep them adjacent so the second copies the first's
+   pattern).
+
+If a diff misses the brief: revert and re-dispatch with the brief amended —
+never patch-on-patch, never let Codex "fix forward" a wrong commit.
 **Task:** Phase K — commerce core (K1–K6), Phase L — chrome/editorial edits
 (L1–L3), **and** Phase M — neon interaction language + the house film stage
 (M1–M3). The homepage becomes a proper selling site: in-site product pages,
