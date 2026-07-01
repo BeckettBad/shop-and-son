@@ -55,12 +55,17 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 **Status:** ready for Codex — **K0 is an operator prerequisite** (Storefront token).
 K1 and the snapshot half of K2 can start without it; K2's live-refresh, K3's live
-fetch, and all of K4 need the token in `homepage/.env` to be testable.
-**Task:** Phase K — commerce core. The homepage becomes a proper selling site:
-in-site product pages, on-site cart, checkout handed to Shopify. FIVE sub-tasks
-(K1–K5), **in order, one focused commit each**, `npm run build` **and**
-`npx astro check` green after every one. Scope: `homepage/` only — EXCEPT K5,
-which (with operator awareness) touches `.github/workflows/deploy.yml`.
+fetch, K4, and K6 need the token in `homepage/.env` to be testable. L1 and L2 need
+nothing; **L3 needs the operator to save the fam photo** to
+`homepage/public/images/fam-tattoo.jpg` first.
+**Task:** Phase K — commerce core (K1–K6) **and** Phase L — chrome/editorial edits
+(L1–L3). The homepage becomes a proper selling site: in-site product pages, on-site
+cart, checkout handed to Shopify, menus + listings that mirror Shopify admin
+automatically. **One focused commit each**, `npm run build` **and** `npx astro
+check` green after every one. K runs in order (K6 depends only on K1); L1–L3 are
+independent of K and of each other — do them whenever convenient. Scope:
+`homepage/` only — EXCEPT K5, which (with operator awareness) touches
+`.github/workflows/deploy.yml`.
 
 **The model (decided with the operator 2026-07-01):**
 - **Cart = on-site drawer** via the Shopify **Storefront Cart API**; only the final
@@ -75,6 +80,14 @@ which (with operator awareness) touches `.github/workflows/deploy.yml`.
 - **Data freshness = layered:** build-time snapshot (existing `products.json` fetch)
   paints instantly → client-side Storefront re-fetch revalidates on open → a daily
   scheduled rebuild keeps the snapshot itself from going stale.
+- **Menus mirror Shopify admin (K6):** the CLOTHES + OBJECTS subcategories are
+  driven by the store's live navigation menus via the Storefront `menu` query —
+  when Ben adds/renames/removes a collection or menu entry in admin, the homepage
+  follows without a redeploy. `content.ts` stays as the no-token fallback snapshot.
+- **Collection descriptions (K2):** opening any designer/category catalogue shows
+  that collection's Shopify description NEXT TO its name at the top of the panel.
+- **No footer (L1):** the H5/J1 footer is removed entirely; the three required
+  legal links live subtly in the bottom-left about block instead.
 
 ---
 
@@ -85,7 +98,8 @@ Not a Codex task — Beckett does this once; Codex consumes the values.
 - Shopify admin → Settings → Apps and sales channels → Develop apps → (the app) →
   **Storefront API** → enable scopes: `unauthenticated_read_product_listings`,
   `unauthenticated_read_checkouts`, `unauthenticated_write_checkouts` (the Cart API
-  mutations ride the checkout scopes). Install/reinstall the app, copy the
+  mutations ride the checkout scopes), and `unauthenticated_read_content` (needed
+  for the K6 `menu` query that keeps the nav categories mirroring admin). Install/reinstall the app, copy the
   **Storefront access token** (this is the PUBLIC token — safe to ship in the page;
   it is NOT the Admin key/secret).
 - Add to `homepage/.env` (and Codex mirrors the names into `.env.example` in K1):
@@ -119,12 +133,22 @@ browser-side Shopify client. The existing `src/lib/shopify.ts` is build-time-sha
   `https://${domain}/api/2025-01/graphql.json` with
   `X-Shopify-Storefront-Access-Token`; handle non-OK + GraphQL `errors[]`; ~10s
   timeout via AbortController.
-- `getCollectionProducts(handle, first = 250)` →
-  `collection(handle:){ products(first:){ nodes{ handle title vendor availableForSale
-  featuredImage{ url altText width height } priceRange{ minVariantPrice{ amount
-  currencyCode } } } } }`, paginating with `pageInfo`/cursor past 250 if needed.
-  Map to the SAME `CatalogProduct` shape K2 extends in `catalog.ts` (import the type)
-  so the catalogue can swap data sources transparently.
+- `getCollection(handle, first = 250)` →
+  `collection(handle:){ title description products(first:){ nodes{ handle title
+  vendor availableForSale featuredImage{ url altText width height }
+  priceRange{ minVariantPrice{ amount currencyCode } } } } }`, paginating with
+  `pageInfo`/cursor past 250 if needed. Returns `{ title, description, products }`;
+  products map to the SAME `CatalogProduct` shape K2 extends in `catalog.ts`
+  (import the type) so the catalogue can swap data sources transparently.
+  `description` is the plain-text collection description Ben writes in admin
+  (e.g. Hender Scheme's tannery note) — K2 renders it in the catalogue head.
+- `getMenu(handle)` → `menu(handle:){ items{ title url items{ title url } } }`
+  (requires `unauthenticated_read_content`). Map each item to
+  `{ label, collectionHandle?, href? }` — collection handles parsed from
+  `/collections/<handle>` URLs; anything else kept as a plain href. K6 consumes
+  this; the live menu HANDLES (the store's nav menus behind its `wear` /
+  `designers` / `objects` dropdowns — likely under `main-menu`) must be discovered
+  at implementation time by querying and inspecting, not guessed.
 - `getProduct(handle)` → `product(handle:){ id handle title vendor descriptionHtml
   availableForSale images(first:24){ nodes{ url altText width height } }
   options{ name values } variants(first:100){ nodes{ id title availableForSale
@@ -175,20 +199,34 @@ and the grid to reflect Shopify changes without waiting for a redeploy.
   `withBase` logic into the client script the same way other base-aware URLs are
   handled (the script is bundled by Astro, so a small inlined base constant from
   `import.meta.env.BASE_URL` is fine).
+- **Collection description in the head:** the catalogue head becomes
+  `TITLE — description` on ONE line block: the collection title as now, and NEXT TO
+  it (inline to its right, not underneath) the collection's Shopify description in
+  smaller, muted, lowercase-as-authored type (e.g. `HENDER SCHEME` followed by
+  "Sourcing from a local Japanese tannery, …"). Long descriptions clamp to ~2 lines
+  (`-webkit-line-clamp`) so the grid never gets pushed around. Applies to EVERY
+  collection — designers, clothing categories, objects. Description arrives with
+  the K1 live fetch (`getCollection`); before it resolves (or with no token) the
+  head shows just the title, exactly as today — no layout jump beyond the text
+  appearing. Empty description → title only.
 - **Live refresh (stale-while-revalidate):** `renderCatalogContent` paints the
-  snapshot immediately (as now), then fires `getCollectionProducts(collection)`
-  (K1). On resolve: if the panel is still showing THAT collection (race-guard via
-  `hero.dataset.activeCollection`) and the data differs, re-render the rows and
-  clamp `rowIndex` to the new `lastRowIndex`. Cache per-collection in a Map for the
-  session (one live fetch per collection per visit). Unconfigured/failed fetch →
-  snapshot stands, zero user-visible errors.
+  snapshot immediately (as now), then fires `getCollection(collection)` (K1). On
+  resolve: if the panel is still showing THAT collection (race-guard via
+  `hero.dataset.activeCollection`) and the data differs, re-render the rows +
+  description and clamp `rowIndex` to the new `lastRowIndex`. A collection with NO
+  snapshot entry (e.g. a menu entry Ben added after the last deploy, via K6) paints
+  an empty grid then fills from the live fetch. Cache per-collection in a Map for
+  the session (one live fetch per collection per visit). Unconfigured/failed fetch
+  → snapshot stands, zero user-visible errors.
 
 **Done when:** build+check green; cards show edge-to-edge images with info below (no
 border, no gray letterbox); mixed aspect ratios page correctly by measured rows;
 sold-out items are marked + dimmed; clicking any card goes to
-`/shop-and-son/product/?handle=<handle>` in the same tab; with the token set, a
-product retitled in Shopify admin shows the new title on next catalogue open without
-a rebuild.
+`/shop-and-son/product/?handle=<handle>` in the same tab; opening HENDER SCHEME
+shows its tannery description next to the name at the top (and every other
+collection likewise shows its admin description, or nothing when unset); with the
+token set, a product retitled in Shopify admin shows the new title on next
+catalogue open without a rebuild.
 
 ---
 
@@ -314,13 +352,177 @@ Storefront features AND the nightly refresh; a build without the vars still succ
 
 ---
 
-### Phase K risks / review focus (Claude checks these on every diff)
+### K6 — Live nav menus: CLOTHES + OBJECTS subcategories mirror Shopify admin
+
+**Why:** the hero menu's subcategories (OBJECTS' LIVING/KITCHEN/LIBRARY/SEATING,
+CLOTHES' CATEGORIES + DESIGNERS) are hardcoded in `content.ts` and have already
+drifted twice (H1, I2). Beckett wants them **identical to the live Shopify nav, now
+and in the future** — when Ben adds/renames/removes a collection or menu entry in
+admin, the site follows on its own. Depends only on K1 (`getMenu`).
+
+**Files:** `src/components/blocks/HeroVideo.astro` (client script),
+`src/lib/catalog.ts` or a small new `src/lib/menu.ts` if cleaner;
+`src/data/content.ts` untouched (it IS the fallback).
+
+- **Discover first:** with the token in `.env`, query the store's menus and identify
+  the handle(s) feeding the live site's `wear`/`designers`/`objects` dropdowns
+  (start with `main-menu`; inspect the item tree). Record the mapping in a comment.
+- **Hydrate, don't rebuild:** on page load, fetch the relevant menus once and
+  reconcile the DOM the server rendered from `content.ts`:
+  - OBJECTS: replace the section's leaf items (labels + collection handles) with the
+    live menu's entries, uppercase labels, same markup shape (`data-shop-all`,
+    `data-collection`, `data-collection-label`) so existing wiring keeps working.
+  - CLOTHES: same treatment for the CATEGORIES and DESIGNERS child lists (SHOP ALL
+    stays pointed at the menu's shop-all entry).
+  - Rebind/delegate the click handlers for replaced nodes — cleanest is switching
+    the collection-button listener to EVENT DELEGATION on `.hero__menu` (one
+    listener, survives any re-render) rather than the current per-button binding.
+    Subgroup toggles (H2) and section headers must be untouched by the swap.
+- **Equality guard:** if the live menu matches what's already rendered (the common
+  case), do nothing — zero flicker. Reconcile only on real difference; if a
+  reconcile happens while that section is open, the open/closed state of the
+  section + subfolders is preserved.
+- **Fallback:** no token / fetch fails / menu handle missing → `content.ts` menu
+  stands, exactly as today. Never render an empty menu.
+- **Operator note (surface, don't act):** once this ships, `content.ts`'s menu is a
+  snapshot that only matters for the pre-hydrate paint and no-token builds — worth
+  refreshing it occasionally, but drift no longer breaks anything.
+
+**Done when:** build+check green; with the token set, the OBJECTS + CLOTHES
+subcategories render exactly the live store's nav (verify against
+shopandson.com's dropdowns); a menu entry renamed in admin shows renamed on next
+page load with no redeploy; clicking hydrated entries opens populated catalogues
+(including a collection created after the last build — K2's no-snapshot path);
+without the token the menu is byte-identical to today's.
+
+---
+
+## PHASE L — chrome & editorial edits (independent of Phase K; any order)
+
+### L1 — Remove the footer entirely; legal links move into the about block
+
+**Why:** Beckett cut the footer from the design. The homepage goes back to a pure
+locked 100vh hero; the only footer content that survives is the legally required
+minimum, tucked subtly into the bottom-left about block.
+
+**Files:** `src/pages/index.astro`, `src/layouts/Base.astro`,
+`src/components/Footer.astro` (DELETE), `src/components/blocks/HeroVideo.astro`
+(about block + scroll-lock helper), `src/styles/global.css`,
+`homepage/public/images/footer-chronicle.png` (DELETE).
+
+- **Tear out H5 + J1 cleanly (they shipped together; reverse both):**
+  - `index.astro`: drop `<Footer />` and the `footer` prop → `<Base landing>`.
+  - `Base.astro`: delete the `footer` prop + `has-footer` class plumbing.
+  - Delete `Footer.astro`, the chronicle PNG, and ALL footer CSS (`.site-footer*` /
+    footer clone rules from H5).
+  - global.css: delete the `has-footer` scroll-unlock rules AND the
+    `.is-scroll-locked` re-lock rules (J1). End state: `html.landing` is
+    unconditionally `overflow:hidden` again — ONE simple lock rule, no variants.
+  - `HeroVideo.astro`: remove `updatePageScrollLock()` and its call sites +
+    the `scrollTo(0,0)` guard — with the page permanently locked it's dead code.
+    Nothing else in the stage/pager logic changes.
+- **Legal links in the about block:** in `.hero-info`, under the contact `<p>`, add
+  one final block:
+  `<p class="hero-info__legal"><a …>refund policy</a> · <a …>privacy policy</a> ·
+  <a …>terms of service</a></p>` linking out (full https, `rel="noopener"`, no
+  `withBase`) to `https://shopandson.com/policies/refund-policy`,
+  `/policies/privacy-policy`, `/policies/terms-of-service`.
+  These three are the required set for a US store (privacy is legally required;
+  refund terms must be conspicuous; ToS is the contract) — contact info is already
+  the line above. **Subtle is the spec:** same mono font, ~1–2px smaller than the
+  address lines, muted (e.g. `rgba(0,0,0,.55)`), lowercase, hover underline. It
+  must read as part of the existing block, not a new element.
+- Newsletter signup dies with the footer — intentional, don't relocate it.
+
+**Done when:** build+check green; no footer anywhere; the homepage cannot scroll
+(pure locked hero, as pre-H5); about block reads address → contact → three quiet
+policy links that visually blend; links open the live policy pages; no orphaned
+footer CSS/assets/props; other `landing` pages unaffected.
+
+---
+
+### L2 — MUSIC: single playlist entry, linked to Spotify
+
+**Why:** the MUSIC panel lists three playlists; two are gone. What remains is the
+official playlist, and it should actually link out to Spotify for anyone to play.
+
+**Files:** `src/data/content.ts` (MUSIC section), `src/components/blocks/HeroVideo.astro`
+(only if the item markup needs the external-link variant).
+
+- In `heroMenu` MUSIC section: DELETE `WILLIAM FREDERICK PLAYLIST` and
+  `SMALL TALK STUDIO PLAYLIST`. Keep `& SON OFFICIAL PLAYLIST` as the only item and
+  give it `href: "https://open.spotify.com/playlist/6MD3a8wIY0582I3iWIngqE"`
+  (strip the tracking params; the bare playlist URL is the durable link) — plus
+  `external: true` semantics: renders as an `<a target="_blank" rel="noopener">`.
+  The section keeps `music: true` (header click still opens the DJ stage); the
+  playlist link is the item WITHIN the opened section.
+- Check the item-rendering branch in `HeroVideo.astro`: an `href` item already
+  renders as `<a>` — confirm it opens in a new tab for absolute URLs (add
+  `target`/`rel` handling for external hrefs if missing; internal menu links, if
+  any ever exist, must not inherit it).
+- Leave the separate `music` content export (radio block copy) alone — it belongs
+  to a non-homepage page.
+
+**Done when:** build+check green; opening MUSIC shows the DJ stage and exactly one
+menu item, `& SON OFFICIAL PLAYLIST`; clicking it opens the Spotify playlist in a
+new tab; the two removed playlists are gone.
+
+---
+
+### L3 — & FAM: interview-series teaser (image + coming-soon line)
+
+**Why:** & FAM stops being a category list. Opening it shows a single editorial
+teaser: the &fam photo with a short series description — the same
+menu-left / stage-right pattern as MUSIC's DJ panel.
+
+**ASSET (operator provides):** Beckett saves the photo (the back tattoo — script
+"&fam" with the small tree, matching the site's ampersand mark) to
+`homepage/public/images/fam-tattoo.jpg`. If it's not there when you start, STOP and
+flag — don't substitute anything.
+
+**Files:** `src/data/content.ts` (& FAM section), `src/components/blocks/HeroVideo.astro`
+(new `fam` stage), `src/styles/global.css`.
+
+- **Menu:** delete all three interview items (`SMALL TALK STUDIO INTERVIEW`,
+  `WILLIAM FREDERICK INTERVIEW`, `LIV RYAN INTERVIEW`). & FAM becomes a headerless
+  section like PRE-ORDER: clicking `& FAM +` opens its stage directly (add a
+  `fam: true` flag on the section, mirroring how `preorder`/`music` flags work; no
+  `.hero__menu-panel` rendered).
+- **Stage:** add a fourth panel stage `"fam"` to the existing machinery (extend
+  `PanelStage`, `getStagePanel`, `getStageClass`, an `is-fam` hero class, an
+  `openFam()` mirroring `openMusic()`). Same 550ms slide/exit conventions, same
+  close behavior (closing via the section header toggle, matching MUSIC — reuse
+  whatever close affordance MUSIC has; if MUSIC has none beyond the header, ditto).
+- **Panel content (static markup in the component, right side of the hero):**
+  - the photo, large, natural aspect ratio, no border — the visual anchor;
+  - under it, in the site's mono/serif skin (match `.hero-info` type, slightly
+    larger), lowercase editorial voice (the site is lowercase; Beckett's words,
+    exactly, recased): `an interview series that takes an in-depth look at
+    designers we carry like you've never seen them before, unless you're related
+    to them.` then on its own line, styled as the quiet kicker: `coming soon…`
+  - no other text, no placeholder links.
+- Mobile: image scales to the panel, text below, no overflow.
+
+**Done when:** build+check green; clicking `& FAM +` slides in the teaser panel
+(photo + the two lines, correctly typeset); no interview items remain anywhere;
+stage opens/closes/switches cleanly against catalog/preorder/music; other stages
+unaffected.
+
+---
+
+### Phase K + L risks / review focus (Claude checks these on every diff)
 
 - **Row pager regression (K2):** measured offsets must survive resize, re-render,
   and the clamp when a live refresh shrinks a collection.
 - **Race conditions (K2/K4):** stale collection fetch painting over a newer panel;
   double-click add-to-cart double-adding (disable button while a mutation is in
   flight).
+- **Menu hydration (K6):** replaced DOM must keep every behavior — shop-all wiring,
+  subgroup toggles, aria state; event delegation is the guard. No flicker when the
+  live menu equals the snapshot.
+- **Footer revert (L1):** H5+J1 touched Base, index, HeroVideo, and global.css —
+  the removal must leave NO orphans (props, classes, dead helpers, unused CSS,
+  the 1.1MB chronicle PNG) and must not disturb the other `landing` pages' lock.
 - **Base path (K2/K3):** every internal URL through `withBase`/`BASE_URL` — a bare
   `/product/` link 404s on Pages.
 - **Token absence:** every live feature must no-op gracefully — the deployed site
@@ -449,6 +651,10 @@ scrolling down reveals it; CLOTHES stays anchored at the top.
 ---
 
 ## Log (Phase K — Codex appends newest at top)
+
+- (empty)
+
+## Log (Phase L — Codex appends newest at top)
 
 - (empty)
 
