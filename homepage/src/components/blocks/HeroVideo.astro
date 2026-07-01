@@ -231,9 +231,11 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   </aside>
 
   <aside class="hero__film" aria-hidden="true">
-    <button type="button" class="hero__film-close" data-film-close aria-label="Close">&times;</button>
-    <video class="hero__film-video" src={withBase("/videos/about-film.mp4")} preload="metadata" playsinline></video>
-    <button type="button" class="hero__film-toggle" data-film-toggle>play</button>
+    <div class="hero__film-frame">
+      <video class="hero__film-video" src={withBase("/videos/about-film.mp4")} preload="metadata" playsinline></video>
+      <button type="button" class="hero__film-close" data-film-close aria-label="Close">&times;</button>
+      <button type="button" class="hero__film-toggle" data-film-toggle>play</button>
+    </div>
   </aside>
 
   <aside class="hero__fam" aria-hidden="true">
