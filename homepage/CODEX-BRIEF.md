@@ -68,7 +68,7 @@ diff against that sub-task's **Done when** + the risks list before the next
 dispatch. Before each dispatch, Claude updates the line below so Codex has ONE
 target; everything else in this file is context, not instruction.
 
-> **ACTIVE SUB-TASK: (none — Wave 3 COMPLETE on dev: M2 193e0b8, M2b 58e8030, M3 0e5a442+asset 32d2e21, L3 5fb0f1f+fam asset. All reviewed + independently built green, held UNPUSHED for operator verify → then ship as its own PR. K1 still unpushed; K2+ paused on token.)**
+> **ACTIVE SUB-TASK: (none — Wave 3 COMPLETE + M3-rev landed on dev: M2 193e0b8, M2b 58e8030, M3 0e5a442+32d2e21, L3 5fb0f1f+76efa7d, M3-rev 5b4e851; new-about-homepage.mp4 deleted. All reviewed + built green, held UNPUSHED for operator verify → ship Wave 3 as its own PR (K1 + plan-docs ride along, operator-approved). K2+ paused on token.)**
 
 Recommended order (three waves, operator verifies on `dev` after each wave and
 ships dev → main per wave, not one giant merge):
@@ -736,6 +736,46 @@ stage is flicker-free; audio plays when the user plays.
 
 ---
 
+### M3-rev — film panel: contain the video clear of the menu + visible play control
+
+**Operator revision (2026-07-01, screenshot-verified):** the M3 film currently
+uses `inset:0; margin:auto` (centres in the FULL viewport) so it spans into the
+left menu column, overlapping the menu text + about block. This is a LAYOUT fix
+only. **DO NOT touch the video file — no re-encode, no crop.** The displayed box
+shrinks; the asset + its quality stay exactly as they are.
+
+**Files:** `src/styles/global.css` (primary); `src/components/blocks/HeroVideo.astro`
+only if the visible control needs a wrapper.
+
+- **Confine right of the menu:** give `.hero__film` the same panel-geometry
+  discipline as `.hero__catalog` — content area starts RIGHT of the menu:
+  `left:max(30vw,240px)` (match `.hero__catalog`'s override), `top:0; right:0;
+  bottom:0`, ~2vw right padding, vertically centred. Replace the `inset:0;
+  margin:auto; aspect-ratio:16/9; max-height:47.25vw` centred-box model. The
+  video sizes WITHIN that box: `max-height:~78vh`, `object-fit:contain`, native
+  aspect (no crop, no distortion). It must NEVER overlap the menu column, the
+  about block/legal links, or the cart/× zone, at any viewport width.
+- **Keep the animation exactly as-is:** the film stays in the shared
+  slide-in-from-right / exit-left behaviour (same transforms — the off-screen
+  `translateX(calc(50vw + 100%))`, active `translateX(0)` via the shared
+  `.is-film` rule, exit `translateX(-110%)`). Only the box geometry changes.
+- **Visible play control:** a real `<button>` overlaid on the video, BOTTOM-LEFT
+  OF THE VIDEO BOX (not the letterbox margin — wrap the `<video>` in a
+  shrink-to-video frame if needed so the button and × sit on the video). Site
+  skin: lowercase mono label `play` ⇄ `pause`, `aria-label`, neon-green on hover
+  per M1 (`@media (hover:hover)` only). Clicking the video itself still toggles
+  playback. Never autoplays; audio stays.
+- **Mobile:** the box sits clear of the horizontal menu tabs (top offset like
+  the catalog/preorder mobile rule `top:clamp(88px,16vh,132px); left:0; right:0`),
+  full available width, `contain`; × reachable.
+
+**Done when:** build+check green; the film opens fully inside its panel area with
+the menu column completely clear (native aspect, sharp); the visible button
+toggles play/pause and highlights green on hover; × and every stage switch still
+pause the film and glide the house back; mobile sane.
+
+---
+
 ### Phase K + L + M risks / review focus (Claude checks these on every diff)
 
 - **Row pager regression (K2):** measured offsets must survive resize, re-render,
@@ -899,6 +939,7 @@ scrolling down reveals it; CLOTHES stays anchored at the top.
 
 ## Log (Phase M — Codex appends newest at top)
 
+- 2026-07-01 — Phase M3-rev: film panel contained clear of the menu + visible play control (operator revision, screenshot-verified) — 5b4e851 — build:green check:green (Claude re-ran: 0 err/0 warn/6 hints) — LAYOUT ONLY, video file untouched (only HeroVideo.astro + global.css changed). .hero__film re-geometried from inset:0/margin:auto (centred in full viewport → spilled into menu) to position top:0/right:0/bottom:0/left:max(30vw,240px) (matches .hero__catalog), flex-centred, padding 0 2vw 0 0 — confined RIGHT of the menu, never overlapping menu/about/cart. Slide transforms KEPT byte-identical (off-screen translateX(calc(50vw+100%)), shared active translateX(0), shared exit translateX(-110%)). New wrapper <div class="hero__film-frame"> (position:relative; inline-flex; fit-content; max-height:78vh) shrink-wraps the video so the × (top-right) + play/pause (bottom-left) buttons anchor to the VIDEO corners, not the letterbox — buttons' own CSS unchanged, just reparented. Video: width/height auto, max-width:100%, max-height:78vh, object-fit:contain (native aspect, no crop). .hero__film-toggle:hover stays neon-green in the @media(hover:hover) group; video-click toggle + updateFilmToggle unchanged; no autoplay, audio stays. Mobile: .hero__film top:clamp(88px,16vh,132px)/left:0/right:0, padding 0 4vw (clear of horizontal menu tabs), frame+video max 100%. Reviewed clean by Claude (full diff). committed @ 5b4e851 — ready for operator verify. Not pushed. ASSET HOUSEKEEPING (operator decisions): new-about-homepage.mp4 DELETED (unused, superseded) — commit prior; about-film.mp4 kept at 32MB (preload=metadata → downloads only on demand) — CANDIDATE FOR A LATER OPTIMIZE PASS (lighter encode) when convenient, not blocking.
 - 2026-07-01 — Phase M2b: stencil white by default, neon-green on hover (operator revision to M2) — 58e8030 — build:green check:green — global.css 2 lines: .hero__stencil background-color var(--neon-green)→#ffffff (white house as before, via mask fill); hover rule filter:brightness(1.28)→background-color:var(--neon-green) inside @media(hover:hover). Now matches the menu-text hover language (white→green only while hovered, signals clickable); touch devices stay white (no stuck green). Mask/sizing/aspect-ratio/transform/exit-left untouched. Reviewed clean by Claude. committed @ 58e8030 — ready for operator verify. Not pushed.
 - 2026-07-01 — Phase M3: click house → about film stage (Wave 3; establishes the 4th-stage pattern L3 copies) — 0e5a442 (code) + 32d2e21 (asset) — build:green check:green (Claude re-ran independently: 0 err/0 warn/6 hints; confirmed dist/videos/about-film.mp4 (32MB) + hero__film markup in dist/index.html). ASSET DECISION (operator asked which path): new-about-homepage.mp4 REJECTED — ffprobe showed a different 17.7s cut (vs master 64.4s), 1920×1080 not native, and NO audio track (spec requires audio). Encoded fresh from master about-original.mp4 → public/videos/about-film.mp4: H.264 high, CRF20, native 2048×1152 (16:9), no crop, AAC stereo audio copied, +faststart; 32MB (large but quality was the stated priority). CODE (HeroVideo.astro + global.css): added 'film' to HeroStage+PanelStage; getStagePanel/getStageClass/is-film; element queries filmPanel/filmVideo/filmToggle/filmClose/filmOpen; is-film added to both returnStencilFromRight class-lists + the cart-hide rule + the stencil exit-left rule (house slides out left). openFilm() mirrors openMusic(). Trigger: [data-film-open] (M2 button) guarded to landing-only → setMenuSectionState(null)+openFilm(). <aside class="hero__film"> = <video src=withBase(/videos/about-film.mp4) preload=metadata playsinline, no autoplay/loop/muted, controls hidden> + × close [data-film-close] + lowercase-mono play/pause [data-film-toggle] bottom-left (real buttons, M1 neon hover). Manual playback: click video OR toggle → play/pause; play/pause/ended events keep the label synced; play() promise .catch guarded. PAUSE ON EVERY EXIT verified: transitionToStage pauses when previousStage==='film' (menu-header switch) AND closeStage pauses + resets label; currentTime NEVER reset → reopen resumes from position. Panel box = stencil's (height:min(82vh,76vw)/max-width:84vw) but aspect-ratio:16/9 + max-height:47.25vw so the film shows at native 16:9 centered where the house was, object-fit:contain no crop; enters-from-right 550ms; z-index:2; mobile override. Reviewed clean by Claude (full script+CSS read). committed @ 0e5a442+32d2e21 — ready for operator verify. Not pushed. Operator: (a) browser-verify the film↔catalog/preorder/music/landing matrix is flicker-free + audio plays on user-initiated play; (b) 32MB asset — fine per quality priority, flag if you want a lighter encode; (c) superseded new-about-homepage.mp4 (4.95MB, tracked, now unused) can be deleted — left in place pending your OK.
 - 2026-07-01 — Phase M2: house stencil white→neon-green + clickable (Wave 3, out of order, operator-authorized) — 193e0b8 — build:green check:green — HeroVideo.astro + global.css. <img class="hero__stencil"> → <button type="button" class="hero__stencil" data-film-open aria-label="about & son" style="--stencil-mask-url:url('<withBase /images/hero-stencil.png>')"> (base-aware mask URL via inline CSS var). CSS: background-color:var(--neon-green) + mask-image/-webkit-mask-image:var(--stencil-mask-url), mask-repeat:no-repeat/position:center/size:contain (+ -webkit-); button reset (border:none/appearance:none/padding:0/display:block); pointer-events none→auto + cursor:pointer; @media(hover:hover) filter:brightness(1.28). KEY: added aspect-ratio:1547/1600 — required because an empty <button> has no intrinsic ratio (an <img> did), and it matches hero-stencil.png's EXACT native dims (verified 1547×1600 via sips) → box ratio == mask ratio, contain fills with no letterbox, clickable area == visible green shape, same size/position as the old img. Preserved byte-identical: inset:0/height:min(82vh,76vw)/max-width:84vw/margin:auto/z-index:1, transform:translateX(0)+transition:transform .55s, the exit-left rule (.is-catalog/.is-preorder/.is-music), and returnStencilFromRight()'s inline-transform dance (script queries stencil as HTMLElement, uses only style.transform/.transition/offsetWidth/transitionend — no <img> assumptions). Green mask used (no fallback). Click does nothing yet — M3 wires data-film-open. Reviewed clean by Claude. committed @ 193e0b8 — ready for operator verify. Not pushed. Operator: visually confirm the green house renders (mask is runtime, not build-checkable) + hover brightens.
