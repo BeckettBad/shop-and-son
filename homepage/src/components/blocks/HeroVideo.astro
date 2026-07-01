@@ -55,7 +55,13 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     <source src={withBase("/videos/homepage-hero-mobile.mp4")} type="video/mp4" />
   </video>
 
-  <img class="hero__stencil" src={withBase("/images/hero-stencil.png")} alt="" aria-hidden="true" />
+  <button
+    type="button"
+    class="hero__stencil"
+    data-film-open
+    aria-label="about & son"
+    style={`--stencil-mask-url:url("${withBase("/images/hero-stencil.png")}")`}
+  ></button>
 
   <div class="hero__dj dj-content-wrapper" aria-hidden="true">
     <img class="dj-cutout-image" src={withBase("/images/dj-in-action-cutout.png")} alt="" />

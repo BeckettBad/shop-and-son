@@ -293,11 +293,22 @@ body{
   transition:opacity .18s ease,visibility 0s linear .18s;
 }
 .hero__stencil{
-  position:absolute; inset:0; z-index:1;
+  position:absolute; inset:0; z-index:1; display:block;
   width:auto; height:min(82vh,76vw); max-width:84vw;
-  margin:auto; object-fit:contain; pointer-events:none;
+  aspect-ratio:1547 / 1600;
+  margin:auto; object-fit:contain; pointer-events:auto;
+  background-color:var(--neon-green);
+  border:none; appearance:none; -webkit-appearance:none; padding:0;
+  mask-image:var(--stencil-mask-url); -webkit-mask-image:var(--stencil-mask-url);
+  mask-repeat:no-repeat; -webkit-mask-repeat:no-repeat;
+  mask-position:center; -webkit-mask-position:center;
+  mask-size:contain; -webkit-mask-size:contain;
+  cursor:pointer;
   transform:translateX(0);
   transition:transform .55s ease-in-out;
+}
+@media(hover:hover){
+  .hero__stencil:hover{filter:brightness(1.28)}
 }
 .hero-video.is-catalog .hero__stencil,
 .hero-video.is-preorder .hero__stencil,
