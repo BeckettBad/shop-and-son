@@ -298,7 +298,7 @@ body{
   width:auto; height:min(82vh,76vw); max-width:84vw;
   aspect-ratio:1547 / 1600;
   margin:auto; object-fit:contain; pointer-events:auto;
-  background-color:var(--neon-green);
+  background-color:#ffffff;
   border:none; appearance:none; -webkit-appearance:none; padding:0;
   mask-image:var(--stencil-mask-url); -webkit-mask-image:var(--stencil-mask-url);
   mask-repeat:no-repeat; -webkit-mask-repeat:no-repeat;
@@ -309,7 +309,7 @@ body{
   transition:transform .55s ease-in-out;
 }
 @media(hover:hover){
-  .hero__stencil:hover{filter:brightness(1.28)}
+  .hero__stencil:hover{background-color:var(--neon-green)}
 }
 .hero-video.is-catalog .hero__stencil,
 .hero-video.is-preorder .hero__stencil,
