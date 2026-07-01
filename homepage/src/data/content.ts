@@ -200,9 +200,7 @@ export const heroMenu: HeroMenuSection[] = [
     label: "MUSIC",
     music: true,
     items: [
-      { label: "& SON OFFICIAL PLAYLIST" },
-      { label: "WILLIAM FREDERICK PLAYLIST" },
-      { label: "SMALL TALK STUDIO PLAYLIST" },
+      { label: "& SON OFFICIAL PLAYLIST", href: "https://open.spotify.com/playlist/6MD3a8wIY0582I3iWIngqE" },
     ],
   },
   {
