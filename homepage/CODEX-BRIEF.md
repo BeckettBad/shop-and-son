@@ -593,6 +593,37 @@ about block.
 
 ---
 
+### IDEA — "now playing in store" on the MUSIC stage (NOT scheduled; do NOT
+build; last-pass item, revisit after Phases K/L/M ship AND Ben approves)
+
+Concept: the MUSIC stage (DJ + notes) gains one quiet line — pulsing neon-green
+dot, `now playing in store`, then `track — artist` (+ small album art), showing
+what's live on the store's Spotify. The whole line deep-links to that track on
+Spotify (visitors add it to their own playlists via Spotify's native UI — no
+visitor login on our site; Spotify's dev-mode caps make on-site "add to
+playlist" a dead end, deep-link is the design). Sits with the existing
+`& SON OFFICIAL PLAYLIST` link.
+
+**HARD requirement — store-hours gate:** the feature renders ONLY during store
+hours (site config already has `hours`, America/New_York). Outside hours it
+renders NOTHING — not "last played", not a placeholder — so Ben's personal
+at-home listening is never displayed. Also hide when nothing is playing.
+
+Two candidate architectures (decide at build time):
+1. **Last.fm relay, zero backend (try first):** Ben one-time connects his
+   Spotify to a free Last.fm account; the site reads Last.fm's public
+   now-playing API client-side. No secrets to protect, no infra.
+2. **Serverless relay (upgrade path):** a Cloudflare Worker (free tier) holds
+   Ben's Spotify OAuth credential privately and exposes a sanitized
+   `{track, artist, art, isPlaying}` JSON. Tighter real-time; one new moving
+   part. The site component is identical either way — the data source is
+   swappable.
+
+Blocked on: Ben's approval + his one-time account connection. Historical note:
+the retired v1 design mocked exactly this (`content.ts` `music.nowPlaying`).
+
+---
+
 ### FUTURE — domain cutover (NOT scheduled; operator decision, recorded so
 nothing built now blocks it)
 
