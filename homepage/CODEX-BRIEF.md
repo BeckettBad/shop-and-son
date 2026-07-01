@@ -74,8 +74,8 @@ Recommended order (three waves, operator verifies on `dev` after each wave and
 ships dev → main per wave, not one giant merge):
 1. **Wave 1 — no prerequisites, quick wins:** L2 → M1 → L1. (L1 is the invasive
    one: after it, click through every stage + confirm the page can't scroll.)
-2. **Wave 2 — after K0 (token live in `homepage/.env`):** K1 → K2 → K3 → K4 →
-   K6 → K5. Browser-verify K2's pager and K4's cart flow by hand, not just
+2. **Wave 2 — after K0 (token live in `homepage/.env`):** K1 → K2 → K3 → L4 →
+   K4 → K6 → K5. Browser-verify K2's pager and K4's cart flow by hand, not just
    build+check.
 3. **Wave 3 — assets confirmed first:** M2 → M3 → L3 (M3 and L3 both extend the
    stage machinery — keep them adjacent so the second copies the first's
@@ -84,13 +84,14 @@ ships dev → main per wave, not one giant merge):
 If a diff misses the brief: revert and re-dispatch with the brief amended —
 never patch-on-patch, never let Codex "fix forward" a wrong commit.
 **Task:** Phase K — commerce core (K1–K6), Phase L — chrome/editorial edits
-(L1–L3), **and** Phase M — neon interaction language + the house film stage
+(L1–L4), **and** Phase M — neon interaction language + the house film stage
 (M1–M3). The homepage becomes a proper selling site: in-site product pages,
 on-site cart, checkout handed to Shopify, menus + listings that mirror Shopify
 admin automatically. **One focused commit each**, `npm run build` **and**
 `npx astro check` green after every one. K runs in order (K6 depends only on K1);
-L1–L3 are independent of K and of each other; M1–M2 are independent, M3 needs M2
-(the stencil must be clickable) — all of M is independent of K and L. Scope:
+L1–L3 are independent of K and of each other; L4 depends on K1+K3; M1–M2 are
+independent, M3 needs M2 (the stencil must be clickable) — all of M is
+independent of K and L. Scope:
 `homepage/` only — EXCEPT K5, which (with operator awareness) touches
 `.github/workflows/deploy.yml`.
 
@@ -424,7 +425,8 @@ without the token the menu is byte-identical to today's.
 
 ---
 
-## PHASE L — chrome & editorial edits (independent of Phase K; any order)
+## PHASE L — chrome & editorial edits (L1–L3 independent of Phase K, any order;
+L4 depends on K1+K3)
 
 ### L1 — Remove the footer entirely; legal links move into the about block
 
@@ -454,6 +456,8 @@ minimum, tucked subtly into the bottom-left about block.
   <a …>terms of service</a></p>` linking out (full https, `rel="noopener"`, no
   `withBase`) to `https://shopandson.com/policies/refund-policy`,
   `/policies/privacy-policy`, `/policies/terms-of-service`.
+  **Transitional:** L4 (after K1/K3 land) repoints these three hrefs at the
+  IN-SITE policy page — the external URLs are the interim + no-token fallback.
   These three are the required set for a US store (privacy is legally required;
   refund terms must be conspicuous; ToS is the contract) — contact info is already
   the line above. **Subtle is the spec:** same mono font, ~1–2px smaller than the
@@ -534,6 +538,57 @@ flag — don't substitute anything.
 (photo + the two lines, correctly typeset); no interview items remain anywhere;
 stage opens/closes/switches cleanly against catalog/preorder/music; other stages
 unaffected.
+
+---
+
+### L4 — In-site policy pages (kills the last old-site content links)
+
+**Why:** the goal is a fully separate storefront — the old Shopify-rendered site
+should leave no visible trace beyond checkout itself. Shopify exposes the store
+policies as CONTENT via the Storefront API (`shop { refundPolicy { title body }
+privacyPolicy { title body } termsOfService { title body } }` — `body` is HTML,
+straight from what Ben edits in admin → auto-updating like everything else).
+Host them here. **Depends on K1 (client data layer) + K3 (the `bare` Base prop);
+sequence it after K3 — it is NOT part of Wave 1.**
+
+**Files:** new `src/pages/policies.astro`; `src/lib/storefront-client.ts` (add
+`getPolicies()`); `src/components/blocks/HeroVideo.astro` (the three L1 hrefs).
+
+- **One page, query-param routed** (same pattern as K3):
+  `/policies/?policy=refund-policy | privacy-policy | terms-of-service`.
+  `<Base bare>`, homepage skin: small uppercase mono title (the policy title from
+  Shopify), the body HTML rendered inside a contained `.policy__body` wrapper
+  (sane type styles, links styled per site, Shopify markup can't restyle the
+  page), a `← back` control like K3's. Nothing else on the page.
+- `getPolicies()` in the client layer fetches all three in one query, cached for
+  the session. Verify at implementation whether the `shop` policy fields need any
+  scope beyond what K0 grants — flag if so.
+- **Repoint the L1 links:** the three about-block hrefs become
+  `withBase("/policies/?policy=<handle>")` (internal, no `target=_blank`).
+- **Fallback:** unknown `?policy=`, fetch failure, or no token → the page shows a
+  plain link out to the same policy on `https://shopandson.com/policies/…` (never
+  a dead end, mirroring K3's fallback convention).
+
+**Done when:** build+check green; all three policy links open in-site pages
+showing the exact text from Shopify admin, typeset in the site skin; editing a
+policy in admin shows on next load without a redeploy; without a token the pages
+degrade to an outbound link; no `shopandson.com/policies` hrefs remain in the
+about block.
+
+---
+
+### FUTURE — domain cutover (NOT scheduled; operator decision, recorded so
+nothing built now blocks it)
+
+End state: `shopandson.com` points at THIS site and the old Shopify storefront
+disappears from public view. When Beckett + Ben call it: (1) the Pages site gets
+the custom domain (repo Settings → Pages → custom domain; base path drops from
+`/shop-and-son` to `/` — `withBase` everywhere is what makes that a config-only
+change, keep it disciplined); (2) `PUBLIC_SHOPIFY_STORE_DOMAIN` and the
+build-time `products.json` fetches switch to the store's `*.myshopify.com`
+domain (the custom domain will no longer serve Shopify); (3) checkout continues
+uninterrupted on Shopify's domain. Until then the old site stays live at
+shopandson.com and the fallback/external links above remain correct.
 
 ---
 
