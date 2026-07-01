@@ -357,7 +357,7 @@ body{
   position:absolute; left:0; top:0; z-index:3;
   box-sizing:border-box;
   width:42vw; min-width:280px; max-width:560px;
-  height:100vh; padding:8vh 4vw 8vh 5.7vw;
+  height:100vh; padding:8vh 4vw max(18vh,150px) 5.7vw;
   overflow-y:auto;
   font-family:"Helvetica Now","Helvetica Neue",Helvetica,Arial,sans-serif;
   color:#000000;
@@ -542,7 +542,7 @@ body{
     position:absolute; left:0; right:0; top:0; z-index:3;
     width:100%; max-width:none; min-width:0;
     height:auto; max-height:100%; max-height:100dvh;
-    padding:max(4vh, env(safe-area-inset-top)) 4vw 4vh;
+    padding:max(4vh, env(safe-area-inset-top)) 4vw max(16vh,132px);
     overflow-x:auto; overflow-y:auto; background:none;
     -webkit-overflow-scrolling:touch;
   }
@@ -811,25 +811,32 @@ body{
 /* preorder embed sits on the hero video (beige texture) — no white fill */
 .hero__preorder,.hero__preorder-frame{background:transparent}
 
-/* ── default-state store info, bottom-left (aligned to the nav column); hidden once any section/stage opens ── */
+@keyframes heroInfoDockDown{
+  from{transform:translateY(120%); opacity:0}
+  to{transform:translateY(0); opacity:1}
+}
+@keyframes heroInfoDockDownActive{
+  from{transform:translateY(120%); opacity:0}
+  to{transform:translateY(0); opacity:1}
+}
+
+/* ── store info, bottom-left (aligned to the nav column); always visible ── */
 .hero-info{
   position:absolute; left:5.7vw; bottom:6vh; z-index:3; max-width:30ch;
   font-family:var(--mono); font-size:11px; line-height:1.5; font-weight:400;
   letter-spacing:.02em; color:#000; text-transform:lowercase;
   pointer-events:none;
-  transform:translateX(0); visibility:visible;       /* landing: in place */
-  transition:transform .55s ease-in-out, visibility 0s;
+  transform:translateY(0); opacity:1; visibility:visible;
+  animation:heroInfoDockDown .55s ease-in-out both;
 }
 .hero-info p{margin:0 0 1em}
 .hero-info p:last-child{margin-bottom:0}
 .hero-info a{color:inherit; text-decoration:underline; text-underline-offset:2px; pointer-events:auto}
-/* hide whenever it's NOT the default landing (a section is open or a stage is active) */
 .hero-video.is-catalog .hero-info,
 .hero-video.is-preorder .hero-info,
 .hero-video.is-music .hero-info,
 .hero-video:has(.hero__menu-section.is-open) .hero-info{
-  transform:translateX(calc(-100% - 6vw)); visibility:hidden;   /* slide off-screen left */
-  transition:transform .55s ease-in-out, visibility 0s linear .55s;
+  animation-name:heroInfoDockDownActive;
 }
 @media(max-width:760px){
   .hero-info{left:4vw; bottom:4vh; font-size:10px}
@@ -839,5 +846,7 @@ body{
   .hero-video.is-catalog .hero-info,
   .hero-video.is-preorder .hero-info,
   .hero-video.is-music .hero-info,
-  .hero-video:has(.hero__menu-section.is-open) .hero-info{transition:none}
+  .hero-video:has(.hero__menu-section.is-open) .hero-info{
+    transform:none; opacity:1; visibility:visible; animation:none;
+  }
 }
