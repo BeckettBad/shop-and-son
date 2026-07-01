@@ -22,6 +22,16 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
 // Block 1 — desktop: vertical left menu; mobile: horizontal tabs over fullscreen video.
 ---
 <section class="block hero-video" id="hero">
+  <a class="hero__cart" href="https://shopandson.com/cart" target="_blank" rel="noopener" aria-label="Cart">
+    <svg focusable="false" class="icon icon-bag" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 20 20" style="enable-background:new 0 0 24 24;" xml:space="preserve">
+<path fill="currentColor" d="M17.200012,5.519043h-3.573059V4.60791c0-2-1.626953-3.626953-3.626953-3.626953S6.373047,2.60791,6.373047,4.60791
+	v0.911133H2.799988L1,18.519043h18L17.200012,5.519043z M7.373047,4.60791c0-1.44873,1.178223-2.626953,2.626953-2.626953
+	c1.448242,0,2.626953,1.178223,2.626953,2.626953v0.911133H7.373047V4.60791z M3.671082,6.519043h2.701965v1h1v-1h5.253906v1h1v-1
+	h2.701965l1.523071,11H2.14801L3.671082,6.519043z"/>
+</svg>
+  </a>
+
   <video
     class="hero-video__media hero-video__media--desktop"
     autoplay
@@ -117,6 +127,15 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
                         <a class="hero__menu-link hero__menu-link--dash" href={item.href}>
                           {item.label}{item.suffix ?? ""}
                         </a>
+                      ) : item.children && item.children.length > 0 ? (
+                        <button
+                          type="button"
+                          class="hero__menu-subheader"
+                          aria-expanded="false"
+                          data-menu-subgroup
+                        >
+                          {item.label}{item.suffix ?? ""} <span class="hero__menu-subtoggle">+</span>
+                        </button>
                       ) : (
                         <span class="hero__menu-link hero__menu-link--dash">
                           {item.label}{item.suffix ?? ""}
@@ -159,6 +178,11 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
         ))
       }
     </ul>
+
+    <div class="hero-info">
+      <p>138 sullivan st,<br />new york, ny 10012</p>
+      <p>contact:<br /><a href="mailto:info@shopandson.com">info@shopandson.com</a></p>
+    </div>
   </nav>
 
   <aside class="hero__catalog" aria-hidden="true">
@@ -182,13 +206,6 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
       ></iframe>
     </div>
   </aside>
-
-  <!-- default-state store info (bottom-left, aligned with the nav column); hidden when any section/stage is open -->
-  <div class="hero-info">
-    <p>mostly clothes,<br />some objects,<br />and a little music</p>
-    <p>138 sullivan st,<br />new york, ny 10012</p>
-    <p>contact:<br /><a href="mailto:info@shopandson.com">info@shopandson.com</a></p>
-  </div>
 
   <script is:inline type="application/json" id="catalog-data" set:html={catalogDataJson}></script>
 </section>
@@ -220,6 +237,7 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-shop-all]"))
     : [];
   const menuSections = hero ? Array.from(hero.querySelectorAll<HTMLElement>("[data-hero-dropdown]")) : [];
+  const subgroupToggles = hero ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-menu-subgroup]")) : [];
   const desktopPagerQuery = window.matchMedia("(min-width: 761px)");
   const preorderDesktopWidth = 1160;
   const stageDuration = 550;
@@ -234,6 +252,17 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
 
   let activeStage: HeroStage = "landing";
   let touchStartY: number | null = null;
+
+  const updatePageScrollLock = () => {
+    if (!hero) return;
+
+    const wasLocked = document.documentElement.classList.contains("is-scroll-locked");
+    const clean = activeStage === "landing" && !hero.querySelector(".hero__menu-section.is-open");
+    document.documentElement.classList.toggle("is-scroll-locked", !clean);
+    if (!clean && !wasLocked) {
+      window.scrollTo(0, 0);
+    }
+  };
 
   const parseCatalogData = (): Record<string, CatalogProduct[]> => {
     try {
@@ -279,6 +308,21 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     });
   };
 
+  const setMenuSubgroupState = (button: HTMLButtonElement, isOpen: boolean) => {
+    const group = button.closest(".hero__menu-item--group");
+    const toggle = button.querySelector(".hero__menu-subtoggle");
+    group?.classList.toggle("is-open", isOpen);
+    button.setAttribute("aria-expanded", String(isOpen));
+    if (toggle) {
+      toggle.textContent = isOpen ? "\u2013" : "+";
+    }
+  };
+
+  const resetMenuSubgroups = (section: HTMLElement) => {
+    const sectionSubgroups = Array.from(section.querySelectorAll<HTMLButtonElement>("[data-menu-subgroup]"));
+    sectionSubgroups.forEach((button) => setMenuSubgroupState(button, false));
+  };
+
   const setMenuSectionState = (activeSection: HTMLElement | null) => {
     menuSections.forEach((section) => {
       const isOpen = section === activeSection;
@@ -289,7 +333,11 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
       if (toggle) {
         toggle.textContent = isOpen ? "\u2013" : "+";
       }
+      if (!isOpen) {
+        resetMenuSubgroups(section);
+      }
     });
+    updatePageScrollLock();
   };
 
   const getStagePanel = (stage: PanelStage) =>
@@ -416,6 +464,7 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
         activatePanel(nextStage);
         if (nextStage === "preorder") resizePreorderFrame();
         activeStage = nextStage;
+        updatePageScrollLock();
         if (nextStage === "music") {
           stageCleanup = window.setTimeout(() => {
             setMusicSettled(true);
@@ -437,6 +486,7 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     activatePanel(nextStage);
     if (nextStage === "preorder") resizePreorderFrame();
     activeStage = nextStage;
+    updatePageScrollLock();
 
     if (previousPanelStage) {
       stageCleanup = window.setTimeout(() => {
@@ -559,6 +609,7 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     dj?.setAttribute("aria-hidden", "true");
     setActiveButton(null);
     activeStage = "landing";
+    updatePageScrollLock();
   };
 
   collectionButtons.forEach((button) => {
@@ -567,6 +618,13 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
       const label = button.dataset.collectionLabel ?? button.textContent?.trim() ?? "";
       if (!collection) return;
       openCatalog(collection, label);
+    });
+  });
+
+  subgroupToggles.forEach((button) => {
+    button.addEventListener("click", () => {
+      const group = button.closest(".hero__menu-item--group");
+      setMenuSubgroupState(button, !group?.classList.contains("is-open"));
     });
   });
 
