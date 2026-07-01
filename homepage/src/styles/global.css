@@ -479,6 +479,7 @@ body{
   text-transform:uppercase;
 }
 .hero__menu-section.is-open > .hero__menu-header{color:var(--neon-green)}
+.hero__menu-item--group.is-open > .hero__menu-subheader{color:var(--neon-green)}
 .hero__menu-panel{display:none; padding:0.35em 0 0}
 .hero__menu-section.is-open .hero__menu-panel{display:block}
 .hero__menu-link{
