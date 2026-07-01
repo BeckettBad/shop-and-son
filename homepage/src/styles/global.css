@@ -278,6 +278,24 @@ body{
 .hero-video__media--mobile{
   display:none;
 }
+.hero__cart{
+  position:absolute; top:4vh; right:2vw; z-index:5;
+  display:inline-flex; align-items:center; justify-content:center;
+  width:30px; height:30px; color:#000000; text-decoration:none;
+  pointer-events:auto; opacity:1; visibility:visible;
+  transition:opacity .18s ease,visibility 0s;
+}
+.hero__cart svg{
+  display:block; width:22px; height:22px;
+}
+.hero__cart:hover{
+  opacity:.62; text-decoration:underline; text-underline-offset:3px;
+}
+.hero-video.is-catalog .hero__cart,
+.hero-video.is-preorder .hero__cart{
+  opacity:0; visibility:hidden; pointer-events:none;
+  transition:opacity .18s ease,visibility 0s linear .18s;
+}
 .hero__stencil{
   position:absolute; inset:0; z-index:1;
   width:auto; height:min(82vh,76vw); max-width:84vw;
@@ -539,6 +557,11 @@ body{
   }
   .music-note{width:clamp(15px,5vw,24px)}
   .music-note--small{width:clamp(12px,4vw,19px)}
+  .hero__cart{
+    top:max(3vh, env(safe-area-inset-top)); right:4vw;
+    width:32px; height:32px;
+  }
+  .hero__cart svg{width:22px; height:22px}
   .hero__overlay{
     position:absolute; left:0; right:0; top:0; z-index:3;
     width:100%; max-width:none; min-width:0;
