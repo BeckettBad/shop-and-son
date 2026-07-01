@@ -294,9 +294,16 @@ prop); `src/styles/global.css` (or a scoped style block in the page).
   one button row per option — handle generally, not size-specific.
 - **ADD TO CART:** disabled until a purchasable variant is resolved; label `add to
   cart`; whole-product `availableForSale === false` → button reads `sold out`,
-  permanently disabled. In THIS commit the click handler is a stub dispatching
+  permanently disabled. In THIS commit the click handler dispatches
   `document.dispatchEvent(new CustomEvent("cart:add", { detail: { variantId,
-  quantity: 1 } }))` — K4 listens; no dead UI, no console-only behavior.
+  quantity: 1 } }))` — K4 listens.
+  **Interim (until K4 is live WITH cart scopes on the token):** when no
+  `cart:add` listener is active — feature-flag it simply: K4 sets
+  `window.__cartReady = true` when its listener mounts, and if that's absent —
+  the button instead renders as a link, same styling, labelled `buy on
+  shopandson.com`, to `https://shopandson.com/products/<handle>` (new tab,
+  `rel="noopener"`). No dead buttons in any shippable state; K4 removes the
+  interim path.
 - **Mobile:** single column — images first (swipeable horizontal strip or stacked;
   stacked is fine), details after; sticky-off.
 - No instructional/internal text anywhere on the page.
