@@ -57,13 +57,18 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 K1 and the snapshot half of K2 can start without it; K2's live-refresh, K3's live
 fetch, K4, and K6 need the token in `homepage/.env` to be testable. L1 and L2 need
 nothing; **L3 needs the operator to save the fam photo** to
-`homepage/public/images/fam-tattoo.jpg` first.
-**Task:** Phase K — commerce core (K1–K6) **and** Phase L — chrome/editorial edits
-(L1–L3). The homepage becomes a proper selling site: in-site product pages, on-site
-cart, checkout handed to Shopify, menus + listings that mirror Shopify admin
-automatically. **One focused commit each**, `npm run build` **and** `npx astro
-check` green after every one. K runs in order (K6 depends only on K1); L1–L3 are
-independent of K and of each other — do them whenever convenient. Scope:
+`homepage/public/images/fam-tattoo.jpg` first. M3's video asset is likely already
+in the repo (see M3's asset note) — operator confirms it before M3 is dispatched.
+**Operator priority within Phase M: M3 (the film stage) first**; M2's green
+stencil is best-effort — if the recolor fights back, ship it white and flag.
+**Task:** Phase K — commerce core (K1–K6), Phase L — chrome/editorial edits
+(L1–L3), **and** Phase M — neon interaction language + the house film stage
+(M1–M3). The homepage becomes a proper selling site: in-site product pages,
+on-site cart, checkout handed to Shopify, menus + listings that mirror Shopify
+admin automatically. **One focused commit each**, `npm run build` **and**
+`npx astro check` green after every one. K runs in order (K6 depends only on K1);
+L1–L3 are independent of K and of each other; M1–M2 are independent, M3 needs M2
+(the stencil must be clickable) — all of M is independent of K and L. Scope:
 `homepage/` only — EXCEPT K5, which (with operator awareness) touches
 `.github/workflows/deploy.yml`.
 
@@ -510,7 +515,151 @@ unaffected.
 
 ---
 
-### Phase K + L risks / review focus (Claude checks these on every diff)
+## PHASE M — neon interaction language + the house film stage
+
+The site's `--neon-green` (`#1faa2e`, global.css :root) graduates from a
+click/active accent into the site-wide "this is clickable" language, the house
+stencil joins it, and the house becomes the door to an about film.
+**Operator priority: M3 > M2 > M1** — the film stage with its animation and
+layout is the must-land; the green stencil recolor is best-effort (white fallback
+acceptable, we circle back); M1 is polish.
+
+### M1 — Universal neon-green hover on clickable text
+
+**Why:** neon green currently marks the PRESSED/open state
+(`.hero__menu-section.is-open > .hero__menu-header`, `.hero__menu-link.is-active`);
+hover is just an underline. Beckett wants hover to ALSO read neon green — anything
+clickable highlights green while the mouse is on it, and only while it's on it.
+
+**File:** `src/styles/global.css` only.
+
+- Wrap the new rules in `@media (hover:hover)` so touch devices never get a stuck
+  green highlight.
+- Add `color:var(--neon-green)` on `:hover` (keeping each element's existing
+  underline behavior) to the homepage's clickable text: `.hero__menu-header`,
+  `.hero__menu-subheader`, `.hero__menu-link[data-shop-all]` and menu `<a>` links
+  (NOT the inert `<span>` placeholders — they aren't clickable and must not lie),
+  the catalogue/preorder `×` close buttons, and `.hero__cart` (green icon on hover
+  via `color`, since the SVG uses `currentColor`).
+- Product cards: on card hover the title keeps its underline AND goes
+  `var(--neon-green)` — same statement, same system.
+- Active/pressed states are UNCHANGED (open section headers and `.is-active` links
+  stay solid green); hover simply previews the same color. Where an element is
+  already green from its active state, the hover is a no-op — fine.
+- Do NOT touch non-homepage components (`TopBar`, legacy blocks use `--accent`
+  orange — leave that ecosystem alone; this is the hero/homepage language).
+  K3/K4's new surfaces (product page controls, cart drawer buttons/links) adopt
+  the same hover convention when they land — one line in their CSS, whoever lands
+  second wires it.
+
+**Done when:** build+check green; mousing over any menu folder/category/link,
+close button, cart icon, or product card shows neon green only during hover;
+touch devices unaffected; open/active states look exactly as before.
+
+---
+
+### M2 — House stencil: white → neon green, and clickable
+
+**Why:** the white house stencil over the hero video becomes a neon-green
+interactive element — same color language as the menu — because in M3 it opens
+the about film.
+
+**Files:** `src/components/blocks/HeroVideo.astro` (stencil markup),
+`src/styles/global.css`.
+
+- **Recolor via CSS mask (keeps the PNG's alpha, no asset regeneration):** replace
+  `<img class="hero__stencil" src=…>` with
+  `<button type="button" class="hero__stencil" data-film-open aria-label="about
+  & son"></button>` styled as: `mask-image:url(<withBase stencil png>)` (+
+  `-webkit-mask-image`), `mask-repeat:no-repeat; mask-position:center;
+  mask-size:contain`, `background-color:var(--neon-green)`, no border/appearance.
+  Keep the EXACT sizing/centering/z-index the img rules have now
+  (`inset:0; height:min(82vh,76vw); max-width:84vw; margin:auto`, mobile override
+  ~`min(74vh,88vw)`), and keep `transform:translateX(0)` +
+  `transition:transform .55s ease-in-out` — the stage exit/return
+  (`.is-catalog/.is-preorder/.is-music` translateX and
+  `returnStencilFromRight()`) must keep working byte-identically on the new node.
+- **It's clickable now:** `pointer-events:auto` (was `none`), `cursor:pointer`.
+  Hover (under `@media(hover:hover)`): brightness lift on the same green —
+  `filter:brightness(1.28)` — the M1 statement adapted for an element that's
+  already green. No underline games on a shape.
+- **Fallback (operator's call: don't block on this):** if mask rendering
+  misbehaves in the build, fall back to the plain white `<img>` inside the button
+  (clickable, hover `opacity`), commit that, and FLAG it — the green recolor gets
+  circled back to (e.g. as a pre-tinted PNG asset) without holding up M3.
+- Script: `stencil` is currently queried as `HTMLElement` — the selector keeps
+  working on a `<button>`; verify nothing assumed `<img>`.
+
+**Done when:** build+check green; the house reads neon green over the video,
+same size/position as today; hovering brightens it (hover-capable devices only);
+stage open/close still slides it out left / returns it from the right exactly as
+before; clicking it does nothing yet (M3 wires it) but shows the pointer.
+
+---
+
+### M3 — Click the house → the about film slides in
+
+**Why:** the house is the site's front door; clicking it plays the shop's film.
+Stencil exits left (the exact animation it already performs when a listing panel
+opens), and the film slides in from the right, replacing the house, properly
+oriented, at full quality. The user controls playback by hand.
+
+**ASSET (operator confirms FIRST):** the film is
+`archive/assets-src/about-original.mp4` (operator's machine; `archive/` is
+reference-only, gitignored). `homepage/public/videos/new-about-homepage.mp4`
+(4.9MB, currently referenced by NOTHING) is almost certainly the already-prepped
+web copy — operator eyeballs it against the original. If it matches: use it
+as-is. If not: operator re-encodes the original — H.264 high profile,
+**CRF ≤ 20, keep the native resolution and aspect ratio, NO cropping**, AAC audio
+kept — to `homepage/public/videos/about-film.mp4`. Quality is the priority;
+letterboxing is fine, recropping is not. If neither exists when you start, STOP
+and flag.
+
+**Files:** `src/components/blocks/HeroVideo.astro` (new panel + stage wiring),
+`src/styles/global.css`.
+
+- **Fourth stage:** extend the machinery the same way & FAM's stage (L3) does —
+  `PanelStage` gains `"film"`, plus `getStagePanel`/`getStageClass`/`is-film`
+  cases and an `openFilm()` mirroring `openMusic()`. The stencil's exit rule
+  gains `.is-film` alongside `.is-catalog/.is-preorder/.is-music` (house slides
+  out LEFT, as it already does for listings); the film panel enters from the
+  right using the same 550ms slide the other panels use; `closeStage()` returns
+  the house from the right via the existing `returnStencilFromRight()`.
+- **Trigger:** click on `[data-film-open]` (the M2 stencil button) →
+  `setMenuSectionState(null); openFilm();`. Guard: only from the landing stage
+  (the stencil is off-screen during other stages anyway). If L3 lands first,
+  follow its stage-extension pattern; if not, this commit establishes it and L3
+  follows suit — flag whichever way it falls in the log.
+- **Panel:** `<aside class="hero__film" aria-hidden="true">` containing the
+  `<video>` (src via `withBase`, `preload="metadata"`, NO `autoplay`, NO `loop`,
+  NOT muted — playback is user-initiated so audio is allowed) and a `×` close
+  button matching the catalogue's. **Layout: the video takes the house's place** —
+  centered in the same box the stencil occupied (`inset:0; margin:auto;
+  height:min(82vh,76vw); max-width:84vw`, mobile `min(74vh,88vw)`), rendered at
+  its NATIVE aspect ratio (`object-fit:contain`, no crop, no distortion), above
+  the background video (z-index like the other panels). No chrome, no border.
+- **Manual play/pause, in-skin:** hide native controls. Clicking the video
+  toggles play/pause; overlay ONE minimal control — a small lowercase mono label
+  (`play` when paused, `pause` while playing — or ▶/❚❚ glyphs if cleaner)
+  bottom-left of the video, neon-green on hover per M1, implemented as a real
+  `<button>` for keyboard/screen-reader access. No scrubber, no volume UI.
+- **Lifecycle:** pause the video whenever the stage exits — in `closeStage()` and
+  on any `transitionToStage` away from `"film"` (menu header clicks that open
+  other stages included). Reopening resumes from the paused position (don't
+  reset `currentTime`). Cart icon: add `.is-film` to the existing
+  hide-while-panel-open rule (the panel has its own `×`).
+- Mobile: same centered box, tap toggles playback, close button reachable.
+
+**Done when:** build+check green; clicking the green house slides it out left and
+the film in from the right, centered where the house was, native aspect, sharp;
+nothing plays until the user hits play; play/pause toggles by click and by the
+button; `×` (or opening any menu section/stage) pauses the film and the house
+glides back in from the right; switching to catalog/preorder/music from the film
+stage is flicker-free; audio plays when the user plays.
+
+---
+
+### Phase K + L + M risks / review focus (Claude checks these on every diff)
 
 - **Row pager regression (K2):** measured offsets must survive resize, re-render,
   and the clamp when a live refresh shrinks a collection.
@@ -523,6 +672,15 @@ unaffected.
 - **Footer revert (L1):** H5+J1 touched Base, index, HeroVideo, and global.css —
   the removal must leave NO orphans (props, classes, dead helpers, unused CSS,
   the 1.1MB chronicle PNG) and must not disturb the other `landing` pages' lock.
+- **Stencil node swap (M2):** the img→button swap must not break the stage
+  exit/return transforms or `returnStencilFromRight()`'s inline-style dance —
+  test open/close of every stage after the swap.
+- **Stage proliferation (L3+M3):** two commits both extend `PanelStage` — whoever
+  lands second rebases on the first's pattern; the exit/enter matrix (any stage →
+  any stage) must stay flicker-free, and media (film video) must pause on every
+  exit path.
+- **Hover honesty (M1):** green hover ONLY on things that actually respond to a
+  click — never on inert spans; and only under `@media(hover:hover)`.
 - **Base path (K2/K3):** every internal URL through `withBase`/`BASE_URL` — a bare
   `/product/` link 404s on Pages.
 - **Token absence:** every live feature must no-op gracefully — the deployed site
@@ -655,6 +813,10 @@ scrolling down reveals it; CLOTHES stays anchored at the top.
 - (empty)
 
 ## Log (Phase L — Codex appends newest at top)
+
+- (empty)
+
+## Log (Phase M — Codex appends newest at top)
 
 - (empty)
 
