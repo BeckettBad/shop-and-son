@@ -234,7 +234,16 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     <div class="hero__film-frame">
       <video class="hero__film-video" src={withBase("/videos/about-film.mp4")} preload="metadata" playsinline></video>
       <button type="button" class="hero__film-close" data-film-close aria-label="Close">&times;</button>
-      <button type="button" class="hero__film-toggle" data-film-toggle>play</button>
+      <button type="button" class="hero__film-playback" data-film-playback aria-label="Play film">
+        <svg class="hero__film-glyph hero__film-glyph--play" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+          <path d="M22 14v36l29-18z"></path>
+        </svg>
+        <svg class="hero__film-glyph hero__film-glyph--pause" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+          <rect x="18" y="14" width="10" height="36" rx="2"></rect>
+          <rect x="36" y="14" width="10" height="36" rx="2"></rect>
+        </svg>
+      </button>
+      <button type="button" class="hero__film-toggle" data-film-mute aria-label="Mute film">sound on</button>
     </div>
   </aside>
 
@@ -273,7 +282,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const preorderClose = hero?.querySelector<HTMLButtonElement>("[data-preorder-close]");
   const filmPanel = hero?.querySelector<HTMLElement>(".hero__film");
   const filmVideo = hero?.querySelector<HTMLVideoElement>(".hero__film-video");
-  const filmToggle = hero?.querySelector<HTMLButtonElement>("[data-film-toggle]");
+  const filmPlayback = hero?.querySelector<HTMLButtonElement>("[data-film-playback]");
+  const filmMute = hero?.querySelector<HTMLButtonElement>("[data-film-mute]");
   const filmClose = hero?.querySelector<HTMLButtonElement>("[data-film-close]");
   const filmOpen = hero?.querySelector<HTMLButtonElement>("[data-film-open]");
   const famPanel = hero?.querySelector<HTMLElement>(".hero__fam");
@@ -289,6 +299,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   let rowIndex = 0;
   let lastRowIndex = 0;
   let isPaging = false;
+  let filmHasStarted = false;
   let pagingFallback: ReturnType<typeof window.setTimeout> | undefined;
   let stencilReturnCleanup: (() => void) | undefined;
   let stageCleanup: ReturnType<typeof window.setTimeout> | undefined;
@@ -507,6 +518,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     const previousPanel = previousPanelStage ? getStagePanel(previousPanelStage) : undefined;
     if (previousStage === "film") {
       filmVideo?.pause();
+      resetFilmMute();
     }
 
     if (previousStage === nextStage) {
@@ -670,25 +682,48 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     transitionToStage("film", () => undefined);
   };
 
-  const updateFilmToggle = () => {
-    if (!filmVideo || !filmToggle) return;
+  const updateFilmPlayback = () => {
+    if (!filmVideo || !filmPlayback) return;
 
     const isPlaying = !filmVideo.paused && !filmVideo.ended;
-    filmToggle.textContent = isPlaying ? "pause" : "play";
-    filmToggle.setAttribute("aria-label", isPlaying ? "Pause film" : "Play film");
-    filmToggle.setAttribute("aria-pressed", String(isPlaying));
+    filmPlayback.hidden = isPlaying;
+    filmPlayback.classList.toggle("is-paused-after-start", filmHasStarted && !isPlaying);
+    filmPlayback.setAttribute("aria-label", isPlaying ? "Pause film" : "Play film");
+    filmPlayback.setAttribute("aria-pressed", String(isPlaying));
   };
 
   const toggleFilmPlayback = () => {
     if (!filmVideo) return;
 
     if (filmVideo.paused || filmVideo.ended) {
-      void filmVideo.play().then(updateFilmToggle).catch(updateFilmToggle);
+      void filmVideo.play().then(updateFilmPlayback).catch(updateFilmPlayback);
       return;
     }
 
     filmVideo.pause();
-    updateFilmToggle();
+    updateFilmPlayback();
+  };
+
+  const updateFilmMute = () => {
+    if (!filmVideo || !filmMute) return;
+
+    filmMute.textContent = filmVideo.muted ? "sound off" : "sound on";
+    filmMute.setAttribute("aria-label", filmVideo.muted ? "Turn film sound on" : "Mute film");
+    filmMute.setAttribute("aria-pressed", String(filmVideo.muted));
+  };
+
+  const resetFilmMute = () => {
+    if (!filmVideo) return;
+
+    filmVideo.muted = false;
+    updateFilmMute();
+  };
+
+  const toggleFilmMute = () => {
+    if (!filmVideo) return;
+
+    filmVideo.muted = !filmVideo.muted;
+    updateFilmMute();
   };
 
   const closeStage = () => {
@@ -696,7 +731,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     clearStageCleanup();
     filmVideo?.pause();
-    updateFilmToggle();
+    resetFilmMute();
+    updateFilmPlayback();
     setPagingReady();
     setRowIndex(0);
     returnStencilFromRight();
@@ -745,11 +781,16 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     openFilm();
   });
   filmVideo?.addEventListener("click", toggleFilmPlayback);
-  filmVideo?.addEventListener("play", updateFilmToggle);
-  filmVideo?.addEventListener("pause", updateFilmToggle);
-  filmVideo?.addEventListener("ended", updateFilmToggle);
-  filmToggle?.addEventListener("click", toggleFilmPlayback);
-  updateFilmToggle();
+  filmVideo?.addEventListener("play", () => {
+    filmHasStarted = true;
+    updateFilmPlayback();
+  });
+  filmVideo?.addEventListener("pause", updateFilmPlayback);
+  filmVideo?.addEventListener("ended", updateFilmPlayback);
+  filmPlayback?.addEventListener("click", toggleFilmPlayback);
+  filmMute?.addEventListener("click", toggleFilmMute);
+  resetFilmMute();
+  updateFilmPlayback();
 
   catalogViewport?.addEventListener(
     "wheel",
