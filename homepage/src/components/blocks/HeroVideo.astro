@@ -109,12 +109,13 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
             class="hero__menu-section"
             data-hero-dropdown
             data-preorder={section.preorder ? "true" : undefined}
+            data-fam={section.fam ? "true" : undefined}
             data-music={section.music ? "true" : undefined}
           >
             <button type="button" class="hero__menu-header" aria-expanded="false">
               {section.label} <span class="hero__menu-toggle">+</span>
             </button>
-            {!section.preorder && (
+            {!section.preorder && !section.fam && (
               <ul class="hero__menu-panel">
                 {
                   section.items.map((item) => (
@@ -235,6 +236,14 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     <button type="button" class="hero__film-toggle" data-film-toggle>play</button>
   </aside>
 
+  <aside class="hero__fam" aria-hidden="true">
+    <img class="hero__fam-image" src={withBase("/images/fam-tattoo.jpg")} alt="& fam" />
+    <p class="hero__fam-copy">
+      an interview series that takes an in-depth look at designers we carry like you've never seen them before, unless you're related to them.
+    </p>
+    <p class="hero__fam-kicker">coming soon…</p>
+  </aside>
+
   <script is:inline type="application/json" id="catalog-data" set:html={catalogDataJson}></script>
 </section>
 
@@ -265,6 +274,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const filmToggle = hero?.querySelector<HTMLButtonElement>("[data-film-toggle]");
   const filmClose = hero?.querySelector<HTMLButtonElement>("[data-film-close]");
   const filmOpen = hero?.querySelector<HTMLButtonElement>("[data-film-open]");
+  const famPanel = hero?.querySelector<HTMLElement>(".hero__fam");
   const catalogDataNode = hero?.querySelector<HTMLScriptElement>("#catalog-data");
   const collectionButtons = hero
     ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-shop-all]"))
@@ -280,8 +290,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   let pagingFallback: ReturnType<typeof window.setTimeout> | undefined;
   let stencilReturnCleanup: (() => void) | undefined;
   let stageCleanup: ReturnType<typeof window.setTimeout> | undefined;
-  type HeroStage = "landing" | "catalog" | "preorder" | "music" | "film";
-  type PanelStage = "catalog" | "preorder" | "music" | "film";
+  type HeroStage = "landing" | "catalog" | "preorder" | "music" | "film" | "fam";
+  type PanelStage = "catalog" | "preorder" | "music" | "film" | "fam";
 
   let activeStage: HeroStage = "landing";
   let touchStartY: number | null = null;
@@ -362,7 +372,15 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   };
 
   const getStagePanel = (stage: PanelStage) =>
-    stage === "catalog" ? catalog : stage === "preorder" ? preorder : stage === "music" ? dj : filmPanel;
+    stage === "catalog"
+      ? catalog
+      : stage === "preorder"
+        ? preorder
+        : stage === "music"
+          ? dj
+          : stage === "film"
+            ? filmPanel
+            : famPanel;
 
   const setPanelHidden = (stage: PanelStage, isHidden: boolean) => {
     const panel = getStagePanel(stage);
@@ -382,6 +400,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     preorder?.classList.remove("is-exiting-left");
     dj?.classList.remove("is-exiting-left");
     filmPanel?.classList.remove("is-exiting-left");
+    famPanel?.classList.remove("is-exiting-left");
     setMusicSettled(false);
   };
 
@@ -399,16 +418,17 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       hero.classList.contains("is-catalog") ||
       hero.classList.contains("is-preorder") ||
       hero.classList.contains("is-music") ||
-      hero.classList.contains("is-film");
+      hero.classList.contains("is-film") ||
+      hero.classList.contains("is-fam");
     if (!stencil || !hasActiveStage) {
-      hero.classList.remove("is-catalog", "is-preorder", "is-music", "is-film", "is-settled");
+      hero.classList.remove("is-catalog", "is-preorder", "is-music", "is-film", "is-fam", "is-settled");
       return;
     }
 
     clearStencilReturn();
     stencil.style.transition = "none";
     stencil.style.transform = "translateX(calc(50vw + 100%))";
-    hero.classList.remove("is-catalog", "is-preorder", "is-music", "is-film", "is-settled");
+    hero.classList.remove("is-catalog", "is-preorder", "is-music", "is-film", "is-fam", "is-settled");
     void stencil.offsetWidth;
 
     const finishReturn = (event?: TransitionEvent) => {
@@ -460,7 +480,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
         ? "is-preorder"
         : stage === "music"
           ? "is-music"
-          : "is-film";
+          : stage === "film"
+            ? "is-film"
+            : "is-fam";
 
   const activatePanel = (stage: PanelStage) => {
     hero?.classList.add(getStageClass(stage));
@@ -626,6 +648,16 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     transitionToStage("music", () => undefined);
   };
 
+  const openFam = () => {
+    if (!hero || !famPanel) return;
+
+    delete hero.dataset.activeCollection;
+    setActiveButton(null);
+    setPagingReady();
+    setRowIndex(0);
+    transitionToStage("fam", () => undefined);
+  };
+
   const openFilm = () => {
     if (!hero || !filmPanel) return;
 
@@ -671,6 +703,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     preorder?.setAttribute("aria-hidden", "true");
     dj?.setAttribute("aria-hidden", "true");
     filmPanel?.setAttribute("aria-hidden", "true");
+    famPanel?.setAttribute("aria-hidden", "true");
     setActiveButton(null);
     activeStage = "landing";
   };
@@ -759,6 +792,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     trigger.addEventListener("click", () => {
       const isPreorderSection = section.dataset.preorder === "true";
+      const isFamSection = section.dataset.fam === "true";
       const isMusicSection = section.dataset.music === "true";
       const isOpen = !section.classList.contains("is-open");
 
@@ -771,6 +805,12 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       if (isMusicSection && isOpen) {
         setMenuSectionState(section);
         openMusic();
+        return;
+      }
+
+      if (isFamSection && isOpen) {
+        setMenuSectionState(section);
+        openFam();
         return;
       }
 
