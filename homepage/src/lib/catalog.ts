@@ -44,7 +44,7 @@ const formatPrice = (price: string | undefined): string => {
   return `$${(price ?? "0").replace(/\.00$/, "")}`;
 };
 
-const getSizedShopifyImageUrl = (src: string | undefined, width: number): string | undefined => {
+export const getSizedShopifyImageUrl = (src: string | undefined, width: number): string | undefined => {
   if (!src) return undefined;
 
   try {
@@ -58,7 +58,7 @@ const getSizedShopifyImageUrl = (src: string | undefined, width: number): string
   }
 };
 
-const getShopifyImageSrcset = (src: string | undefined): string | undefined => {
+export const getShopifyImageSrcset = (src: string | undefined): string | undefined => {
   if (!src) return undefined;
 
   return SHOPIFY_IMAGE_WIDTHS
