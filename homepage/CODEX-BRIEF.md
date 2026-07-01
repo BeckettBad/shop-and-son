@@ -186,6 +186,13 @@ browser-side Shopify client. The existing `src/lib/shopify.ts` is build-time-sha
   (`?width=` on `cdn.shopify.com` URLs, 700/1100/1600) — export those two helpers
   from `catalog.ts` and import them; don't fork the logic.
 - Price formatting matches the cards: `$495` (strip `.00`), non-USD shows code.
+- `sanitizeShopifyHtml(html)` — the ONE gate for any admin-authored HTML the site
+  injects (K3 `descriptionHtml`, L4 policy bodies): parse via
+  `DOMParser`, strip `<script>/<iframe>/<object>/<embed>/<form>`, every `on*`
+  attribute, and `javascript:` URLs, return the cleaned fragment. Shopify admin
+  content is trusted-ish (it's Ben's), but a compromised admin must not become a
+  compromised storefront. Plain-text fields (titles, vendors, prices) keep using
+  `textContent` — never `innerHTML` — as the card factory already does.
 
 **Done when:** build+check green; module typechecks and is importable from client
 scripts; with the token in `.env`, a quick manual `getProduct("<any live handle>")`
@@ -284,8 +291,9 @@ prop); `src/styles/global.css` (or a scoped style block in the page).
   stacked full-column-width, natural aspect ratios, edge-to-edge, no borders
   (lazy-load below the first; width-resized srcset via the K1 helpers). **Right:**
   `position:sticky; top:0` details panel: vendor (small, muted) → title → price →
-  variant selector → ADD TO CART → `descriptionHtml` (rendered as-is inside a
-  `.product-detail__desc` wrapper with sane type styles). Page scrolls the image
+  variant selector → ADD TO CART → `descriptionHtml` (inside a
+  `.product-detail__desc` wrapper with sane type styles — injected ONLY through
+  the K1 `sanitizeShopifyHtml()` helper, never raw `innerHTML`). Page scrolls the image
   stack; details stay pinned — same reading as the preorder page.
 - **Variant selector:** square bordered uppercase buttons per variant option value
   (visual language of the preorder `size-btn`, rebuilt in our skin — selected =
@@ -566,7 +574,8 @@ sequence it after K3 — it is NOT part of Wave 1.**
   `<Base bare>`, homepage skin: small uppercase mono title (the policy title from
   Shopify), the body HTML rendered inside a contained `.policy__body` wrapper
   (sane type styles, links styled per site, Shopify markup can't restyle the
-  page), a `← back` control like K3's. Nothing else on the page.
+  page) — injected through the K1 `sanitizeShopifyHtml()` helper — and a `← back`
+  control like K3's. Nothing else on the page.
 - `getPolicies()` in the client layer fetches all three in one query, cached for
   the session. Verify at implementation whether the `shop` policy fields need any
   scope beyond what K0 grants — flag if so.
@@ -765,6 +774,27 @@ stage is flicker-free; audio plays when the user plays.
   exit path.
 - **Hover honesty (M1):** green hover ONLY on things that actually respond to a
   click — never on inert spans; and only under `@media(hover:hover)`.
+
+### SECURITY posture (standing rules, every phase)
+
+The architecture is the main defense: static files, no server, no database, no
+customer accounts, no payment handling (PCI is Shopify's problem). Keep it that
+way, plus:
+- **Admin credentials never ship.** `SHOPIFY_API_KEY`/`SHOPIFY_API_SECRET` are
+  used by NOTHING in these phases; they must never appear in client code, build
+  output, workflow files, or the GitHub variables page. Only the two `PUBLIC_`
+  Storefront values (public-by-design, minimal scopes) are ever exposed.
+- **One HTML gate.** All admin-authored HTML goes through
+  `sanitizeShopifyHtml()` (K1); all plain-text fields render via `textContent`.
+  No other `innerHTML` of fetched data, ever.
+- **No new dependencies without cause.** The client data layer, cart, and
+  sanitizer are all plain fetch/DOM — do not add npm packages for them. Any new
+  dependency gets flagged to the operator in the log with why.
+- **Storage stays anonymous.** localStorage holds the cart ID only — never
+  email, names, addresses, or anything personal.
+- **Operator-side (not Codex):** 2FA on the GitHub account and Ben's Shopify
+  admin; branch protection on `main` (PR-only, no force-push) so a stolen laptop
+  ≠ a hijacked live site; Dependabot alerts on for the repo.
 - **Base path (K2/K3):** every internal URL through `withBase`/`BASE_URL` — a bare
   `/product/` link 404s on Pages.
 - **Token absence:** every live feature must no-op gracefully — the deployed site
