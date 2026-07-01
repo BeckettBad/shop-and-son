@@ -19,6 +19,7 @@
 html{scroll-behavior:smooth}
 html.landing:not(.has-footer),html.landing:not(.has-footer) body{overflow:hidden; height:100%}
 html.landing.has-footer,html.landing.has-footer body{min-height:100%; overflow-x:hidden}
+html.landing.has-footer.is-scroll-locked,html.landing.has-footer.is-scroll-locked body{overflow:hidden; height:100%}
 body{
   font-family:var(--mono); font-size:15px; color:var(--ink); background:var(--paper);
   text-transform:lowercase;            /* the catalog register — matches shopandson.com */

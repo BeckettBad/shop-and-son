@@ -253,6 +253,17 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
   let activeStage: HeroStage = "landing";
   let touchStartY: number | null = null;
 
+  const updatePageScrollLock = () => {
+    if (!hero) return;
+
+    const wasLocked = document.documentElement.classList.contains("is-scroll-locked");
+    const clean = activeStage === "landing" && !hero.querySelector(".hero__menu-section.is-open");
+    document.documentElement.classList.toggle("is-scroll-locked", !clean);
+    if (!clean && !wasLocked) {
+      window.scrollTo(0, 0);
+    }
+  };
+
   const parseCatalogData = (): Record<string, CatalogProduct[]> => {
     try {
       return JSON.parse(catalogDataNode?.textContent ?? "{}") as Record<string, CatalogProduct[]>;
@@ -326,6 +337,7 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
         resetMenuSubgroups(section);
       }
     });
+    updatePageScrollLock();
   };
 
   const getStagePanel = (stage: PanelStage) =>
@@ -452,6 +464,7 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
         activatePanel(nextStage);
         if (nextStage === "preorder") resizePreorderFrame();
         activeStage = nextStage;
+        updatePageScrollLock();
         if (nextStage === "music") {
           stageCleanup = window.setTimeout(() => {
             setMusicSettled(true);
@@ -473,6 +486,7 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     activatePanel(nextStage);
     if (nextStage === "preorder") resizePreorderFrame();
     activeStage = nextStage;
+    updatePageScrollLock();
 
     if (previousPanelStage) {
       stageCleanup = window.setTimeout(() => {
@@ -595,6 +609,7 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     dj?.setAttribute("aria-hidden", "true");
     setActiveButton(null);
     activeStage = "landing";
+    updatePageScrollLock();
   };
 
   collectionButtons.forEach((button) => {
