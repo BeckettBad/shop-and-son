@@ -117,6 +117,15 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
                         <a class="hero__menu-link hero__menu-link--dash" href={item.href}>
                           {item.label}{item.suffix ?? ""}
                         </a>
+                      ) : item.children && item.children.length > 0 ? (
+                        <button
+                          type="button"
+                          class="hero__menu-subheader"
+                          aria-expanded="false"
+                          data-menu-subgroup
+                        >
+                          {item.label}{item.suffix ?? ""} <span class="hero__menu-subtoggle">+</span>
+                        </button>
                       ) : (
                         <span class="hero__menu-link hero__menu-link--dash">
                           {item.label}{item.suffix ?? ""}
@@ -220,6 +229,7 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-shop-all]"))
     : [];
   const menuSections = hero ? Array.from(hero.querySelectorAll<HTMLElement>("[data-hero-dropdown]")) : [];
+  const subgroupToggles = hero ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-menu-subgroup]")) : [];
   const desktopPagerQuery = window.matchMedia("(min-width: 761px)");
   const preorderDesktopWidth = 1160;
   const stageDuration = 550;
@@ -279,6 +289,21 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
     });
   };
 
+  const setMenuSubgroupState = (button: HTMLButtonElement, isOpen: boolean) => {
+    const group = button.closest(".hero__menu-item--group");
+    const toggle = button.querySelector(".hero__menu-subtoggle");
+    group?.classList.toggle("is-open", isOpen);
+    button.setAttribute("aria-expanded", String(isOpen));
+    if (toggle) {
+      toggle.textContent = isOpen ? "\u2013" : "+";
+    }
+  };
+
+  const resetMenuSubgroups = (section: HTMLElement) => {
+    const sectionSubgroups = Array.from(section.querySelectorAll<HTMLButtonElement>("[data-menu-subgroup]"));
+    sectionSubgroups.forEach((button) => setMenuSubgroupState(button, false));
+  };
+
   const setMenuSectionState = (activeSection: HTMLElement | null) => {
     menuSections.forEach((section) => {
       const isOpen = section === activeSection;
@@ -288,6 +313,9 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
       trigger?.setAttribute("aria-expanded", String(isOpen));
       if (toggle) {
         toggle.textContent = isOpen ? "\u2013" : "+";
+      }
+      if (!isOpen) {
+        resetMenuSubgroups(section);
       }
     });
   };
@@ -567,6 +595,13 @@ const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
       const label = button.dataset.collectionLabel ?? button.textContent?.trim() ?? "";
       if (!collection) return;
       openCatalog(collection, label);
+    });
+  });
+
+  subgroupToggles.forEach((button) => {
+    button.addEventListener("click", () => {
+      const group = button.closest(".hero__menu-item--group");
+      setMenuSubgroupState(button, !group?.classList.contains("is-open"));
     });
   });
 

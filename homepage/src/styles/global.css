@@ -479,7 +479,18 @@ body{
 .hero__menu-link.is-active{color:var(--neon-green); text-decoration:underline}
 .hero__menu-link--dash::before{content:"- "}
 .hero__menu-link--bullet::before{content:"o "}
+.hero__menu-subheader{
+  display:inline-flex; align-items:baseline; gap:.35em; margin:0; padding:0;
+  border:none; background:none; appearance:none; -webkit-appearance:none;
+  font-family:inherit; font-size:clamp(9px,.9vw,12px); font-weight:400; line-height:1.25;
+  letter-spacing:0; color:inherit; text-align:left; text-transform:uppercase;
+  cursor:pointer;
+}
+.hero__menu-subheader:hover{text-decoration:underline}
+.hero__menu-subtoggle{display:inline-block}
 .hero__menu-nested{padding-left:1.4em; margin-top:0.15em}
+.hero__menu-item--group .hero__menu-nested{display:none}
+.hero__menu-item--group.is-open .hero__menu-nested{display:block}
 @media(min-width:761px){
   .hero__overlay{
     overflow-x:hidden; overflow-y:auto;
@@ -495,7 +506,7 @@ body{
   .hero__menu-section.is-open .hero__menu-panel > .hero__menu-item{
     margin-bottom:.4em;
   }
-  .hero__menu-section.is-open .hero__menu-panel > .hero__menu-item > .hero__menu-link,
+  .hero__menu-section.is-open .hero__menu-panel > .hero__menu-item:not(.hero__menu-item--group) > .hero__menu-link,
   .hero__menu-section.is-open .hero__menu-nested .hero__menu-link{
     font-size:clamp(14px,1.3vw,18px); line-height:1.22;
   }
@@ -505,11 +516,11 @@ body{
   .hero__menu-section.is-open .hero__menu-item--group:first-child{
     margin-top:0;
   }
-  .hero__menu-section.is-open .hero__menu-item--group > .hero__menu-link{
+  .hero__menu-section.is-open .hero__menu-item--group > .hero__menu-subheader{
     font-size:clamp(10px,.95vw,13px); line-height:1.2;
     margin-bottom:.22em;
   }
-  .hero__menu-section.is-open .hero__menu-nested{
+  .hero__menu-item--group .hero__menu-nested{
     padding-left:0; margin-top:0;
   }
 }
@@ -555,6 +566,10 @@ body{
   .hero__menu-section.is-open .hero__menu-panel{display:block}
   .hero__menu-link{
     font-size:11px; font-weight:400; line-height:1.35;
+    padding:0.3em 0; white-space:nowrap;
+  }
+  .hero__menu-subheader{
+    font-size:11px; line-height:1.35;
     padding:0.3em 0; white-space:nowrap;
   }
   .hero__menu-nested{padding-left:1.4em; margin-top:0.2em}
