@@ -186,6 +186,13 @@ browser-side Shopify client. The existing `src/lib/shopify.ts` is build-time-sha
   (`?width=` on `cdn.shopify.com` URLs, 700/1100/1600) — export those two helpers
   from `catalog.ts` and import them; don't fork the logic.
 - Price formatting matches the cards: `$495` (strip `.00`), non-USD shows code.
+- `sanitizeShopifyHtml(html)` — the ONE gate for any admin-authored HTML the site
+  injects (K3 `descriptionHtml`, L4 policy bodies): parse via
+  `DOMParser`, strip `<script>/<iframe>/<object>/<embed>/<form>`, every `on*`
+  attribute, and `javascript:` URLs, return the cleaned fragment. Shopify admin
+  content is trusted-ish (it's Ben's), but a compromised admin must not become a
+  compromised storefront. Plain-text fields (titles, vendors, prices) keep using
+  `textContent` — never `innerHTML` — as the card factory already does.
 
 **Done when:** build+check green; module typechecks and is importable from client
 scripts; with the token in `.env`, a quick manual `getProduct("<any live handle>")`
@@ -284,8 +291,9 @@ prop); `src/styles/global.css` (or a scoped style block in the page).
   stacked full-column-width, natural aspect ratios, edge-to-edge, no borders
   (lazy-load below the first; width-resized srcset via the K1 helpers). **Right:**
   `position:sticky; top:0` details panel: vendor (small, muted) → title → price →
-  variant selector → ADD TO CART → `descriptionHtml` (rendered as-is inside a
-  `.product-detail__desc` wrapper with sane type styles). Page scrolls the image
+  variant selector → ADD TO CART → `descriptionHtml` (inside a
+  `.product-detail__desc` wrapper with sane type styles — injected ONLY through
+  the K1 `sanitizeShopifyHtml()` helper, never raw `innerHTML`). Page scrolls the image
   stack; details stay pinned — same reading as the preorder page.
 - **Variant selector:** square bordered uppercase buttons per variant option value
   (visual language of the preorder `size-btn`, rebuilt in our skin — selected =
@@ -294,9 +302,16 @@ prop); `src/styles/global.css` (or a scoped style block in the page).
   one button row per option — handle generally, not size-specific.
 - **ADD TO CART:** disabled until a purchasable variant is resolved; label `add to
   cart`; whole-product `availableForSale === false` → button reads `sold out`,
-  permanently disabled. In THIS commit the click handler is a stub dispatching
+  permanently disabled. In THIS commit the click handler dispatches
   `document.dispatchEvent(new CustomEvent("cart:add", { detail: { variantId,
-  quantity: 1 } }))` — K4 listens; no dead UI, no console-only behavior.
+  quantity: 1 } }))` — K4 listens.
+  **Interim (until K4 is live WITH cart scopes on the token):** when no
+  `cart:add` listener is active — feature-flag it simply: K4 sets
+  `window.__cartReady = true` when its listener mounts, and if that's absent —
+  the button instead renders as a link, same styling, labelled `buy on
+  shopandson.com`, to `https://shopandson.com/products/<handle>` (new tab,
+  `rel="noopener"`). No dead buttons in any shippable state; K4 removes the
+  interim path.
 - **Mobile:** single column — images first (swipeable horizontal strip or stacked;
   stacked is fine), details after; sticky-off.
 - No instructional/internal text anywhere on the page.
@@ -559,7 +574,8 @@ sequence it after K3 — it is NOT part of Wave 1.**
   `<Base bare>`, homepage skin: small uppercase mono title (the policy title from
   Shopify), the body HTML rendered inside a contained `.policy__body` wrapper
   (sane type styles, links styled per site, Shopify markup can't restyle the
-  page), a `← back` control like K3's. Nothing else on the page.
+  page) — injected through the K1 `sanitizeShopifyHtml()` helper — and a `← back`
+  control like K3's. Nothing else on the page.
 - `getPolicies()` in the client layer fetches all three in one query, cached for
   the session. Verify at implementation whether the `shop` policy fields need any
   scope beyond what K0 grants — flag if so.
@@ -574,6 +590,46 @@ showing the exact text from Shopify admin, typeset in the site skin; editing a
 policy in admin shows on next load without a redeploy; without a token the pages
 degrade to an outbound link; no `shopandson.com/policies` hrefs remain in the
 about block.
+
+---
+
+### IDEA — "now playing in store" on the MUSIC stage (NOT scheduled; do NOT
+build; last-pass item, revisit after Phases K/L/M ship AND Ben approves)
+
+Concept: the MUSIC stage (DJ + notes) gains one quiet line — pulsing neon-green
+dot, `now playing in store`, then `track — artist` (+ small album art), showing
+what's live on the store's Spotify. The whole line deep-links to that track on
+Spotify (visitors add it to their own playlists via Spotify's native UI — no
+visitor login on our site; Spotify's dev-mode caps make on-site "add to
+playlist" a dead end, deep-link is the design). Sits with the existing
+`& SON OFFICIAL PLAYLIST` link.
+
+**HARD requirement — store-hours gate:** the feature renders ONLY during store
+hours (site config already has `hours`, America/New_York). Outside hours it
+renders NOTHING — not "last played", not a placeholder — so Ben's personal
+at-home listening is never displayed. Also hide when nothing is playing.
+
+Two candidate architectures (decide at build time):
+1. **Last.fm relay, zero backend (try first):** Ben one-time connects his
+   Spotify to a free Last.fm account; the site reads Last.fm's public
+   now-playing API client-side. No secrets to protect, no infra.
+2. **Serverless relay (upgrade path):** a Cloudflare Worker (free tier) holds
+   Ben's Spotify OAuth credential privately and exposes a sanitized
+   `{track, artist, art, isPlaying}` JSON. Tighter real-time; one new moving
+   part. The site component is identical either way — the data source is
+   swappable.
+
+**Ben's on/off switch (part of the idea):** a Shopify SHOP METAFIELD boolean
+(e.g. namespace `site`, key `now_playing_enabled`, storefront access enabled),
+read via the Storefront API like everything else. Ben gets a bookmark straight
+to the field in admin: flip on/off → site follows on next load, no redeploy.
+Display requires ALL THREE gates: switch on AND store hours AND actively
+playing — otherwise the section doesn't render at all. This `site.*` flag
+namespace is the pattern for any future operator toggles (one place, Ben's
+existing login, zero new accounts).
+
+Blocked on: Ben's approval + his one-time account connection. Historical note:
+the retired v1 design mocked exactly this (`content.ts` `music.nowPlaying`).
 
 ---
 
@@ -894,6 +950,27 @@ the house back; mobile unaffected or improved.
   exit path.
 - **Hover honesty (M1):** green hover ONLY on things that actually respond to a
   click — never on inert spans; and only under `@media(hover:hover)`.
+
+### SECURITY posture (standing rules, every phase)
+
+The architecture is the main defense: static files, no server, no database, no
+customer accounts, no payment handling (PCI is Shopify's problem). Keep it that
+way, plus:
+- **Admin credentials never ship.** `SHOPIFY_API_KEY`/`SHOPIFY_API_SECRET` are
+  used by NOTHING in these phases; they must never appear in client code, build
+  output, workflow files, or the GitHub variables page. Only the two `PUBLIC_`
+  Storefront values (public-by-design, minimal scopes) are ever exposed.
+- **One HTML gate.** All admin-authored HTML goes through
+  `sanitizeShopifyHtml()` (K1); all plain-text fields render via `textContent`.
+  No other `innerHTML` of fetched data, ever.
+- **No new dependencies without cause.** The client data layer, cart, and
+  sanitizer are all plain fetch/DOM — do not add npm packages for them. Any new
+  dependency gets flagged to the operator in the log with why.
+- **Storage stays anonymous.** localStorage holds the cart ID only — never
+  email, names, addresses, or anything personal.
+- **Operator-side (not Codex):** 2FA on the GitHub account and Ben's Shopify
+  admin; branch protection on `main` (PR-only, no force-push) so a stolen laptop
+  ≠ a hijacked live site; Dependabot alerts on for the repo.
 - **Base path (K2/K3):** every internal URL through `withBase`/`BASE_URL` — a bare
   `/product/` link 404s on Pages.
 - **Token absence:** every live feature must no-op gracefully — the deployed site
