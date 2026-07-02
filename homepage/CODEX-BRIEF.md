@@ -68,7 +68,7 @@ diff against that sub-task's **Done when** + the risks list before the next
 dispatch. Before each dispatch, Claude updates the line below so Codex has ONE
 target; everything else in this file is context, not instruction.
 
-> **ACTIVE SUB-TASK: (none — Wave 3 + all film revisions COMPLETE on dev: M2 193e0b8, M2b 58e8030, M3 0e5a442+32d2e21, L3 5fb0f1f+76efa7d, M3-rev 5b4e851, M3-rev2 1a31085. All reviewed + built green, held UNPUSHED for operator verify → ship Wave 3 as its own PR (K1 + plan-docs ride along, approved). K2+ paused on token.)**
+> **ACTIVE SUB-TASK: (none — Wave 3 + all film revisions COMPLETE on dev through M3-rev3b (671c6fe). Full stack: M2 193e0b8, M2b 58e8030, M3 0e5a442+32d2e21, L3 5fb0f1f+76efa7d, M3-rev 5b4e851, M3-rev2 1a31085, M3-rev3 184b2ad, M3-rev3b 671c6fe. Reviewed + built green, held UNPUSHED for operator verify → ship Wave 3 as its own PR (K1 + plan-docs ride along, approved). K2+ paused on token.)**
 
 Recommended order (three waves, operator verifies on `dev` after each wave and
 ships dev → main per wave, not one giant merge):
@@ -827,6 +827,51 @@ glide the house back; mobile sane.
 
 ---
 
+### M3-rev3 — film: larger still, re-centered off the right edge, bigger sound toggle
+
+**Operator revision (2026-07-01, screenshot after rev2).** `src/styles/global.css`
+ONLY (geometry + control sizing). **Video FILE and the rev2 control
+behaviour/state machine stay EXACTLY as they are** (no JS, no glyph/markup
+changes, no touching the play/pause state machine or the mute wiring).
+
+1. **GEOMETRY.** Current: the video hugs the RIGHT viewport edge (right margin
+   ≈0) with dead space pooled on the menu side (root cause: `.hero__film-video`
+   uses `width:100%` + `max-height:86vh` + `object-fit:contain`, so when the cap
+   binds the video pillarboxes instead of filling). Invert it — the video gets
+   LARGER and sits balanced in the region right of the menu:
+   - **LEFT:** small ~2vw gap between the menu column and the video's left edge
+     (menu incl. FULLY-EXPANDED CLOTHES stays completely clear — hard constraint
+     at every width; `left:max(27vw,240px)` is the starting point, nudge out only
+     if CLOTHES overlaps).
+   - **RIGHT:** a real ~4–5vw margin between the video's right edge and the
+     viewport — it must no longer touch/crowd the right edge (add `right:4.5vw`,
+     drop the old `padding:0 2vw 0 0`).
+   - **SIZE / fill:** kill the pillarbox by giving `.hero__film-frame`
+     `aspect-ratio:16 / 9` (the asset is exactly 16:9) with `width:100%`,
+     `max-height:~88vh`, `margin:auto` — so the frame fills the box width-first,
+     caps at 88vh on very wide/short viewports, and the video (`width:100%;
+     height:100%; object-fit:contain`) fills the frame edge-to-edge with NO dead
+     space and the ×/mute/centre buttons land on the true video corners. Net:
+     bigger than rev2 in both dimensions, commanding, balanced not right-hugging.
+   - **Vertical:** centered. × stays top-right ON the frame; **slide transforms
+     stay byte-identical** (only left/right insets + frame sizing change).
+
+2. **SOUND TOGGLE — a known feature, not a whisper.** Same bottom-left position
+   on the video, same lowercase-mono style + `sound on`⇄`sound off` behaviour,
+   but visibly LARGER: ~13–14px font with comfortable padding / larger hit area,
+   **min ~44px touch target**. Keep/STRENGTHEN the subtle backing so it stays
+   legible over any footage (e.g. bump the translucent bg, keep the border).
+   Neon-green on hover unchanged.
+
+**Done when:** build+check green; the film opens large and centered in the space
+right of the menu — small consistent ~2vw gap to the menu, clear ~4–5vw margin to
+the right edge, nothing overlapped, native aspect, sharp; the rev2 centered
+play/pause state machine is UNTOUCHED and still greens on hover; the sound toggle
+reads at a glance and greens on hover; × and stage switches still pause + glide
+the house back; mobile unaffected or improved.
+
+---
+
 ### Phase K + L + M risks / review focus (Claude checks these on every diff)
 
 - **Row pager regression (K2):** measured offsets must survive resize, re-render,
@@ -990,6 +1035,8 @@ scrolling down reveals it; CLOTHES stays anchored at the top.
 
 ## Log (Phase M — Codex appends newest at top)
 
+- 2026-07-01 — Phase M3-rev3b: enlarge film × close to match rev3 controls (operator follow-up) — 671c6fe — build:green check:green — global.css .hero__film-close only: width/height 30→44px, font 22→28px (line-height 26px→1), bg .22→.5, added display:inline-flex + align/justify center so the × stays centered in the bigger box; position/border/color/z-index/neon-hover unchanged. Reviewed clean by Claude. committed @ 671c6fe — ready for operator verify. Not pushed.
+- 2026-07-01 — Phase M3-rev3: film larger/re-centered off right edge + bigger sound toggle (operator revision) — 184b2ad — build:green check:green (Claude re-ran: 0 err/0 warn/6 hints) — global.css ONLY (video file + rev2 JS/state-machine/markup untouched). GEOMETRY: .hero__film right:0→4.5vw (real right margin), padding:0 2vw 0 0→0, left stays max(27vw,240px) (~2vw menu gap); .hero__film-frame now aspect-ratio:16/9 + width:100% + max-width:calc(88vh*16/9) + max-height:88vh + margin:auto — the 16:9 frame fills the box width-first, precisely caps at 88vh tall, centered; .hero__film-video width:100%/height:100%/object-fit:contain fills the frame edge-to-edge (both 16:9 → NO pillarbox, root cause of rev2's dead-paper/right-hug fixed) so ×/mute/centered controls sit on the TRUE video corners. Bigger both dims, balanced. Transforms byte-identical. SOUND TOGGLE .hero__film-toggle: display:inline-flex/align-items:center/min-height:44px, padding 4px7px→9px12px, font 12→14px, bg .22→.5 (stronger legibility), border + neon hover kept. Reviewed clean by Claude. committed @ 184b2ad — ready for operator verify. Not pushed.
 - 2026-07-01 — Phase M3-rev2: film presence + classic centered play/pause glyph + bottom-left mute (operator revision) — 1a31085 — build:green check:green (Claude re-ran: 0 err/0 warn/6 hints) — video file UNTOUCHED (HeroVideo.astro + global.css only). PRESENCE: .hero__film left:max(30vw→27vw,240px); .hero__film-frame + .hero__film-video now width:100% (width-first, fills panel width), max-height 78vh→86vh, object-fit contain native aspect — video now commands the space, minimal side dead paper. CENTERED PLAYBACK: new <button class="hero__film-playback" data-film-playback> centered in frame (62px, 58px mobile), two inline-SVG glyphs (filled triangle --play / two rounded bars --pause), ink #000 with white drop-shadow halo for legibility (no chrome/circle), neon-green on hover (@media hover:hover). State machine via updateFilmPlayback + filmHasStarted flag: hidden=isPlaying (controls vanish while playing); default(no class)=▶; .is-paused-after-start (filmHasStarted && paused)=⏸; filmHasStarted set on first 'play'; clicking glyph OR video toggles. MUTE: bottom-left .hero__film-toggle repurposed to data-film-mute, same lowercase-mono style + neon hover; label 'sound on'⇄'sound off' wired to video.muted; resetFilmMute() (muted=false) on init + closeStage + on leaving film via transitionToStage. Reviewed clean by Claude (full diff). committed @ 1a31085 — ready for operator verify. Not pushed. FLAGS for operator: (1) PER SPEC the PAUSED-after-start state shows the PAUSE glyph ⏸ (conventional players show ▶ when paused) — one-glyph swap (.is-paused-after-start rule) if you want it flipped after seeing it; (2) 'all controls vanish while playing' implemented as the CENTERED playback glyph hiding while playing — the × and mute stay accessible (so you can close/mute without pausing first); say if you want those to auto-hide-on-play + reveal-on-hover too; (3) mute also resets to sound-on when you switch from film to another stage (not just on ×) — matches 'reset when the stage closes'.
 - 2026-07-01 — Phase M3-rev: film panel contained clear of the menu + visible play control (operator revision, screenshot-verified) — 5b4e851 — build:green check:green (Claude re-ran: 0 err/0 warn/6 hints) — LAYOUT ONLY, video file untouched (only HeroVideo.astro + global.css changed). .hero__film re-geometried from inset:0/margin:auto (centred in full viewport → spilled into menu) to position top:0/right:0/bottom:0/left:max(30vw,240px) (matches .hero__catalog), flex-centred, padding 0 2vw 0 0 — confined RIGHT of the menu, never overlapping menu/about/cart. Slide transforms KEPT byte-identical (off-screen translateX(calc(50vw+100%)), shared active translateX(0), shared exit translateX(-110%)). New wrapper <div class="hero__film-frame"> (position:relative; inline-flex; fit-content; max-height:78vh) shrink-wraps the video so the × (top-right) + play/pause (bottom-left) buttons anchor to the VIDEO corners, not the letterbox — buttons' own CSS unchanged, just reparented. Video: width/height auto, max-width:100%, max-height:78vh, object-fit:contain (native aspect, no crop). .hero__film-toggle:hover stays neon-green in the @media(hover:hover) group; video-click toggle + updateFilmToggle unchanged; no autoplay, audio stays. Mobile: .hero__film top:clamp(88px,16vh,132px)/left:0/right:0, padding 0 4vw (clear of horizontal menu tabs), frame+video max 100%. Reviewed clean by Claude (full diff). committed @ 5b4e851 — ready for operator verify. Not pushed. ASSET HOUSEKEEPING (operator decisions): new-about-homepage.mp4 DELETED (unused, superseded) — commit prior; about-film.mp4 kept at 32MB (preload=metadata → downloads only on demand) — CANDIDATE FOR A LATER OPTIMIZE PASS (lighter encode) when convenient, not blocking.
 - 2026-07-01 — Phase M2b: stencil white by default, neon-green on hover (operator revision to M2) — 58e8030 — build:green check:green — global.css 2 lines: .hero__stencil background-color var(--neon-green)→#ffffff (white house as before, via mask fill); hover rule filter:brightness(1.28)→background-color:var(--neon-green) inside @media(hover:hover). Now matches the menu-text hover language (white→green only while hovered, signals clickable); touch devices stay white (no stuck green). Mask/sizing/aspect-ratio/transform/exit-left untouched. Reviewed clean by Claude. committed @ 58e8030 — ready for operator verify. Not pushed.
