@@ -1,4 +1,5 @@
 import {
+  formatMoney,
   getShopifyImageSrcset,
   getSizedShopifyImageUrl,
   type CatalogProduct,
@@ -112,24 +113,16 @@ function getProductUrl(handle: string): string {
   return SHOPIFY_DOMAIN ? `https://${SHOPIFY_DOMAIN}/products/${handle}` : `/products/${handle}`;
 }
 
-function formatMoney(money: Money | null | undefined): string {
-  if (!money) return "";
-
-  const amount = money.amount.replace(/\.00$/, "");
-  if (money.currencyCode === "USD") return `$${amount}`;
-
-  return `${amount} ${money.currencyCode}`;
-}
-
 function mapCatalogProduct(product: StorefrontCollectionProduct): CatalogProduct {
   const imageWidth = product.featuredImage?.width;
   const imageHeight = product.featuredImage?.height;
+  const money = product.priceRange.minVariantPrice;
 
   return {
     handle: product.handle,
     title: product.title,
     vendor: product.vendor,
-    price: formatMoney(product.priceRange.minVariantPrice),
+    price: formatMoney(money.amount, money.currencyCode),
     url: getProductUrl(product.handle),
     available: product.availableForSale,
     image: getSizedShopifyImageUrl(product.featuredImage?.url, 1100),
@@ -416,7 +409,7 @@ export async function getProduct(handle: string): Promise<ProductDetail | null> 
         id: variant.id,
         title: variant.title,
         availableForSale: variant.availableForSale,
-        price: formatMoney(variant.price),
+        price: formatMoney(variant.price.amount, variant.price.currencyCode),
         selectedOptions: variant.selectedOptions,
       })),
     };

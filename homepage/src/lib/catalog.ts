@@ -45,8 +45,12 @@ const FETCH_RETRY_MAX_DELAY_MS = 8_000;
 const productCache = new Map<string, Promise<CatalogProduct[]>>();
 let catalogFetchQueue = Promise.resolve();
 
-const formatPrice = (price: string | undefined): string => {
-  return `$${(price ?? "0").replace(/\.00$/, "")}`;
+export const formatMoney = (amount: string | undefined, currencyCode = "USD"): string => {
+  const n = Number.parseFloat(amount ?? "");
+  if (!Number.isFinite(n)) return "";
+
+  const body = Number.isInteger(n) ? String(n) : n.toFixed(2);
+  return currencyCode === "USD" ? `$${body}` : `${body} ${currencyCode}`;
 };
 
 export const getSizedShopifyImageUrl = (src: string | undefined, width: number): string | undefined => {
@@ -86,7 +90,7 @@ const mapProduct = (product: ShopifyProduct): CatalogProduct => {
     handle,
     title: product.title ?? "",
     vendor: product.vendor ?? "",
-    price: formatPrice(product.variants?.[0]?.price),
+    price: formatMoney(product.variants?.[0]?.price),
     available: product.variants?.some((variant) => variant.available) ?? false,
     image: getSizedShopifyImageUrl(imageSrc, 1100),
     imageSrcset: getShopifyImageSrcset(imageSrc),

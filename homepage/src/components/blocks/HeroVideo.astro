@@ -308,6 +308,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const desktopPagerQuery = window.matchMedia("(min-width: 761px)");
   const preorderDesktopWidth = 1160;
   const stageDuration = 550;
+  const fallbackCardAspect = 0.75;
   let rowIndex = 0;
   let lastRowIndex = 0;
   let isPaging = false;
@@ -335,6 +336,11 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const getProductHref = (handle: string) => {
     const base = BASE.replace(/\/$/, "");
     return `${base}/product/?handle=${encodeURIComponent(handle)}`;
+  };
+
+  const getCardAspect = (imageAspect: number | undefined) => {
+    const aspect = Number(imageAspect);
+    return Number.isFinite(aspect) && aspect > 0 ? aspect : fallbackCardAspect;
   };
 
   const getLiveCollection = (collection: string) => {
@@ -616,7 +622,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     const card = document.createElement("a");
     card.className = "product-card";
     card.href = getProductHref(product.handle);
-    card.style.setProperty("--card-aspect", String(product.imageAspect || 0.75));
+    card.style.setProperty("--card-aspect", String(getCardAspect(product.imageAspect)));
     card.classList.toggle("is-sold-out", product.available === false);
 
     const media = document.createElement("span");
@@ -632,6 +638,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       image.loading = "lazy";
       image.decoding = "async";
       media.append(image);
+    } else {
+      media.style.background = "rgba(247, 244, 235, 0.72)";
     }
     if (product.available === false) {
       const soldOut = document.createElement("span");
@@ -697,8 +705,32 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       price: product.price,
       available: product.available,
       image: getImageCompareKey(product.image),
-      imageAspect: product.imageAspect,
+      imageAspect: getCardAspect(product.imageAspect),
     }));
+
+  const reconcileLiveProducts = (
+    liveProducts: CatalogProduct[],
+    snapshotProducts: CatalogProduct[],
+  ) => {
+    const snapshotByHandle = new Map(snapshotProducts.map((product) => [product.handle, product]));
+
+    return liveProducts.map((product) => {
+      const snapshotProduct = snapshotByHandle.get(product.handle);
+      if (product.image || !snapshotProduct?.image) {
+        return {
+          ...product,
+          imageAspect: getCardAspect(product.imageAspect),
+        };
+      }
+
+      return {
+        ...product,
+        image: snapshotProduct.image,
+        imageSrcset: snapshotProduct.imageSrcset,
+        imageAspect: getCardAspect(snapshotProduct.imageAspect),
+      };
+    });
+  };
 
   const hasLiveCatalogChanged = (
     liveCollection: CollectionDetail,
@@ -724,10 +756,15 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     void getLiveCollection(collection).then((liveCollection) => {
       if (!liveCollection || hero.dataset.activeCollection !== collection) return;
-      if (!hasLiveCatalogChanged(liveCollection, snapshotProducts)) return;
 
-      renderCatalogHeader(label, liveCollection.description);
-      renderCatalogRows(liveCollection.products, rowIndex);
+      const reconciledLiveCollection: CollectionDetail = {
+        ...liveCollection,
+        products: reconcileLiveProducts(liveCollection.products, snapshotProducts),
+      };
+      if (!hasLiveCatalogChanged(reconciledLiveCollection, snapshotProducts)) return;
+
+      renderCatalogHeader(label, reconciledLiveCollection.description);
+      renderCatalogRows(reconciledLiveCollection.products, rowIndex);
     });
   };
 
