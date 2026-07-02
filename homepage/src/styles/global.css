@@ -1005,9 +1005,9 @@ html.cart-ready .cart-backdrop{transition:opacity .55s ease-in-out}
   transform:translateX(100%); visibility:hidden;
 }
 html.cart-ready .cart-drawer{transition:transform .55s ease-in-out,visibility 0s linear .55s}
+html.cart-ready .cart-drawer.is-open{transition:transform .55s ease-in-out,visibility 0s}
 .cart-drawer.is-open{
   transform:translateX(0); visibility:visible;
-  transition:transform .55s ease-in-out,visibility 0s;
 }
 .cart-drawer__header{
   display:flex; align-items:center; justify-content:space-between;
