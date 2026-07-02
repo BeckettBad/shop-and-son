@@ -30,6 +30,10 @@
   const checkoutButton = document.querySelector<HTMLButtonElement>("[data-cart-checkout]");
   const messageElement = document.querySelector<HTMLElement>("[data-cart-message]");
 
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.documentElement.classList.add("cart-ready");
+  }));
+
   let activeCart: Cart | undefined;
   let messageTimer: ReturnType<typeof window.setTimeout> | undefined;
 

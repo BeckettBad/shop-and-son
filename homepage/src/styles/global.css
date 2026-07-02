@@ -994,8 +994,8 @@ body.is-cart-open{overflow:hidden}
 .cart-backdrop{
   position:fixed; inset:0; z-index:80;
   background:rgba(0,0,0,.18); opacity:0;
-  transition:opacity .55s ease-in-out;
 }
+html.cart-ready .cart-backdrop{transition:opacity .55s ease-in-out}
 .cart-backdrop.is-open{opacity:1}
 .cart-drawer{
   position:fixed; top:0; right:0; bottom:0; z-index:81;
@@ -1003,8 +1003,8 @@ body.is-cart-open{overflow:hidden}
   background:var(--paper); color:#000; border-left:1px solid #000;
   font-family:var(--mono); text-transform:lowercase;
   transform:translateX(100%); visibility:hidden;
-  transition:transform .55s ease-in-out,visibility 0s linear .55s;
 }
+html.cart-ready .cart-drawer{transition:transform .55s ease-in-out,visibility 0s linear .55s}
 .cart-drawer.is-open{
   transform:translateX(0); visibility:visible;
   transition:transform .55s ease-in-out,visibility 0s;
