@@ -1,0 +1,91 @@
+---
+import Base from "../layouts/Base.astro";
+---
+
+<Base bare title="&son">
+  <main class="policy-page" data-policy-page>
+    <header class="policy-page__top">
+      <button type="button" class="policy-page__back" data-policy-back>← back</button>
+    </header>
+    <section class="policy-page__state" data-policy-state>loading</section>
+  </main>
+
+  <script>
+    import {
+      getPolicies,
+      isStorefrontConfigured,
+      sanitizeShopifyHtml,
+      type ShopPolicy,
+    } from "../lib/storefront-client";
+
+    const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+    const homeUrl = `${BASE}/`;
+    const allowedPolicies = new Set(["refund-policy", "privacy-policy", "terms-of-service"]);
+    const requestedHandle = new URLSearchParams(window.location.search).get("policy")?.trim() ?? "";
+    const handle = allowedPolicies.has(requestedHandle) ? requestedHandle : "";
+    const state = document.querySelector<HTMLElement>("[data-policy-state]");
+    const back = document.querySelector<HTMLButtonElement>("[data-policy-back]");
+
+    back?.addEventListener("click", () => {
+      if (window.history.length > 1) {
+        window.history.back();
+        return;
+      }
+      window.location.assign(homeUrl);
+    });
+
+    const shopifyPolicyUrl = (policyHandle: string) =>
+      policyHandle
+        ? `https://shopandson.com/policies/${encodeURIComponent(policyHandle)}`
+        : "https://shopandson.com/policies/";
+
+    const renderFallback = () => {
+      if (!state) return;
+
+      const link = document.createElement("a");
+      link.className = "policy-page__fallback-link";
+      link.href = shopifyPolicyUrl(handle);
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.textContent = handle ? `shopandson.com/policies/${handle}` : "shopandson.com/policies";
+
+      state.className = "policy-page__state policy-page__state--message";
+      state.replaceChildren(link);
+    };
+
+    const renderPolicy = (policy: ShopPolicy) => {
+      if (!state) return;
+
+      const title = document.createElement("h1");
+      title.className = "policy-page__title";
+      title.textContent = policy.title;
+
+      const body = document.createElement("div");
+      body.className = "policy__body";
+      body.innerHTML = sanitizeShopifyHtml(policy.body);
+
+      state.className = "policy-page__content";
+      state.replaceChildren(title, body);
+    };
+
+    const init = async () => {
+      if (!state) return;
+
+      if (!handle || !isStorefrontConfigured) {
+        renderFallback();
+        return;
+      }
+
+      const policies = await getPolicies();
+      const policy = policies?.[handle];
+      if (!policy) {
+        renderFallback();
+        return;
+      }
+
+      renderPolicy(policy);
+    };
+
+    void init();
+  </script>
+</Base>

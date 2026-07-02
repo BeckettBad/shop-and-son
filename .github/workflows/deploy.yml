@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    # Daily ~4am ET — redeploy main as-is so the build-time products.json snapshot
+    # stays fresh (the live Storefront layer revalidates at runtime; this keeps the
+    # instant-paint snapshot + the no-token fallback from going stale).
+    - cron: "0 8 * * *"
 
 permissions:
   contents: read
@@ -28,6 +33,13 @@ jobs:
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Build site (homepage → root /shop-and-son/)
+        # Public, read-only Storefront token (repo Actions Variables, not Secrets) —
+        # Astro inlines these PUBLIC_ vars into the client bundle so the deployed
+        # site gets the live catalogue/cart/menu features. Unset (forks/PRs) → the
+        # client layer degrades quietly to the build-time snapshot; build stays green.
+        env:
+          PUBLIC_SHOPIFY_STORE_DOMAIN: ${{ vars.PUBLIC_SHOPIFY_STORE_DOMAIN }}
+          PUBLIC_SHOPIFY_STOREFRONT_API_TOKEN: ${{ vars.PUBLIC_SHOPIFY_STOREFRONT_API_TOKEN }}
         run: |
           cd homepage
           npm ci

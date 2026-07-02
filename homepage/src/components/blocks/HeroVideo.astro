@@ -23,7 +23,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 // Block 1 — desktop: vertical left menu; mobile: horizontal tabs over fullscreen video.
 ---
 <section class="block hero-video" id="hero">
-  <a class="hero__cart" href="https://shopandson.com/cart" target="_blank" rel="noopener" aria-label="Cart">
+  <button type="button" class="hero__cart" data-cart-toggle aria-label="Cart">
     <svg focusable="false" class="icon icon-bag" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
 	 viewBox="0 0 20 20" style="enable-background:new 0 0 24 24;" xml:space="preserve">
 <path fill="currentColor" d="M17.200012,5.519043h-3.573059V4.60791c0-2-1.626953-3.626953-3.626953-3.626953S6.373047,2.60791,6.373047,4.60791
@@ -31,7 +31,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 	c1.448242,0,2.626953,1.178223,2.626953,2.626953v0.911133H7.373047V4.60791z M3.671082,6.519043h2.701965v1h1v-1h5.253906v1h1v-1
 	h2.701965l1.523071,11H2.14801L3.671082,6.519043z"/>
 </svg>
-  </a>
+    <span class="hero__cart-count" data-cart-count hidden></span>
+  </button>
 
   <video
     class="hero-video__media hero-video__media--desktop"
@@ -201,21 +202,30 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       <p>138 sullivan st,<br />new york, ny 10012</p>
       <p>contact:<br /><a href="mailto:info@shopandson.com">info@shopandson.com</a></p>
       <p class="hero-info__legal">
-        <a href="https://shopandson.com/policies/refund-policy" target="_blank" rel="noopener">refund policy</a> &middot;
-        <a href="https://shopandson.com/policies/privacy-policy" target="_blank" rel="noopener">privacy policy</a> &middot;
-        <a href="https://shopandson.com/policies/terms-of-service" target="_blank" rel="noopener">terms of service</a>
+        <a href={withBase("/policies/?policy=refund-policy")}>refund policy</a> &middot;
+        <a href={withBase("/policies/?policy=privacy-policy")}>privacy policy</a> &middot;
+        <a href={withBase("/policies/?policy=terms-of-service")}>terms of service</a>
       </p>
     </div>
   </nav>
 
   <aside class="hero__catalog" aria-hidden="true">
     <div class="hero__catalog-head">
-      <h2 class="hero__catalog-title" data-catalog-title></h2>
+      <h2 class="hero__catalog-title">
+        <span class="hero__catalog-title-text" data-catalog-title></span>
+        <span class="hero__catalog-description-separator" data-catalog-description-separator hidden>—</span>
+        <span class="hero__catalog-description" data-catalog-description hidden></span>
+      </h2>
       <button type="button" class="hero__catalog-close" data-catalog-close aria-label="Close catalogue">&times;</button>
     </div>
     <div class="hero__catalog-viewport" data-catalog-viewport>
       <div class="hero__catalog-track" data-catalog-track></div>
     </div>
+  </aside>
+
+  <aside class="hero__product" aria-hidden="true">
+    <button type="button" class="hero__product-close" data-product-close aria-label="Close product">&times;</button>
+    <div class="hero__product-view" data-product-view></div>
   </aside>
 
   <aside class="hero__preorder" aria-hidden="true">
@@ -259,23 +269,36 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 </section>
 
 <script>
+  import { getLiveHeroMenu, type LiveHeroMenuEntry } from "../../lib/menu";
+  import { mountProductView } from "../../lib/product-view";
+  import { getCollection, type CollectionDetail } from "../../lib/storefront-client";
+
   interface CatalogProduct {
+    handle: string;
     title: string;
     vendor: string;
     price: string;
     url: string;
+    available: boolean;
     image?: string;
     imageSrcset?: string;
+    imageAspect: number;
   }
 
+  const BASE = import.meta.env.BASE_URL ?? "/";
   const hero = document.querySelector<HTMLElement>(".hero-video");
   const stencil = hero?.querySelector<HTMLElement>(".hero__stencil");
   const dj = hero?.querySelector<HTMLElement>(".hero__dj");
   const catalog = hero?.querySelector<HTMLElement>(".hero__catalog");
   const catalogTitle = hero?.querySelector<HTMLElement>("[data-catalog-title]");
+  const catalogDescription = hero?.querySelector<HTMLElement>("[data-catalog-description]");
+  const catalogDescriptionSeparator = hero?.querySelector<HTMLElement>("[data-catalog-description-separator]");
   const catalogViewport = hero?.querySelector<HTMLElement>("[data-catalog-viewport]");
   const catalogTrack = hero?.querySelector<HTMLElement>("[data-catalog-track]");
   const catalogClose = hero?.querySelector<HTMLButtonElement>("[data-catalog-close]");
+  const productPanel = hero?.querySelector<HTMLElement>(".hero__product");
+  const productView = hero?.querySelector<HTMLElement>("[data-product-view]");
+  const productClose = hero?.querySelector<HTMLButtonElement>("[data-product-close]");
   const preorder = hero?.querySelector<HTMLElement>(".hero__preorder");
   const preorderShell = hero?.querySelector<HTMLElement>("[data-preorder-shell]");
   const preorderFrame = hero?.querySelector<HTMLIFrameElement>(".hero__preorder-frame");
@@ -288,25 +311,32 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const filmOpen = hero?.querySelector<HTMLButtonElement>("[data-film-open]");
   const famPanel = hero?.querySelector<HTMLElement>(".hero__fam");
   const catalogDataNode = hero?.querySelector<HTMLScriptElement>("#catalog-data");
-  const collectionButtons = hero
-    ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-shop-all]"))
-    : [];
+  const heroMenuElement = hero?.querySelector<HTMLElement>(".hero__menu");
   const menuSections = hero ? Array.from(hero.querySelectorAll<HTMLElement>("[data-hero-dropdown]")) : [];
   const subgroupToggles = hero ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-menu-subgroup]")) : [];
   const desktopPagerQuery = window.matchMedia("(min-width: 761px)");
   const preorderDesktopWidth = 1160;
   const stageDuration = 550;
+  const fallbackCardAspect = 0.75;
   let rowIndex = 0;
   let lastRowIndex = 0;
   let isPaging = false;
+  const liveCollectionCache = new Map<string, Promise<CollectionDetail | null>>();
   let filmHasStarted = false;
   let pagingFallback: ReturnType<typeof window.setTimeout> | undefined;
   let stencilReturnCleanup: (() => void) | undefined;
   let stageCleanup: ReturnType<typeof window.setTimeout> | undefined;
-  type HeroStage = "landing" | "catalog" | "preorder" | "music" | "film" | "fam";
-  type PanelStage = "catalog" | "preorder" | "music" | "film" | "fam";
+  type HeroStage = "landing" | "catalog" | "product" | "preorder" | "music" | "film" | "fam";
+  type PanelStage = "catalog" | "product" | "preorder" | "music" | "film" | "fam";
+  interface SavedCatalog {
+    collection: string;
+    label: string;
+    rowIndex: number;
+  }
 
   let activeStage: HeroStage = "landing";
+  let activeProductHandle: string | null = null;
+  let savedCatalog: SavedCatalog | null = null;
   let touchStartY: number | null = null;
 
   const parseCatalogData = (): Record<string, CatalogProduct[]> => {
@@ -318,6 +348,64 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   };
 
   const catalogData = parseCatalogData();
+
+  const getProductHref = (handle: string) => {
+    const base = BASE.replace(/\/$/, "");
+    return `${base}/product/?handle=${encodeURIComponent(handle)}`;
+  };
+
+  const getHomepageProductUrl = (handle: string) => {
+    const url = new URL(location.href);
+    url.pathname = BASE;
+    url.searchParams.set("product", handle);
+    url.hash = "";
+    return url;
+  };
+
+  const getCurrentProductParam = () => new URL(location.href).searchParams.get("product");
+
+  const stripProductParamFromUrl = () => {
+    const url = new URL(location.href);
+    if (!url.searchParams.has("product")) return;
+
+    url.searchParams.delete("product");
+    history.replaceState(null, "", url);
+  };
+
+  const getHandleFromProductHref = (href: string) => {
+    try {
+      return new URL(href, location.href).searchParams.get("handle");
+    } catch {
+      return null;
+    }
+  };
+
+  const getCardAspect = (imageAspect: number | undefined) => {
+    const aspect = Number(imageAspect);
+    return Number.isFinite(aspect) && aspect > 0 ? aspect : fallbackCardAspect;
+  };
+
+  const getCollectionButtons = () =>
+    hero ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-shop-all]")) : [];
+
+  const getLiveCollection = (collection: string) => {
+    const cachedCollection = liveCollectionCache.get(collection);
+    if (cachedCollection) return cachedCollection;
+
+    const liveCollection = getCollection(collection);
+    liveCollectionCache.set(collection, liveCollection);
+    return liveCollection;
+  };
+
+  const getImageCompareKey = (src: string | undefined) => {
+    if (!src) return "";
+
+    try {
+      return new URL(src).pathname;
+    } catch {
+      return src.split("?")[0] ?? src;
+    }
+  };
 
   const setPagingReady = () => {
     isPaging = false;
@@ -331,7 +419,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (!catalogTrack) return;
 
     rowIndex = Math.max(0, Math.min(nextIndex, lastRowIndex));
-    catalogTrack.style.setProperty("--catalog-row-index", String(rowIndex));
+    const rows = Array.from(catalogTrack.querySelectorAll<HTMLElement>(".hero__catalog-row"));
+    const row = rows[rowIndex];
+    const offsetTop = row ? row.offsetTop : 0;
+    catalogTrack.style.setProperty("--catalog-row-offset", `${-offsetTop}px`);
   };
 
   const pageRows = (direction: number) => {
@@ -346,11 +437,114 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   };
 
   const setActiveButton = (collection: string | null) => {
-    collectionButtons.forEach((button) => {
+    getCollectionButtons().forEach((button) => {
       const isActive = Boolean(collection && button.dataset.collection === collection);
       button.classList.toggle("is-active", isActive);
       button.setAttribute("aria-pressed", String(isActive));
     });
+  };
+
+  const getMenuLabel = (value: string | null | undefined) =>
+    (value ?? "")
+      .replace(/[+\u2013-]\s*$/, "")
+      .trim()
+      .replace(/\s+/g, " ")
+      .toLocaleUpperCase("en-US");
+
+  const getMenuSection = (label: string) =>
+    menuSections.find((section) => {
+      const trigger = section.querySelector<HTMLElement>(".hero__menu-header");
+      return getMenuLabel(trigger?.textContent).startsWith(label);
+    });
+
+  const getSubgroupList = (section: HTMLElement | undefined, label: string) => {
+    if (!section) return null;
+
+    const subgroup = Array.from(section.querySelectorAll<HTMLButtonElement>("[data-menu-subgroup]")).find((button) =>
+      getMenuLabel(button.textContent).startsWith(label),
+    );
+    return subgroup?.closest(".hero__menu-item--group")?.querySelector<HTMLUListElement>(".hero__menu-nested") ?? null;
+  };
+
+  const getCollectionEntries = (items: Element[]): LiveHeroMenuEntry[] =>
+    items.flatMap((item) => {
+      const button = item.querySelector<HTMLButtonElement>("[data-shop-all]");
+      const collection = button?.dataset.collection;
+      if (!button || !collection) return [];
+
+      const label = getMenuLabel(button.dataset.collectionLabel ?? button.textContent);
+      return [
+        {
+          label,
+          collection,
+          collectionLabel: label,
+        },
+      ];
+    });
+
+  const entriesMatch = (currentEntries: LiveHeroMenuEntry[], nextEntries: LiveHeroMenuEntry[]) =>
+    currentEntries.length === nextEntries.length &&
+    currentEntries.every(
+      (entry, index) =>
+        entry.collection === nextEntries[index]?.collection &&
+        entry.collectionLabel === nextEntries[index]?.collectionLabel,
+    );
+
+  const createCollectionMenuItem = (entry: LiveHeroMenuEntry, variant: "bullet" | "dash") => {
+    const item = document.createElement("li");
+    if (variant === "dash") {
+      item.className = "hero__menu-item";
+    }
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `hero__menu-link hero__menu-link--${variant}`;
+    button.setAttribute("data-shop-all", "");
+    button.dataset.collection = entry.collection;
+    button.dataset.collectionLabel = entry.collectionLabel;
+    button.setAttribute("aria-pressed", String(hero?.dataset.activeCollection === entry.collection));
+    button.classList.toggle("is-active", hero?.dataset.activeCollection === entry.collection);
+    button.textContent = entry.label;
+    item.append(button);
+    return item;
+  };
+
+  const reconcileNestedMenuList = (list: HTMLUListElement | null, nextEntries: LiveHeroMenuEntry[]) => {
+    if (!list || nextEntries.length === 0) return;
+
+    const currentEntries = getCollectionEntries(Array.from(list.children));
+    if (entriesMatch(currentEntries, nextEntries)) return;
+
+    list.replaceChildren(...nextEntries.map((entry) => createCollectionMenuItem(entry, "bullet")));
+  };
+
+  const reconcileObjectsMenuList = (section: HTMLElement | undefined, nextEntries: LiveHeroMenuEntry[]) => {
+    if (!section || nextEntries.length === 0) return;
+
+    const panel = section.querySelector<HTMLUListElement>(".hero__menu-panel");
+    if (!panel) return;
+
+    const items = Array.from(panel.children);
+    const shopAllIndex = items.findIndex((item) => item.querySelector("[data-shop-all]"));
+    if (shopAllIndex === -1) return;
+
+    const currentLeafItems = items.slice(shopAllIndex + 1);
+    const currentEntries = getCollectionEntries(currentLeafItems);
+    if (entriesMatch(currentEntries, nextEntries)) return;
+
+    currentLeafItems.forEach((item) => item.remove());
+    items[shopAllIndex]?.after(...nextEntries.map((entry) => createCollectionMenuItem(entry, "dash")));
+  };
+
+  const hydrateLiveMenu = async () => {
+    const liveMenu = await getLiveHeroMenu();
+    if (!liveMenu) return;
+
+    const clothesSection = getMenuSection("CLOTHES");
+    const objectsSection = getMenuSection("OBJECTS");
+    reconcileNestedMenuList(getSubgroupList(clothesSection, "CATEGORIES"), liveMenu.categories);
+    reconcileNestedMenuList(getSubgroupList(clothesSection, "DESIGNERS"), liveMenu.designers);
+    reconcileObjectsMenuList(objectsSection, liveMenu.objects);
   };
 
   const setMenuSubgroupState = (button: HTMLButtonElement, isOpen: boolean) => {
@@ -387,6 +581,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const getStagePanel = (stage: PanelStage) =>
     stage === "catalog"
       ? catalog
+      : stage === "product"
+        ? productPanel
       : stage === "preorder"
         ? preorder
         : stage === "music"
@@ -410,6 +606,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       stageCleanup = undefined;
     }
     catalog?.classList.remove("is-exiting-left");
+    productPanel?.classList.remove("is-exiting-left");
     preorder?.classList.remove("is-exiting-left");
     dj?.classList.remove("is-exiting-left");
     filmPanel?.classList.remove("is-exiting-left");
@@ -429,19 +626,20 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     const hasActiveStage =
       hero.classList.contains("is-catalog") ||
+      hero.classList.contains("is-product") ||
       hero.classList.contains("is-preorder") ||
       hero.classList.contains("is-music") ||
       hero.classList.contains("is-film") ||
       hero.classList.contains("is-fam");
     if (!stencil || !hasActiveStage) {
-      hero.classList.remove("is-catalog", "is-preorder", "is-music", "is-film", "is-fam", "is-settled");
+      hero.classList.remove("is-catalog", "is-product", "is-preorder", "is-music", "is-film", "is-fam", "is-settled");
       return;
     }
 
     clearStencilReturn();
     stencil.style.transition = "none";
     stencil.style.transform = "translateX(calc(50vw + 100%))";
-    hero.classList.remove("is-catalog", "is-preorder", "is-music", "is-film", "is-fam", "is-settled");
+    hero.classList.remove("is-catalog", "is-product", "is-preorder", "is-music", "is-film", "is-fam", "is-settled");
     void stencil.offsetWidth;
 
     const finishReturn = (event?: TransitionEvent) => {
@@ -489,6 +687,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const getStageClass = (stage: PanelStage) =>
     stage === "catalog"
       ? "is-catalog"
+      : stage === "product"
+        ? "is-product"
       : stage === "preorder"
         ? "is-preorder"
         : stage === "music"
@@ -575,7 +775,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const createProductCard = (product: CatalogProduct) => {
     const card = document.createElement("a");
     card.className = "product-card";
-    card.href = product.url;
+    card.href = getProductHref(product.handle);
+    card.style.setProperty("--card-aspect", String(getCardAspect(product.imageAspect)));
+    card.classList.toggle("is-sold-out", product.available === false);
 
     const media = document.createElement("span");
     media.className = "product-card__media";
@@ -590,6 +792,14 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       image.loading = "lazy";
       image.decoding = "async";
       media.append(image);
+    } else {
+      media.style.background = "rgba(247, 244, 235, 0.72)";
+    }
+    if (product.available === false) {
+      const soldOut = document.createElement("span");
+      soldOut.className = "product-card__sold-out";
+      soldOut.textContent = "sold out";
+      media.append(soldOut);
     }
 
     const body = document.createElement("span");
@@ -612,19 +822,27 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     return card;
   };
 
-  const renderCatalogContent = (collection: string, label: string) => {
-    if (!hero || !catalogTitle || !catalogTrack) return;
+  const renderCatalogHeader = (title: string, description = "") => {
+    if (!catalogTitle || !catalogDescription || !catalogDescriptionSeparator) return;
 
-    hero.dataset.activeCollection = collection;
-    catalogTitle.textContent = label;
-    setActiveButton(collection);
+    const trimmedDescription = description.trim();
+    catalogTitle.textContent = title;
+    catalogDescription.textContent = trimmedDescription;
+    catalogDescription.hidden = !trimmedDescription;
+    catalogDescriptionSeparator.hidden = !trimmedDescription;
+  };
 
-    const products = catalogData[collection] ?? [];
+  const renderCatalogRows = (products: CatalogProduct[], targetRowIndex: number) => {
+    if (!catalogTrack) return;
+
+    const sorted = [...products].sort(
+      (a, b) => Number(a.available === false) - Number(b.available === false),
+    );
     const rows: HTMLDivElement[] = [];
-    for (let index = 0; index < products.length; index += 3) {
+    for (let index = 0; index < sorted.length; index += 3) {
       const row = document.createElement("div");
       row.className = "hero__catalog-row";
-      for (const product of products.slice(index, index + 3)) {
+      for (const product of sorted.slice(index, index + 3)) {
         row.append(createProductCard(product));
       }
       rows.push(row);
@@ -633,18 +851,91 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     catalogTrack.replaceChildren(...rows);
     lastRowIndex = Math.max(0, rows.length - 1);
     setPagingReady();
-    setRowIndex(0);
+    setRowIndex(Math.min(targetRowIndex, lastRowIndex));
+  };
+
+  const getComparableProducts = (products: CatalogProduct[]) =>
+    products.map((product) => ({
+      handle: product.handle,
+      title: product.title,
+      vendor: product.vendor,
+      price: product.price,
+      available: product.available,
+      image: getImageCompareKey(product.image),
+      imageAspect: getCardAspect(product.imageAspect),
+    }));
+
+  const reconcileLiveProducts = (
+    liveProducts: CatalogProduct[],
+    snapshotProducts: CatalogProduct[],
+  ) => {
+    const snapshotByHandle = new Map(snapshotProducts.map((product) => [product.handle, product]));
+
+    return liveProducts.map((product) => {
+      const snapshotProduct = snapshotByHandle.get(product.handle);
+      if (product.image || !snapshotProduct?.image) {
+        return {
+          ...product,
+          imageAspect: getCardAspect(product.imageAspect),
+        };
+      }
+
+      return {
+        ...product,
+        image: snapshotProduct.image,
+        imageSrcset: snapshotProduct.imageSrcset,
+        imageAspect: getCardAspect(snapshotProduct.imageAspect),
+      };
+    });
+  };
+
+  const hasLiveCatalogChanged = (
+    liveCollection: CollectionDetail,
+    snapshotProducts: CatalogProduct[],
+  ) => {
+    if (liveCollection.description.trim()) return true;
+
+    return (
+      JSON.stringify(getComparableProducts(liveCollection.products)) !==
+      JSON.stringify(getComparableProducts(snapshotProducts))
+    );
+  };
+
+  const renderCatalogContent = (collection: string, label: string) => {
+    if (!hero || !catalogTitle || !catalogTrack) return;
+
+    hero.dataset.activeCollection = collection;
+    renderCatalogHeader(label);
+    setActiveButton(collection);
+
+    const snapshotProducts = catalogData[collection] ?? [];
+    renderCatalogRows(snapshotProducts, 0);
+
+    void getLiveCollection(collection).then((liveCollection) => {
+      if (!liveCollection || hero.dataset.activeCollection !== collection) return;
+
+      const reconciledLiveCollection: CollectionDetail = {
+        ...liveCollection,
+        products: reconcileLiveProducts(liveCollection.products, snapshotProducts),
+      };
+      if (!hasLiveCatalogChanged(reconciledLiveCollection, snapshotProducts)) return;
+
+      renderCatalogHeader(label, reconciledLiveCollection.description);
+      renderCatalogRows(reconciledLiveCollection.products, rowIndex);
+    });
   };
 
   const openCatalog = (collection: string, label: string) => {
     if (!hero || !catalog || !catalogTitle || !catalogTrack) return;
 
+    prepareToLeaveProductForStage();
     transitionToStage("catalog", () => renderCatalogContent(collection, label));
   };
 
   const openPreorder = () => {
     if (!hero || !preorder) return;
 
+    prepareToLeaveProductForStage();
     delete hero.dataset.activeCollection;
     setActiveButton(null);
     setPagingReady();
@@ -655,6 +946,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const openMusic = () => {
     if (!hero || !dj) return;
 
+    prepareToLeaveProductForStage();
     delete hero.dataset.activeCollection;
     setActiveButton(null);
     setPagingReady();
@@ -665,6 +957,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const openFam = () => {
     if (!hero || !famPanel) return;
 
+    prepareToLeaveProductForStage();
     delete hero.dataset.activeCollection;
     setActiveButton(null);
     setPagingReady();
@@ -675,11 +968,75 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const openFilm = () => {
     if (!hero || !filmPanel) return;
 
+    prepareToLeaveProductForStage();
     delete hero.dataset.activeCollection;
     setActiveButton(null);
     setPagingReady();
     setRowIndex(0);
     transitionToStage("film", () => undefined);
+  };
+
+  const openProduct = (handle: string, saveReturnPoint = true) => {
+    if (!hero || !productPanel || !productView) return;
+
+    productView.replaceChildren();
+    productView.removeAttribute("class");
+
+    if (saveReturnPoint && activeStage === "catalog") {
+      savedCatalog = {
+        collection: hero.dataset.activeCollection ?? "",
+        label: catalogTitle?.textContent?.trim() ?? "",
+        rowIndex,
+      };
+    } else {
+      savedCatalog = null;
+    }
+
+    activeProductHandle = handle;
+    transitionToStage("product", () => mountProductView(productView, handle));
+  };
+
+  const actualCloseProduct = (stripUrl = false) => {
+    const catalogReturn = savedCatalog;
+    activeProductHandle = null;
+    savedCatalog = null;
+
+    if (catalogReturn?.collection) {
+      transitionToStage("catalog", () => {
+        if (!hero) return;
+        hero.dataset.activeCollection = catalogReturn.collection;
+        if (catalogTitle) catalogTitle.textContent = catalogReturn.label;
+        setActiveButton(catalogReturn.collection);
+        setRowIndex(catalogReturn.rowIndex);
+      });
+    } else {
+      closeStage();
+    }
+
+    if (stripUrl) {
+      stripProductParamFromUrl();
+    }
+  };
+
+  const closeProduct = () => {
+    if (activeStage !== "product") return;
+
+    if (history.state?.product) {
+      history.back();
+      return;
+    }
+
+    actualCloseProduct(true);
+  };
+
+  const prepareToLeaveProductForStage = () => {
+    if (activeStage !== "product") return;
+
+    activeProductHandle = null;
+    savedCatalog = null;
+    stripProductParamFromUrl();
+    deactivatePanel("catalog");
+    catalog?.classList.remove("is-exiting-left");
   };
 
   const updateFilmPlayback = () => {
@@ -738,21 +1095,43 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     returnStencilFromRight();
     delete hero.dataset.activeCollection;
     catalog?.setAttribute("aria-hidden", "true");
+    productPanel?.setAttribute("aria-hidden", "true");
     preorder?.setAttribute("aria-hidden", "true");
     dj?.setAttribute("aria-hidden", "true");
     filmPanel?.setAttribute("aria-hidden", "true");
     famPanel?.setAttribute("aria-hidden", "true");
     setActiveButton(null);
+    activeProductHandle = null;
+    savedCatalog = null;
     activeStage = "landing";
   };
 
-  collectionButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      const collection = button.dataset.collection;
-      const label = button.dataset.collectionLabel ?? button.textContent?.trim() ?? "";
-      if (!collection) return;
-      openCatalog(collection, label);
-    });
+  const syncProductStageFromUrl = () => {
+    const handle = getCurrentProductParam();
+    if (handle) {
+      if (activeStage !== "product" || activeProductHandle !== handle) {
+        openProduct(handle, activeStage === "catalog");
+      }
+      return;
+    }
+
+    if (activeStage === "product") {
+      actualCloseProduct();
+    }
+  };
+
+  heroMenuElement?.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const button = target.closest<HTMLButtonElement>("[data-shop-all]");
+    if (!button || !heroMenuElement.contains(button)) return;
+
+    const collection = button.dataset.collection;
+    const label = button.dataset.collectionLabel ?? button.textContent?.trim() ?? "";
+    if (!collection) return;
+
+    openCatalog(collection, label);
   });
 
   subgroupToggles.forEach((button) => {
@@ -766,6 +1145,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     setMenuSectionState(null);
     closeStage();
   });
+  productClose?.addEventListener("click", closeProduct);
   preorderClose?.addEventListener("click", () => {
     setMenuSectionState(null);
     closeStage();
@@ -791,6 +1171,33 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   filmMute?.addEventListener("click", toggleFilmMute);
   resetFilmMute();
   updateFilmPlayback();
+
+  catalogTrack?.addEventListener("click", (event) => {
+    if (!(event instanceof MouseEvent)) return;
+
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const link = target.closest<HTMLAnchorElement>(".product-card[href]");
+    if (!link || !catalogTrack.contains(link)) return;
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    const handle = getHandleFromProductHref(link.href);
+    if (!handle) return;
+
+    event.preventDefault();
+    history.pushState({ product: handle }, "", getHomepageProductUrl(handle));
+    openProduct(handle);
+  });
 
   catalogViewport?.addEventListener(
     "wheel",
@@ -826,6 +1233,15 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (event.propertyName === "transform") {
       setPagingReady();
     }
+  });
+
+  window.addEventListener("popstate", syncProductStageFromUrl);
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || activeStage !== "product") return;
+    if (document.querySelector(".cart-drawer")?.classList.contains("is-open")) return;
+
+    event.preventDefault();
+    closeProduct();
   });
 
   menuSections.forEach((section) => {
@@ -870,4 +1286,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     preorderObserver?.observe(preorderShell);
     window.addEventListener("resize", resizePreorderFrame);
   }
+  window.addEventListener("resize", () => setRowIndex(rowIndex));
+  void hydrateLiveMenu();
+  syncProductStageFromUrl();
 </script>

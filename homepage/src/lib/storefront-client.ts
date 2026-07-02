@@ -1,4 +1,5 @@
 import {
+  formatMoney,
   getShopifyImageSrcset,
   getSizedShopifyImageUrl,
   type CatalogProduct,
@@ -101,6 +102,13 @@ export interface CollectionDetail {
   products: CatalogProduct[];
 }
 
+export interface ShopPolicy {
+  title: string;
+  body: string;
+}
+
+export type ShopPolicyLookup = Record<string, ShopPolicy>;
+
 function normalizeDomain(domain: string | undefined): string | undefined {
   const trimmed = domain?.trim();
   if (!trimmed) return undefined;
@@ -112,23 +120,21 @@ function getProductUrl(handle: string): string {
   return SHOPIFY_DOMAIN ? `https://${SHOPIFY_DOMAIN}/products/${handle}` : `/products/${handle}`;
 }
 
-function formatMoney(money: Money | null | undefined): string {
-  if (!money) return "";
-
-  const amount = money.amount.replace(/\.00$/, "");
-  if (money.currencyCode === "USD") return `$${amount}`;
-
-  return `${amount} ${money.currencyCode}`;
-}
-
 function mapCatalogProduct(product: StorefrontCollectionProduct): CatalogProduct {
+  const imageWidth = product.featuredImage?.width;
+  const imageHeight = product.featuredImage?.height;
+  const money = product.priceRange.minVariantPrice;
+
   return {
+    handle: product.handle,
     title: product.title,
     vendor: product.vendor,
-    price: formatMoney(product.priceRange.minVariantPrice),
+    price: formatMoney(money.amount, money.currencyCode),
     url: getProductUrl(product.handle),
+    available: product.availableForSale,
     image: getSizedShopifyImageUrl(product.featuredImage?.url, 1100),
     imageSrcset: getShopifyImageSrcset(product.featuredImage?.url),
+    imageAspect: imageWidth && imageHeight ? imageWidth / imageHeight : 0.75,
   };
 }
 
@@ -140,6 +146,27 @@ function mapProductImage(image: StorefrontImage): ProductImage {
     height: image.height,
     srcset: getShopifyImageSrcset(image.url),
   };
+}
+
+export function sanitizeShopifyHtml(html: string): string {
+  if (!html) return "";
+
+  const document = new DOMParser().parseFromString(html, "text/html");
+  document.querySelectorAll("script, iframe, object, embed, form").forEach((element) => element.remove());
+  document.body.querySelectorAll("*").forEach((element) => {
+    for (const attribute of Array.from(element.attributes)) {
+      const name = attribute.name.toLowerCase();
+      const value = attribute.value.trim().toLowerCase();
+      if (name.startsWith("on")) {
+        element.removeAttribute(attribute.name);
+      }
+      if ((name === "href" || name === "src") && value.startsWith("javascript:")) {
+        element.removeAttribute(attribute.name);
+      }
+    }
+  });
+
+  return document.body.innerHTML;
 }
 
 function getCollectionHandleFromUrl(url: string | null | undefined): string | undefined {
@@ -410,11 +437,77 @@ export async function getProduct(handle: string): Promise<ProductDetail | null> 
         id: variant.id,
         title: variant.title,
         availableForSale: variant.availableForSale,
-        price: formatMoney(variant.price),
+        price: formatMoney(variant.price.amount, variant.price.currencyCode),
         selectedOptions: variant.selectedOptions,
       })),
     };
   } catch {
     return null;
   }
+}
+
+const POLICIES_QUERY = /* GraphQL */ `
+  query Policies {
+    shop {
+      refundPolicy {
+        title
+        handle
+        body
+      }
+      privacyPolicy {
+        title
+        handle
+        body
+      }
+      termsOfService {
+        title
+        handle
+        body
+      }
+    }
+  }
+`;
+
+interface StorefrontPolicyRaw {
+  title: string;
+  handle: string;
+  body: string;
+}
+
+interface PoliciesQueryData {
+  shop: {
+    refundPolicy: StorefrontPolicyRaw | null;
+    privacyPolicy: StorefrontPolicyRaw | null;
+    termsOfService: StorefrontPolicyRaw | null;
+  } | null;
+}
+
+let policiesPromise: Promise<ShopPolicyLookup | null> | undefined;
+
+async function fetchPolicies(): Promise<ShopPolicyLookup | null> {
+  try {
+    const data = await storefrontFetch<PoliciesQueryData>(POLICIES_QUERY);
+    const shop = data?.shop;
+    if (!shop) return null;
+
+    const policies: ShopPolicyLookup = {};
+    [shop.refundPolicy, shop.privacyPolicy, shop.termsOfService].forEach((policy) => {
+      if (!policy?.handle) return;
+      policies[policy.handle] = {
+        title: policy.title,
+        body: policy.body,
+      };
+    });
+
+    return policies;
+  } catch {
+    return null;
+  }
+}
+
+export async function getPolicies(): Promise<ShopPolicyLookup | null> {
+  if (!isStorefrontConfigured) return null;
+
+  policiesPromise ??= fetchPolicies();
+  return policiesPromise;
 }

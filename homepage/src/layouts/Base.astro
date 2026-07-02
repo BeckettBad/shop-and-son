@@ -9,8 +9,10 @@ interface Props {
   title?: string;
   /** Opening splash only — no header, no scroll, no index overlay. */
   landing?: boolean;
+  /** Minimal chrome-free layout that still scrolls normally. */
+  bare?: boolean;
 }
-const { title = `${site.brand} — independent design`, landing = false } = Astro.props;
+const { title = `${site.brand} — independent design`, landing = false, bare = false } = Astro.props;
 ---
 <!doctype html>
 <html lang="en" class:list={[{ landing }]}>
@@ -28,9 +30,9 @@ const { title = `${site.brand} — independent design`, landing = false } = Astr
     />
   </head>
   <body class:list={[{ landing }]}>
-    {!landing && <TopBar />}
+    {!landing && !bare && <TopBar />}
     <slot />
-    {!landing && <IndexOverlay />}
+    {!landing && !bare && <IndexOverlay />}
 
     <script is:inline define:vars={{ OPEN_HOUR: site.hours.openHour, CLOSE_HOUR: site.hours.closeHour }}>
       // clock + open/closed status, computed from store hours in America/New_York

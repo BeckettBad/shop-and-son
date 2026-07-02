@@ -45,6 +45,11 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
    a PR **`dev → main`** (`gh pr create`) with the diff summary + verify results.
    The operator reviews on GitHub and **merges = deploy** (push to `main` triggers
    the Pages build). Only the operator merges the deploy PR.
+   > **PROTOCOL (2026-07-02, after the Wave-3 parked-vs-shipped mixup):** NOTHING
+   > goes to `main` without an explicit **"ship &lt;wave&gt;"** from the operator that
+   > NAMES the wave. "ship X" authorizes ONLY wave X; a PR must never quietly carry
+   > other in-flight work. (Wave 3 was verified-after-the-fact and left live —
+   > operator's call — but the default is: name it or it doesn't ship.)
 
 ---
 
@@ -68,7 +73,7 @@ diff against that sub-task's **Done when** + the risks list before the next
 dispatch. Before each dispatch, Claude updates the line below so Codex has ONE
 target; everything else in this file is context, not instruction.
 
-> **ACTIVE SUB-TASK: (none — Wave 3 + all film revisions COMPLETE on dev through M3-rev4 (951cce8). Film stack: M3 0e5a442+32d2e21, M3-rev 5b4e851, M3-rev2 1a31085, M3-rev3 184b2ad, M3-rev3b 671c6fe, M3-rev4 951cce8; plus M2 193e0b8, M2b 58e8030, L3 5fb0f1f+76efa7d. Reviewed + built green, held UNPUSHED for operator verify → ship Wave 3 as its own PR (K1 + plan-docs ride along, approved). K2+ paused on token.)**
+> **ACTIVE SUB-TASK: (none — PHASE N COMPLETE: N1 e70e5ae + N2 e8aaa43 on origin/dev, reviewed + built green. WAVE 2 + PHASE N now at the SHIP GATE: awaiting operator's full dev eyeball (cart end-to-end, product STAGE incl. card→product→× returns to same row, browser back, refresh-mid-product, cmd-click opens standalone page, add-to-cart→checkout, menu/stage interactions close product cleanly, K7 sort, live menus, policies, mobile) → then an EXPLICIT "ship wave 2". Ship = dev→main PR carrying Wave 2 + Phase N (K1/Wave 3 already on main). Deferred: "now playing in store" idea (needs Ben's OK).)**
 
 Recommended order (three waves, operator verifies on `dev` after each wave and
 ships dev → main per wave, not one giant merge):
@@ -108,6 +113,16 @@ independent of K and L. Scope:
 - **Data freshness = layered:** build-time snapshot (existing `products.json` fetch)
   paints instantly → client-side Storefront re-fetch revalidates on open → a daily
   scheduled rebuild keeps the snapshot itself from going stale.
+- **⚠️ STANDING DATA RULE (2026-07-02):** the **Headless channel's publication set
+  MUST mirror the Online Store's.** The snapshot comes from the Online Store
+  (`products.json`); the live layer comes from the Headless channel (Storefront
+  API). They must contain the same products. If **imageless or unknown products
+  ever appear** in the live catalogue, **check channel publication FIRST — it's a
+  data/admin problem, not code.** (2026-07-02: the Headless channel had 40+
+  phantom products — imported but never published to Online Store, 404 on the live
+  site, no images; Ben removed them in admin and the two sets now match at 342 =
+  342, 0 imageless. The paper-box resilience in `createProductCard` stays as
+  correct defensive behavior if the sets ever drift again.)
 - **Menus mirror Shopify admin (K6):** the CLOTHES + OBJECTS subcategories are
   driven by the store's live navigation menus via the Storefront `menu` query —
   when Ben adds/renames/removes a collection or menu entry in admin, the homepage
@@ -186,6 +201,13 @@ browser-side Shopify client. The existing `src/lib/shopify.ts` is build-time-sha
   (`?width=` on `cdn.shopify.com` URLs, 700/1100/1600) — export those two helpers
   from `catalog.ts` and import them; don't fork the logic.
 - Price formatting matches the cards: `$495` (strip `.00`), non-USD shows code.
+- `sanitizeShopifyHtml(html)` — the ONE gate for any admin-authored HTML the site
+  injects (K3 `descriptionHtml`, L4 policy bodies): parse via
+  `DOMParser`, strip `<script>/<iframe>/<object>/<embed>/<form>`, every `on*`
+  attribute, and `javascript:` URLs, return the cleaned fragment. Shopify admin
+  content is trusted-ish (it's Ben's), but a compromised admin must not become a
+  compromised storefront. Plain-text fields (titles, vendors, prices) keep using
+  `textContent` — never `innerHTML` — as the card factory already does.
 
 **Done when:** build+check green; module typechecks and is importable from client
 scripts; with the token in `.env`, a quick manual `getProduct("<any live handle>")`
@@ -284,8 +306,9 @@ prop); `src/styles/global.css` (or a scoped style block in the page).
   stacked full-column-width, natural aspect ratios, edge-to-edge, no borders
   (lazy-load below the first; width-resized srcset via the K1 helpers). **Right:**
   `position:sticky; top:0` details panel: vendor (small, muted) → title → price →
-  variant selector → ADD TO CART → `descriptionHtml` (rendered as-is inside a
-  `.product-detail__desc` wrapper with sane type styles). Page scrolls the image
+  variant selector → ADD TO CART → `descriptionHtml` (inside a
+  `.product-detail__desc` wrapper with sane type styles — injected ONLY through
+  the K1 `sanitizeShopifyHtml()` helper, never raw `innerHTML`). Page scrolls the image
   stack; details stay pinned — same reading as the preorder page.
 - **Variant selector:** square bordered uppercase buttons per variant option value
   (visual language of the preorder `size-btn`, rebuilt in our skin — selected =
@@ -294,9 +317,16 @@ prop); `src/styles/global.css` (or a scoped style block in the page).
   one button row per option — handle generally, not size-specific.
 - **ADD TO CART:** disabled until a purchasable variant is resolved; label `add to
   cart`; whole-product `availableForSale === false` → button reads `sold out`,
-  permanently disabled. In THIS commit the click handler is a stub dispatching
+  permanently disabled. In THIS commit the click handler dispatches
   `document.dispatchEvent(new CustomEvent("cart:add", { detail: { variantId,
-  quantity: 1 } }))` — K4 listens; no dead UI, no console-only behavior.
+  quantity: 1 } }))` — K4 listens.
+  **Interim (until K4 is live WITH cart scopes on the token):** when no
+  `cart:add` listener is active — feature-flag it simply: K4 sets
+  `window.__cartReady = true` when its listener mounts, and if that's absent —
+  the button instead renders as a link, same styling, labelled `buy on
+  shopandson.com`, to `https://shopandson.com/products/<handle>` (new tab,
+  `rel="noopener"`). No dead buttons in any shippable state; K4 removes the
+  interim path.
 - **Mobile:** single column — images first (swipeable horizontal strip or stacked;
   stacked is fine), details after; sticky-off.
 - No instructional/internal text anywhere on the page.
@@ -422,6 +452,33 @@ shopandson.com's dropdowns); a menu entry renamed in admin shows renamed on next
 page load with no redeploy; clicking hydrated entries opens populated catalogues
 (including a collection created after the last build — K2's no-snapshot path);
 without the token the menu is byte-identical to today's.
+
+---
+
+### K7 — Availability sort: in-stock first, sold-out last (every catalogue)
+
+**Why:** in every collection view (designers, categories, objects, shop-alls),
+in-stock products should sort to the TOP and sold-out to the BOTTOM — sold-out
+stays fully visible + clickable, just last.
+
+**Files:** `src/components/blocks/HeroVideo.astro` (the render-prep point only).
+
+- **Stable partition by `available` in the ONE place products are prepared for
+  rendering** — `renderCatalogRows(products, targetRowIndex)` (~line 787), which
+  BOTH the snapshot paint (`renderCatalogContent`) AND the live refresh call. Sort
+  there so snapshot and post-refresh order are identical (no reshuffle flicker).
+- Stable partition: `available !== false` first, `available === false` last;
+  WITHIN each group PRESERVE the incoming collection order (JS `Array.prototype.sort`
+  is stable — sort a COPY by `Number(a.available === false) - Number(b.available === false)`;
+  do not mutate the input array).
+- The row pager already re-measures rebuilt rows (K2) — nothing else to change.
+- NO UI chrome, NO headers between the two groups — the dimmed cards + `sold out`
+  chips already communicate the split.
+
+**Done when:** build+check green; opening any designer/category/objects/shop-all
+with mixed stock shows all available items first, sold-out trailing (dimmed,
+clickable); order within each group matches Shopify's collection order; the
+snapshot paint and the post-live-refresh order agree.
 
 ---
 
@@ -559,7 +616,8 @@ sequence it after K3 — it is NOT part of Wave 1.**
   `<Base bare>`, homepage skin: small uppercase mono title (the policy title from
   Shopify), the body HTML rendered inside a contained `.policy__body` wrapper
   (sane type styles, links styled per site, Shopify markup can't restyle the
-  page), a `← back` control like K3's. Nothing else on the page.
+  page) — injected through the K1 `sanitizeShopifyHtml()` helper — and a `← back`
+  control like K3's. Nothing else on the page.
 - `getPolicies()` in the client layer fetches all three in one query, cached for
   the session. Verify at implementation whether the `shop` policy fields need any
   scope beyond what K0 grants — flag if so.
@@ -574,6 +632,46 @@ showing the exact text from Shopify admin, typeset in the site skin; editing a
 policy in admin shows on next load without a redeploy; without a token the pages
 degrade to an outbound link; no `shopandson.com/policies` hrefs remain in the
 about block.
+
+---
+
+### IDEA — "now playing in store" on the MUSIC stage (NOT scheduled; do NOT
+build; last-pass item, revisit after Phases K/L/M ship AND Ben approves)
+
+Concept: the MUSIC stage (DJ + notes) gains one quiet line — pulsing neon-green
+dot, `now playing in store`, then `track — artist` (+ small album art), showing
+what's live on the store's Spotify. The whole line deep-links to that track on
+Spotify (visitors add it to their own playlists via Spotify's native UI — no
+visitor login on our site; Spotify's dev-mode caps make on-site "add to
+playlist" a dead end, deep-link is the design). Sits with the existing
+`& SON OFFICIAL PLAYLIST` link.
+
+**HARD requirement — store-hours gate:** the feature renders ONLY during store
+hours (site config already has `hours`, America/New_York). Outside hours it
+renders NOTHING — not "last played", not a placeholder — so Ben's personal
+at-home listening is never displayed. Also hide when nothing is playing.
+
+Two candidate architectures (decide at build time):
+1. **Last.fm relay, zero backend (try first):** Ben one-time connects his
+   Spotify to a free Last.fm account; the site reads Last.fm's public
+   now-playing API client-side. No secrets to protect, no infra.
+2. **Serverless relay (upgrade path):** a Cloudflare Worker (free tier) holds
+   Ben's Spotify OAuth credential privately and exposes a sanitized
+   `{track, artist, art, isPlaying}` JSON. Tighter real-time; one new moving
+   part. The site component is identical either way — the data source is
+   swappable.
+
+**Ben's on/off switch (part of the idea):** a Shopify SHOP METAFIELD boolean
+(e.g. namespace `site`, key `now_playing_enabled`, storefront access enabled),
+read via the Storefront API like everything else. Ben gets a bookmark straight
+to the field in admin: flip on/off → site follows on next load, no redeploy.
+Display requires ALL THREE gates: switch on AND store hours AND actively
+playing — otherwise the section doesn't render at all. This `site.*` flag
+namespace is the pattern for any future operator toggles (one place, Ben's
+existing login, zero new accounts).
+
+Blocked on: Ben's approval + his one-time account connection. Historical note:
+the retired v1 design mocked exactly this (`content.ts` `music.nowPlaying`).
 
 ---
 
@@ -872,6 +970,92 @@ the house back; mobile unaffected or improved.
 
 ---
 
+## PHASE N — product view as an in-page stage (ships WITH Wave 2)
+
+Operator decisions (made 2026-07-02, do NOT re-ask): Wave 2 holds and ships
+together with Phase N; the standalone `/product/` page STAYS (direct links, new
+tabs, shares) and URLs sync; product images are a free-scrolling stack; closing a
+product returns to the catalogue where the user left off. TWO sub-tasks, one
+commit each, **N1 before N2**.
+
+### N1 — Extract the shared product-detail renderer (NO behavior change)
+
+Refactor K3's product page so the detail VIEW (image stack, details column,
+variant selector, add-to-cart `cart:add` dispatch + interim buy-on-shopandson,
+sanitized `descriptionHtml`, and the loading / not-found / no-token states) is
+built by ONE shared client module (DOM-builder pattern, like `createProductCard`)
+consumed by BOTH the `/product/` page (now) and the hero panel (N2).
+
+- New module e.g. `src/lib/product-view.ts`: exports a mount function that renders
+  the detail view + drives its states INTO A PROVIDED CONTAINER — e.g.
+  `mountProductView(container: HTMLElement, handle: string)` (loading → getProduct →
+  render / not-found / unconfigured-fallback). Move product.astro's render logic
+  (renderProduct, gallery, panel, renderVariantSelector, makeButtonOrLink,
+  renderMessage, renderStorefrontFallback) into it verbatim. Keep the same class
+  names + markup so CSS is unchanged.
+- NO page-specific assumptions: the module must NOT rely on document-level scroll
+  or on being the whole page — it renders into the given container, which owns its
+  scroll context. `/product/` keeps its own header (← back + cart icon) OUTSIDE the
+  container and just calls the module.
+- `product.astro` becomes a thin consumer: header chrome + a container + one
+  `mountProductView(container, handle)` call.
+
+**Done when:** build+check green; `/product/?handle=…` behaves + renders
+PIXEL-IDENTICAL to today (all states); the module has no page-specific assumptions
+(renders into a provided container with its own scroll context).
+
+### N2 — The product stage inside the hero
+
+Clicking a catalogue card no longer navigates — the listings row phases out
+(existing exit animation) and the product view slides in on the same page; the
+menu + about block stay put.
+
+- **STAGE:** add `"product"` to the stage machinery (`PanelStage`, `getStagePanel`,
+  `getStageClass` → `is-product`, `openProduct(handle)`). It is the ONLY stage
+  entered FROM catalog, not from the menu. On open: keep the catalogue panel's DOM
+  ALIVE (hide + aria-hidden — do NOT re-render it) and SAVE `{collection, rowIndex}`.
+  Product panel = same bounds discipline as the catalogue (right-of-menu), × top-
+  right; content via the N1 module `mountProductView(panelContainer, handle)`
+  (loading while it fetches; not-found per N1).
+- **CLOSE = BACK TO CATALOGUE:** × or Esc restores the SAVED catalogue — same
+  collection, same rowIndex, re-measured — reverse animation (product exits the way
+  it came, catalogue re-enters). If the mirrored animation fights the existing
+  keyframes, matching the standard stage transition is acceptable — FLAG it, operator
+  judges feel. The catalogue's OWN × still exits to the bare hero. Opening any menu
+  section / other stage while a product is open closes BOTH layers cleanly.
+- **CARD CLICKS — progressive enhancement, EXACTLY this:** cards KEEP their
+  `/product/?handle=…` hrefs. Intercept PLAIN LEFT-CLICKS only (no cmd/ctrl/shift/
+  middle-click — those still open the standalone page in a new tab) → `preventDefault`
+  → open the stage.
+- **URL SYNC (implement + test each of the four paths):**
+  1. Open via card click → `history.pushState` `?product=<handle>` onto the homepage
+     URL (base-path aware).
+  2. Close via ×/Esc → if WE pushed that state, call `history.back()` and let the
+     popstate handler do the actual close (never pushState a "closed" entry — no
+     history littering).
+  3. Browser back/forward → popstate handler opens/closes the stage to match,
+     including restoring the catalogue on back.
+  4. Direct load of the homepage WITH `?product=<handle>` → after hydration, open the
+     product stage directly (no catalogue underneath); closing it then goes to the
+     bare hero and `replaceState` strips the param.
+- **SCROLL:** page stays scroll-locked; the IMAGE STACK is the panel's OWN scroll
+  context (`overflow-y:auto; overscroll-behavior:contain`), details column sticky
+  within the panel. The panel MUST sit OUTSIDE `[data-catalog-viewport]` so the
+  catalogue's wheel-hijack listener never captures its scroll. Mobile: single
+  scrollable panel, images then details, × reachable.
+- **CART:** add-to-cart uses the same `cart:add` → drawer flow (K4). Verify the
+  drawer z-index sits ABOVE the product stage, and Esc priority: if the drawer is
+  open, Esc closes the DRAWER, not the product.
+- The `/product/` page keeps working for direct links, new tabs, shares.
+
+**Done when:** build+check green; catalogue → product → × returns to the same
+collection at the same row; browser back does the same; refresh mid-product reopens
+that product; cmd-click opens the standalone page; add-to-cart from the panel through
+Shopify checkout works; all other stages + menu interactions close the product layer
+cleanly; mobile sane.
+
+---
+
 ### Phase K + L + M risks / review focus (Claude checks these on every diff)
 
 - **Row pager regression (K2):** measured offsets must survive resize, re-render,
@@ -894,6 +1078,27 @@ the house back; mobile unaffected or improved.
   exit path.
 - **Hover honesty (M1):** green hover ONLY on things that actually respond to a
   click — never on inert spans; and only under `@media(hover:hover)`.
+
+### SECURITY posture (standing rules, every phase)
+
+The architecture is the main defense: static files, no server, no database, no
+customer accounts, no payment handling (PCI is Shopify's problem). Keep it that
+way, plus:
+- **Admin credentials never ship.** `SHOPIFY_API_KEY`/`SHOPIFY_API_SECRET` are
+  used by NOTHING in these phases; they must never appear in client code, build
+  output, workflow files, or the GitHub variables page. Only the two `PUBLIC_`
+  Storefront values (public-by-design, minimal scopes) are ever exposed.
+- **One HTML gate.** All admin-authored HTML goes through
+  `sanitizeShopifyHtml()` (K1); all plain-text fields render via `textContent`.
+  No other `innerHTML` of fetched data, ever.
+- **No new dependencies without cause.** The client data layer, cart, and
+  sanitizer are all plain fetch/DOM — do not add npm packages for them. Any new
+  dependency gets flagged to the operator in the log with why.
+- **Storage stays anonymous.** localStorage holds the cart ID only — never
+  email, names, addresses, or anything personal.
+- **Operator-side (not Codex):** 2FA on the GitHub account and Ben's Shopify
+  admin; branch protection on `main` (PR-only, no force-push) so a stolen laptop
+  ≠ a hijacked live site; Dependabot alerts on for the repo.
 - **Base path (K2/K3):** every internal URL through `withBase`/`BASE_URL` — a bare
   `/product/` link 404s on Pages.
 - **Token absence:** every live feature must no-op gracefully — the deployed site
@@ -1023,6 +1228,21 @@ scrolling down reveals it; CLOTHES stays anchored at the top.
 
 ## Log (Phase K — Codex appends newest at top)
 
+- 2026-07-02 — Phase N2: product stage inside the hero — e8aaa43 — build:green check:green (Claude re-ran: 0/0/6, 4 routes; product-stage markup in dist/index.html; /product/ + /policies/ still build). HeroVideo.astro + global.css. STAGE: "product" added to HeroStage/PanelStage, getStagePanel→productPanel, getStageClass→is-product, is-product added to reset lists + returnStencilFromRight + stencil-exit CSS + cart-hide CSS + closeStage. New <aside class="hero__product"> is a SIBLING of .hero__catalog, OUTSIDE [data-catalog-viewport] (so the catalogue wheel-hijack can't capture its scroll); contains × [data-product-close] (sticky top-right) + [data-product-view] container. openProduct(handle, saveReturnPoint): clears productView, saves {collection,label,rowIndex} only when leaving catalog, activeProductHandle=handle, transitionToStage("product", ()=>mountProductView(productView,handle)) (N1 module). CARD INTERCEPT: delegated on [data-catalog-track], .product-card[href] plain-LEFT-click only (bails on defaultPrevented/button!==0/meta/ctrl/shift/alt → standalone page opens in new tab), parses ?handle from href, preventDefault → pushState + openProduct. URL SYNC (4 paths): (1) card click → pushState {product:handle} ?product=<handle> (base-aware); (2) ×/Esc → if history.state.product → history.back() (popstate does real close, no litter) else actualCloseProduct(stripUrl); (3) popstate → syncProductStageFromUrl (single source of truth: ?product present & not showing → openProduct; absent & product open → actualCloseProduct → restores saved catalogue via transitionToStage('catalog', re-assert activeCollection+title+setActiveButton+setRowIndex, rows kept ALIVE not re-rendered); (4) direct load ?product → syncProductStageFromUrl() on init opens product with NO saved catalog → close = bare hero + replaceState strips param. prepareToLeaveProductForStage() called at the top of EVERY openX (catalog/preorder/music/fam/film) → clears product state + strips ?product + deactivates the kept-alive catalog, so opening any menu section/stage closes BOTH layers cleanly. SCROLL: .hero__product own context (overflow-y:auto, overscroll-behavior:contain), right-of-menu bounds like catalog, details sticky within panel; scoped .hero__product .product-detail__{content,panel,title} overrides so the /product/ full-page styles fit; mobile single-column static panel. CART: add-to-cart still dispatches cart:add→drawer (N1); .hero__product z-index:2 (shared bounds rule) BELOW the drawer's 80/81; product Esc bails if .cart-drawer.is-open (drawer gets Esc first). /product/ standalone UNCHANGED. FLAG (operator pre-approved): product→catalogue CLOSE uses the STANDARD transitionToStage animation (not a bespoke mirrored reverse) — operator to judge feel. Reviewed clean by Claude (full state machine: open/close/actualClose/prepareToLeave/syncFromUrl + card intercept + markup placement + CSS bounds/scroll/z-index traced). committed @ e8aaa43 — pushed to origin/dev. Interactive URL-sync/cmd-click/back-forward paths are operator hand-verify (not headless-testable). 
+- 2026-07-02 — Phase N1: extract shared product-detail renderer (pure refactor, no behavior change) — e70e5ae — build:green check:green (Claude re-ran: 0/0/6, 4 pages) — NEW src/lib/product-view.ts (253 lines) exports mountProductView(container, handle): sets container "loading" → guards no-handle/!isStorefrontConfigured (renderStorefrontFallback → shopandson.com/products/<handle>) → getProduct → not-found ("this piece is no longer listed") or renderProduct. ALL of product.astro's render logic moved VERBATIM (gallery .product-detail__gallery, panel .product-detail__panel, renderVariantSelector, makeButtonOrLink incl. window.__cartReady interim buy-on-shopandson + cart:add CustomEvent, renderMessage, renderStorefrontFallback, variant resolution) — same class names/markup/data-attrs → pixel-identical, global.css untouched. Renders ONLY into the provided container (no document-scroll reliance) → reusable by N2's hero panel. product.astro (254 lines removed) now thin: <Base bare> shell + header (← back + cart button/badge unchanged) + [data-product-state] container + one mountProductView(state, handle) call. HeroVideo/global.css untouched. Reviewed clean by Claude (mountProductView flow + moved logic + product.astro thinness). committed @ e70e5ae — pushed to origin/dev. N2 next.
+- 2026-07-02 — Phase K5: freshness ops — nightly rebuild + PUBLIC_ token into the Pages deploy build — (deploy.yml; committed with brief) — CLAUDE-AUTHORED (the documented homepage-only scope EXCEPTION; the dispatch script hard-fences Codex to homepage/, and deploy.yml is at repo-root .github/workflows/). Changes: (1) added `schedule: - cron: "0 8 * * *"` (daily ~08:00 UTC ≈ 4am ET) alongside push[main]/workflow_dispatch — redeploys main as-is to keep the build-time products.json snapshot fresh (runtime Storefront layer already revalidates; this keeps the instant-paint snapshot + no-token fallback from rotting). (2) added `env:` to the "Build site" step passing PUBLIC_SHOPIFY_STORE_DOMAIN + PUBLIC_SHOPIFY_STOREFRONT_API_TOKEN from `${{ vars.* }}` (repo Actions Variables, NOT Secrets — public token) so Astro inlines them into the deployed client bundle → the live site gets catalogue/cart/menu features. Unset (forks/PRs) → K1 quiet degradation → build stays green. Operator confirmed + Claude verified the two Actions Variables exist by name (gh variable list). YAML validated (js-yaml: triggers [push, workflow_dispatch, schedule], cron ok); local build green (workflow change doesn't affect local build). deploy.yml effect lands when Wave 2 merges to main. Reviewed by Claude (self). committed with brief — pushed to origin/dev.
+- 2026-07-02 — Phase K7: availability sort (in-stock first, sold-out last) in every catalogue — 93694bf — build:green check:green (Claude re-ran: 0/0/6) — HeroVideo.astro renderCatalogRows only (the SINGLE render-prep point both snapshot paint + live refresh call): `const sorted = [...products].sort((a,b)=>Number(a.available===false)-Number(b.available===false))` then build rows from `sorted`. Stable partition on a COPY (no mutation) → available-first, sold-out-last, preserving Shopify collection order within each group (Array.sort is stable). Because it's the one render point, snapshot and post-refresh order agree (no reshuffle flicker); the SWR diff (unsorted) still just detects change. No chrome/headers between groups (dimmed cards + sold-out chips show the split); pager re-measures rebuilt rows (K2). Reviewed clean by Claude. committed @ 93694bf — pushed to origin/dev.
+- 2026-07-02 — Phase K6: live hero nav menus mirror Shopify admin — 3dc8053 — build:green check:green (Claude re-ran: 0/0/6). NEW src/lib/menu.ts: getLiveHeroMenu() → getMenu("main-menu") (K1), maps the 3 top items to {categories, designers, objects} entry lists (label uppercased, collection from collectionHandle); categories = clothing.items minus shop-all/clothing-1; returns null on empty/missing item (→ content.ts fallback). HeroVideo.astro: collectionButtons array → getCollectionButtons() re-query (works on reconciled DOM); [data-shop-all] catalogue-open switched from per-button binding to a SINGLE delegated listener on .hero__menu (survives node replacement); hydrateLiveMenu() on load reconciles 3 leaf lists — CLOTHES>CATEGORIES + CLOTHES>DESIGNERS nested <ul> (rebuilt as hero__menu-link--bullet), OBJECTS panel leaves after SHOP ALL (rebuilt as --dash) — each with an entriesMatch equality guard (skip if collection+label identical), rebuilding buttons with identical data-shop-all/data-collection/data-collection-label markup + active state; section/subgroup is-open + [data-menu-subgroup] toggles + section headers untouched (only leaf lists swap → open state preserved); SHOP ALL parents (clothing-1/house-1) kept. No token / fetch fail / missing item → no-op, content.ts stands. content.ts UNTOUCHED (fallback). Reviewed clean by Claude (menu.ts + full reconcile/delegation read; getMenu('main-menu') live-verified returns 3 items). committed @ 3dc8053 — pushed to origin/dev. ⚠️ OPERATOR FLAG: OBJECTS now mirrors the LIVE nav = 4 BRANDS (binu binu, danny d's mud shop, mark patrick harrington, shino takeda) + SHOP ALL(house-1), REPLACING the homepage's LIVING/KITCHEN/LIBRARY/SEATING categories on load — the live shopandson.com objects dropdown is brand-based (verified: only main-menu exists; its objects item = those 4 brands). Want categories back → add them to the live Shopify "objects" menu in admin (K6 follows admin) OR say and I'll exempt OBJECTS. CLOTHES CATEGORIES also gains "sale" (clothing-sale). — RESOLVED 2026-07-02: operator ACCEPTED Option A (OBJECTS = the 4 live brands, as shipped; no change).
+- 2026-07-02 — Phase K4-fix2: restore the cart open/close SLIDE animation (regression from K4-fix specificity) — 42d1cca — build:green check:green — K4-fix's `html.cart-ready .cart-drawer{transition:...visibility 0s linear .55s}` (spec 0,2,1) was OVERRIDING the open rule `.cart-drawer.is-open{transition:...visibility 0s}` (spec 0,2,0), so opening used the CLOSE transition's DELAYED visibility → drawer slid while hidden then popped in after 550ms (no visible animation). FIX: removed the transition from `.cart-drawer.is-open` (kept transform/visibility) and added `html.cart-ready .cart-drawer.is-open{transition:transform .55s ease-in-out,visibility 0s}` (spec 0,3,1) so the OPEN transition (visibility immediate) wins on open while the base cart-ready rule (visibility delayed) drives the close. Now: open = visible slide-in R→L; close = visible slide-out L→R; load = still no animation (cart-ready gating preserved). CSS only. Reviewed clean by Claude (specificity traced). committed @ 42d1cca — pushed to origin/dev. K4 verify-gate continues.
+- 2026-07-02 — Phase K4-fix: stop the cart drawer animating off-screen on page load (operator bug) — d48790e — build:green check:green — first-paint transition flash: the .cart-drawer/.cart-backdrop slide+fade `transition` lived on the BASE rule, so the browser animated the element into its closed translateX(100%) position on first paint. FIX: removed the transition from the base .cart-drawer + .cart-backdrop rules; re-added them gated behind `html.cart-ready .cart-drawer{transition:...}` / `html.cart-ready .cart-backdrop{transition:opacity...}`; CartDrawer script adds `cart-ready` to documentElement via double requestAnimationFrame (after first paint). Net: closed drawer is painted instantly on load (no flash); open/close still slide 550ms. is-open transition + all cart behavior/markup unchanged. Reviewed clean by Claude. committed @ d48790e — pushed to origin/dev. Part of the K4 verify-gate (still awaiting operator hand-check of the full add→drawer→checkout flow).
+- 2026-07-02 — Phase K4: Storefront Cart API + on-site drawer (checkout → Shopify) — 6b4710e — build:green check:green (Claude re-ran: 0/0/6, 4 routes) + **live cart pipeline PROVEN via API**: cartCreate → cartLinesAdd(real in-stock variant) → userErrors:[], totalQuantity:1, subtotal 195.0→"$195", checkoutUrl present (shopandson.com/cart/c/…), line "pig jet cap in sand beige / Default Title" (Default Title correctly skipped in drawer). NEW src/lib/cart.ts (459 lines): CART_FRAGMENT + cart(id) query + cartCreate/cartLinesAdd/cartLinesUpdate/cartLinesRemove; window.__cartReady=true ONLY if isStorefrontConfigured (no-token → K3 buy-on-shopandson fallback stays); localStorage andson:cart-id hydrate (checked-out/errored/null → isUsableCart(id&&checkoutUrl) false → reset id, lazy recreate); mapCart (subtotal+line price via shared formatMoney, variantTitle 'Default Title'→'', thumb getSizedShopifyImageUrl 200); getCart/ensureCart/addLine(qty≥1)/updateLine(qty≤0→remove)/removeLine; EVERY mutation → document 'cart:updated' (detail=Cart); userErrors → 'cart:message' + console.warn, NEVER alert; listens 'cart:add' (K3) → addLine → 'cart:open' (auto-open); queueMicrotask initial hydrate for badges; all fns no-op gracefully when unconfigured. NEW src/components/CartDrawer.astro (228): right slide-over + backdrop, header cart+×, line rows (thumb→product link, title, variant/vendor, −/+ stepper→updateLine, ×→removeLine, line price), footer subtotal + 'shipping + tax at checkout' + black CHECKOUT (disabled/hidden when empty) → location.href=checkoutUrl, 'nothing yet' empty state, quiet inline cart:message (auto-hide 4.5s); open on 'cart:open', close on ×/backdrop/Esc; is-cart-open scroll-lock on html+body; updates ALL [data-cart-count] badges + subtotal + checkout state on cart:updated; [data-cart-toggle]→dispatch cart:open; initial getCart().then(render). HeroVideo cart <a href=shopandson.com/cart> → <button data-cart-toggle> + .hero__cart-count badge (I1 hide-on-catalog/preorder CSS kept). product.astro cart <a> → <button data-cart-toggle> + badge; <CartDrawer/> mounted on index + product; K3 interim buy-on-shopandson branch left in place (now inert, __cartReady true — still the correct no-token fallback). global.css .cart-drawer/backdrop/line/stepper/checkout/badge (paper skin, black CHECKOUT, M1 neon hover, 550ms slide, scroll-lock). Reviewed clean by Claude (full cart.ts + CartDrawer read + wiring + live API test). committed @ 6b4710e — pushed to origin/dev. **K4 IS THE VERIFY-GATE** — awaiting operator hand-check: add-to-cart from a product page → drawer opens w/ line, stepper/remove, badge tracks, reload persists, CHECKOUT lands on Shopify with the items, completed checkout returns an empty cart. FLAG (per brief): homepage cart button stays hidden during catalog/preorder stages (I1 CSS kept) — adding from a catalogue view still opens the drawer though the icon's hidden; whether the icon should stay visible in panels is an operator call.
+- 2026-07-02 — Phase L4: in-site policy pages /policies/?policy= — d9ff640 — build:green check:green (Claude re-ran: 0/0/6; 4 pages now — dist/policies/index.html builds; shop-policy query proven live: refundPolicy/privacyPolicy/termsOfService all returned, no extra scope). storefront-client.ts: added getPolicies() (ONE query for all three shop policies, keyed by handle, module-level Promise memo = one fetch/session, quiet null on unconfigured/error) + exported ShopPolicy/ShopPolicyLookup types. NEW src/pages/policies.astro (<Base bare>): reads ?policy, validates against allowed set {refund-policy,privacy-policy,terms-of-service}; states loading / fallback (invalid/unconfigured/missing → outbound link to shopandson.com/policies/<handle> or /policies, target_blank noopener — never a dead end) / loaded (uppercase-mono title via textContent + body via sanitizeShopifyHtml into contained .policy__body); ← back like K3, no cart icon (minimal). HeroVideo.astro: the three L1 about-block legal links REPOINTED from external https://shopandson.com/policies/... (target_blank) → internal withBase("/policies/?policy=<handle>") same-tab; grep confirms NO shopandson.com/policies hrefs remain. global.css .policy-page*/.policy__body (paper skin, contained Shopify-HTML typography, M1 neon hover, no new fonts). Reviewed clean by Claude. committed @ d9ff640 — pushed to origin/dev. Next per order: K4 (cart — the verify-gate).
+- 2026-07-02 — Phase K3: product detail page /product/?handle= — 6fa12ec — build:green check:green (Claude re-ran: 0/0/6; 3 pages now — dist/product/index.html builds with product-detail markup; getProduct query proven live in K2). Base.astro: additive `bare?` prop (TopBar+IndexOverlay gated on !landing && !bare; NO landing class → page scrolls). storefront-client.ts: added exported sanitizeShopifyHtml(html) — DOMParser, removes script/iframe/object/embed/form + all on* attrs + javascript: href/src, returns body.innerHTML, guards empty. NEW src/pages/product.astro (<Base bare>): client-driven — reads ?handle, states loading / not-found ("this piece is no longer listed"+home link) / unconfigured (fallback link to shopandson.com/products/<handle>) / loaded. Desktop grid 55/45: gallery left (all images stacked full-width edge-to-edge, first eager+fetchpriority high, rest lazy, srcset+sizes), sticky detail panel right (vendor→title→price→variants→add→desc). Variant selector general (one row per option, per-value buttons, is-selected inverted, unavailable disabled+strikethrough via candidate-variant resolution; single-variant → no selector, auto-select). Add-to-cart: sold-out→disabled "sold out"; else dispatches CustomEvent cart:add {variantId,quantity}; INTERIM when !window.__cartReady → renders as "buy on shopandson.com" link (new tab, noopener) so no dead button pre-K4. descriptionHtml via sanitizeShopifyHtml into .product-detail__desc (contained typography: img/video max-width, table borders); plain fields via textContent. Reuses the exact icon-bag cart SVG + formatMoney(already-formatted prices from getProduct). global.css .product-detail* (paper skin, no new fonts, no preorder CSS): sticky 2-col desktop, single-col mobile (sticky off), M1 neon hover on all controls. Reviewed clean by Claude (full page + Base + sanitizer read). committed @ 6fa12ec — pushed to origin/dev. K3 is NOT a gate (K4 is) — proceeding to L4.
+- 2026-07-02 — K2 GATE PASSED (re-verify after admin data fix). Diagnosis had found the paper-box "in-stock imageless clothing" was NOT a code bug: the SONNY one-pocket-shirt-in-sand (and 40+ others) were Headless-only PHANTOM imports — 404 on the Online Store product page + products/<handle>.json, absent from the products.json snapshot, present on Storefront with featuredImage null. Ben removed them from the Headless channel in admin. Claude re-verified end-to-end (live API, no code change): Storefront clothing-1 now = 342 products, 0 imageless, 342 unique handles — EXACTLY matching the Online Store snapshot (342 products, 342 imaged). Prices one-decimal ("1045.0" etc.) → unified formatMoney → "$1045"; sold-out = genuine availableForSale (155); clothing-1 description empty → title-only (designer collections carry descriptions, e.g. hender-scheme tannery note). Paper-box resilience kept (correct if data drifts). Standing data rule added to "The model" section (Headless publication set must mirror Online Store; imageless/unknown products ⇒ check channel publication FIRST). K2 (c68cfc9) + K2-fix (76ebf36) now pushed to origin/dev. Proceeding to K3.
+- 2026-07-02 — Phase K2-fix: align live mapper with K2 card shape + unify price + refresh resilience (operator remote-review found 2 live bugs; Claude live-API diagnosis found a 3rd) — 76ebf36 — build:green check:green (Claude re-ran: 0/0/6; formatter unit-checked: "295.0"/"295.00"→"$295", "295.5"/"295.50"→"$295.50", non-USD→"295 EUR"). ROOT CAUSES: (1) storefront-client formatMoney used `.replace(/\.00$/,"")` but Storefront returns one-decimal "295.0" → "$295.0" (snapshot showed "$295") → visible mismatch AND perpetual re-render (price always differed in the diff); (2) **Storefront API returns NO images (featuredImage null + images empty) for the main CLOTHING collections (clothing-1 verified) while designer collections (hender-scheme-1) DO** → naive live re-render blanked clothing images. FIX: catalog.ts formatPrice→exported formatMoney(amount,currencyCode) (numeric: int→"$295", else toFixed(2)); storefront-client deletes its local formatMoney, imports the shared one, uses it in mapCatalogProduct + getProduct variant prices — ONE formatter, snapshot+live can't drift. CatalogProduct handle/available/imageAspect confirmed REQUIRED. HeroVideo: getCardAspect() guards NaN/<=0→0.75; card factory paper-box (rgba(247,244,235,.72)) when image missing (holds space, no collapse); reconcileLiveProducts(live,snapshot) — per handle, if a live product has no image but the snapshot does, PRESERVE the snapshot image/srcset/aspect (live refresh never downgrades) → clothing keeps its snapshot images; diff + render use the reconciled list so an unchanged collection is a true no-op. Reviewed clean by Claude (full diff, formatter unit-checked, live API cross-checked). committed @ 76ebf36 — ready for operator verify. Not pushed. **FLAG (data, not code):** clothing/category collections have NO images on the Headless channel — until Ben publishes their product media to the Headless channel in admin, live-refresh RELIES on the snapshot image (fine for existing products; a brand-new clothing product with no snapshot would show a paper box). Designer collections are unaffected.
+- 2026-07-02 — PROTOCOL NOTE — Wave 3 parked-vs-shipped mixup: operator intended Wave 3 held for visual verify, but PR #7 (which the operator merged) had already shipped it (+ dormant K1) to main. Resolution: operator chose LEAVE IT LIVE (option a). New standing rule added to the Handshake (step 6): nothing merges to main without an explicit "ship &lt;wave&gt;" naming the wave; a ship PR must not quietly carry other in-flight work.
+- 2026-07-02 — K0 OPERATOR PREREQ DONE — Storefront token live in homepage/.env (Headless channel PUBLIC token; scopes read_product_listings + read/write_checkouts + read_content). Claude validated against https://shopandson.com/api/2025-01/graphql.json (token never printed): (a) products(first:2) → real products ✓; (b) cartCreate → cart id + checkoutUrl ✓; (c) menu(handle:"main-menu") → FULL live nav tree ✓ — **`main-menu` is the K6 handle** (structure: clothing→clothing-1 + 11 category children; objects→house-1 + 4 object brands [binu-binu, danny-ds-mud-shop, mark-patrick-harrington, shino-takeda]; designers→/pages/designers + 32 designer collections). Old SHOPIFY_STOREFRONT_API_TOKEN left empty (build uses public products.json). GitHub Actions Variables for deploy still pending → that's K5.
+- 2026-07-02 — Phase K2: catalogue whitespace-free cards + sold-out + in-site links + collection description + live refresh — c68cfc9 — build:green check:green (Claude re-ran: 0 err/0 warn/6 hints; live collection query proven: getCollection('hender-scheme-1') returns title + tannery description + products w/ availableForSale + native dims). catalog.ts: CatalogProduct += handle/available/imageAspect; ShopifyVariant.available + ShopifyImage.width/height; PRODUCT_CAP 60→250 + paged fetch (products.json?limit=250&page=N until a short page, graceful [] on page failure); mapProduct populates the 3 new fields (available = any variant available; imageAspect = w/h or 0.75). storefront-client.ts (allowed single touch): getCollection's mapCatalogProduct now also fills handle/available/imageAspect. HeroVideo.astro: client CatalogProduct interface extended; BASE=import.meta.env.BASE_URL; getProductHref → `${base}/product/?handle=${encodeURIComponent(handle)}` same-tab (product page is K3 — link 404s until then, expected); createProductCard sets --card-aspect per card + is-sold-out class + appends 'sold out' corner label when !available; MEASURED PAGER — setRowIndex now reads target row.offsetTop → sets --catalog-row-offset px (replaces uniform --catalog-row-index * -100%), + window resize listener re-applies; renderCatalogHeader (title + '—' separator + 2-line-clamp description spans); renderCatalogRows(products, targetRowIndex) preserves rowIndex; SWR live refresh — paint snapshot → getLiveCollection (per-collection cached Promise Map) → race-guard (hero.dataset.activeCollection) + hasLiveCatalogChanged (description present OR product JSON differs, image compared by pathname) → re-render header+rows. global.css: .product-card__media loses border+gradient/letterbox, gains aspect-ratio:var(--card-aspect) + overflow:hidden; img object-fit contain→cover; is-sold-out img opacity:.55; .product-card__sold-out corner tag (mono uppercase, white bg, bordered); .hero__catalog-title flex baseline w/ muted 2-line-clamp description + separator; track transform → translateY(var(--catalog-row-offset)) flex-column w/ gap; rows/cards top-aligned natural height; mobile media aspect-ratio var too. Reviewed clean by Claude (all 4 files, full read). committed @ c68cfc9 — **ready for operator verify (K2 verify-gate: catalogue visuals + live refresh)**. Not pushed. Next per order: K3.
 - 2026-07-01 — Phase K1: client-side Storefront data layer — b0b6a3c — build:green check:green — NEW src/lib/storefront-client.ts (420 lines, browser-safe: fetch/AbortController/URL/import.meta.env, no Node APIs) + catalog.ts (exported getSizedShopifyImageUrl + getShopifyImageSrcset, keyword-only) + .env.example (PUBLIC_SHOPIFY_STORE_DOMAIN / PUBLIC_SHOPIFY_STOREFRONT_API_TOKEN, commented, no values). Exports: isStorefrontConfigured, storefrontFetch<T> (POST /api/2025-01/graphql.json, X-Shopify-Storefront-Access-Token, non-OK→null, GraphQL errors[]→null, 10s AbortController, timeout cleared in finally), getCollection (cursor pagination past 250, maps to current CatalogProduct shape via imported helpers, returns {title,description,products}), getMenu (parses /collections/<handle> abs+rel → collectionHandle else href, [] unconfigured), getProduct (full detail, exports ProductDetail + ProductImage/ProductOption/ProductVariant types for K3/K4). formatMoney strips .00, USD→$ else `amount CODE`. Every fn guards isStorefrontConfigured + try/catch → null/[] (quiet degradation). Reviewed clean by Claude (read full module). NOTE: homepage/.env has NO PUBLIC_ token yet (K0 not done) → live fetch not testable; acceptance = build-green + graceful degradation, both confirmed. mapCatalogProduct targets the CURRENT CatalogProduct shape (handle/available/imageAspect are added by K2, not K1 — correct sequencing). committed @ b0b6a3c — NOT pushed (holding so PR #6 stays Wave-1-only). Awaiting operator: (a) merge PR #6, (b) confirm PUBLIC_ token in homepage/.env before K2+.
 
 - (empty)
