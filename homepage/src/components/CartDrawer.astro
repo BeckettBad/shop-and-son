@@ -1,0 +1,228 @@
+<div class="cart-backdrop" data-cart-backdrop hidden></div>
+<aside class="cart-drawer" data-cart-drawer aria-hidden="true">
+  <header class="cart-drawer__header">
+    <p class="cart-drawer__title">cart</p>
+    <button type="button" class="cart-drawer__close" data-cart-close aria-label="close cart">&times;</button>
+  </header>
+  <p class="cart-drawer__message" data-cart-message hidden></p>
+  <div class="cart-drawer__lines" data-cart-lines></div>
+  <p class="cart-drawer__empty" data-cart-empty>nothing yet</p>
+  <footer class="cart-drawer__footer">
+    <div class="cart-drawer__subtotal">
+      <span>subtotal</span>
+      <span data-cart-subtotal></span>
+    </div>
+    <p class="cart-drawer__note">shipping + tax at checkout</p>
+    <button type="button" class="cart-drawer__checkout" data-cart-checkout disabled>CHECKOUT</button>
+  </footer>
+</aside>
+
+<script>
+  import * as cart from "../lib/cart";
+  import type { Cart, CartLine } from "../lib/cart";
+
+  const drawer = document.querySelector<HTMLElement>("[data-cart-drawer]");
+  const backdrop = document.querySelector<HTMLElement>("[data-cart-backdrop]");
+  const closeButton = document.querySelector<HTMLButtonElement>("[data-cart-close]");
+  const linesElement = document.querySelector<HTMLElement>("[data-cart-lines]");
+  const emptyElement = document.querySelector<HTMLElement>("[data-cart-empty]");
+  const subtotalElement = document.querySelector<HTMLElement>("[data-cart-subtotal]");
+  const checkoutButton = document.querySelector<HTMLButtonElement>("[data-cart-checkout]");
+  const messageElement = document.querySelector<HTMLElement>("[data-cart-message]");
+
+  let activeCart: Cart | undefined;
+  let messageTimer: ReturnType<typeof window.setTimeout> | undefined;
+
+  const updateBadges = (quantity: number) => {
+    document.querySelectorAll<HTMLElement>("[data-cart-count]").forEach((badge) => {
+      badge.textContent = String(quantity);
+      badge.hidden = quantity <= 0;
+    });
+  };
+
+  const lockScroll = () => {
+    document.documentElement.classList.add("is-cart-open");
+    document.body.classList.add("is-cart-open");
+  };
+
+  const unlockScroll = () => {
+    document.documentElement.classList.remove("is-cart-open");
+    document.body.classList.remove("is-cart-open");
+  };
+
+  const openCart = () => {
+    if (!drawer || !backdrop) return;
+
+    drawer.classList.add("is-open");
+    drawer.setAttribute("aria-hidden", "false");
+    backdrop.hidden = false;
+    backdrop.classList.add("is-open");
+    lockScroll();
+  };
+
+  const closeCart = () => {
+    if (!drawer || !backdrop) return;
+
+    drawer.classList.remove("is-open");
+    drawer.setAttribute("aria-hidden", "true");
+    backdrop.classList.remove("is-open");
+    unlockScroll();
+    window.setTimeout(() => {
+      if (!backdrop.classList.contains("is-open")) {
+        backdrop.hidden = true;
+      }
+    }, 550);
+  };
+
+  const showMessage = (message: string) => {
+    if (!messageElement || !message) return;
+
+    messageElement.textContent = message;
+    messageElement.hidden = false;
+    if (messageTimer) {
+      window.clearTimeout(messageTimer);
+    }
+    messageTimer = window.setTimeout(() => {
+      messageElement.hidden = true;
+      messageElement.textContent = "";
+    }, 4500);
+  };
+
+  const renderLine = (line: CartLine) => {
+    const row = document.createElement("article");
+    row.className = "cart-line";
+
+    const media = document.createElement("a");
+    media.className = "cart-line__media";
+    media.href = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/product/?handle=${encodeURIComponent(line.handle)}`;
+    media.setAttribute("aria-label", line.title || "product");
+
+    if (line.image) {
+      const image = document.createElement("img");
+      image.src = line.image;
+      image.alt = "";
+      image.loading = "lazy";
+      image.decoding = "async";
+      image.width = 72;
+      media.append(image);
+    }
+
+    const body = document.createElement("div");
+    body.className = "cart-line__body";
+
+    const title = document.createElement("p");
+    title.className = "cart-line__title";
+    title.textContent = line.title;
+
+    const meta = document.createElement("div");
+    meta.className = "cart-line__meta";
+    if (line.variantTitle) {
+      const variant = document.createElement("p");
+      variant.className = "cart-line__variant";
+      variant.textContent = line.variantTitle;
+      meta.append(variant);
+    }
+    if (line.vendor) {
+      const vendor = document.createElement("p");
+      vendor.className = "cart-line__vendor";
+      vendor.textContent = line.vendor;
+      meta.append(vendor);
+    }
+
+    const controls = document.createElement("div");
+    controls.className = "cart-line__controls";
+
+    const stepper = document.createElement("div");
+    stepper.className = "cart-line__stepper";
+
+    const decrement = document.createElement("button");
+    decrement.type = "button";
+    decrement.className = "cart-line__step";
+    decrement.textContent = "−";
+    decrement.setAttribute("aria-label", `decrease ${line.title} quantity`);
+    decrement.addEventListener("click", () => {
+      void cart.updateLine(line.id, line.quantity - 1);
+    });
+
+    const quantity = document.createElement("span");
+    quantity.className = "cart-line__quantity";
+    quantity.textContent = String(line.quantity);
+
+    const increment = document.createElement("button");
+    increment.type = "button";
+    increment.className = "cart-line__step";
+    increment.textContent = "+";
+    increment.setAttribute("aria-label", `increase ${line.title} quantity`);
+    increment.addEventListener("click", () => {
+      void cart.updateLine(line.id, line.quantity + 1);
+    });
+
+    stepper.append(decrement, quantity, increment);
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "cart-line__remove";
+    remove.textContent = "×";
+    remove.setAttribute("aria-label", `remove ${line.title}`);
+    remove.addEventListener("click", () => {
+      void cart.removeLine(line.id);
+    });
+
+    controls.append(stepper, remove);
+    body.append(title, meta, controls);
+
+    const price = document.createElement("p");
+    price.className = "cart-line__price";
+    price.textContent = line.price;
+
+    row.append(media, body, price);
+    return row;
+  };
+
+  const renderCart = (nextCart: Cart) => {
+    activeCart = nextCart;
+    const hasLines = nextCart.lines.length > 0;
+
+    updateBadges(nextCart.totalQuantity);
+
+    linesElement?.replaceChildren(...nextCart.lines.map(renderLine));
+    if (emptyElement) {
+      emptyElement.hidden = hasLines;
+    }
+    if (subtotalElement) {
+      subtotalElement.textContent = nextCart.subtotal;
+    }
+    if (checkoutButton) {
+      checkoutButton.disabled = !hasLines || !nextCart.checkoutUrl;
+      checkoutButton.hidden = !hasLines;
+    }
+  };
+
+  document.addEventListener("cart:open", openCart);
+  document.addEventListener("cart:updated", (event) => {
+    renderCart((event as CustomEvent<Cart>).detail);
+  });
+  document.addEventListener("cart:message", (event) => {
+    showMessage((event as CustomEvent<string>).detail);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && drawer?.classList.contains("is-open")) {
+      closeCart();
+    }
+  });
+
+  document.querySelectorAll<HTMLElement>("[data-cart-toggle]").forEach((toggle) => {
+    toggle.addEventListener("click", () => {
+      document.dispatchEvent(new CustomEvent("cart:open"));
+    });
+  });
+
+  closeButton?.addEventListener("click", closeCart);
+  backdrop?.addEventListener("click", closeCart);
+  checkoutButton?.addEventListener("click", () => {
+    if (!activeCart?.checkoutUrl) return;
+    window.location.href = activeCart.checkoutUrl;
+  });
+
+  void cart.getCart().then(renderCart);
+</script>

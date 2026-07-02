@@ -23,7 +23,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 // Block 1 — desktop: vertical left menu; mobile: horizontal tabs over fullscreen video.
 ---
 <section class="block hero-video" id="hero">
-  <a class="hero__cart" href="https://shopandson.com/cart" target="_blank" rel="noopener" aria-label="Cart">
+  <button type="button" class="hero__cart" data-cart-toggle aria-label="Cart">
     <svg focusable="false" class="icon icon-bag" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
 	 viewBox="0 0 20 20" style="enable-background:new 0 0 24 24;" xml:space="preserve">
 <path fill="currentColor" d="M17.200012,5.519043h-3.573059V4.60791c0-2-1.626953-3.626953-3.626953-3.626953S6.373047,2.60791,6.373047,4.60791
@@ -31,7 +31,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 	c1.448242,0,2.626953,1.178223,2.626953,2.626953v0.911133H7.373047V4.60791z M3.671082,6.519043h2.701965v1h1v-1h5.253906v1h1v-1
 	h2.701965l1.523071,11H2.14801L3.671082,6.519043z"/>
 </svg>
-  </a>
+    <span class="hero__cart-count" data-cart-count hidden></span>
+  </button>
 
   <video
     class="hero-video__media hero-video__media--desktop"
