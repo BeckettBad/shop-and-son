@@ -210,7 +210,11 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   <aside class="hero__catalog" aria-hidden="true">
     <div class="hero__catalog-head">
-      <h2 class="hero__catalog-title" data-catalog-title></h2>
+      <h2 class="hero__catalog-title">
+        <span class="hero__catalog-title-text" data-catalog-title></span>
+        <span class="hero__catalog-description-separator" data-catalog-description-separator hidden>—</span>
+        <span class="hero__catalog-description" data-catalog-description hidden></span>
+      </h2>
       <button type="button" class="hero__catalog-close" data-catalog-close aria-label="Close catalogue">&times;</button>
     </div>
     <div class="hero__catalog-viewport" data-catalog-viewport>
@@ -259,20 +263,28 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 </section>
 
 <script>
+  import { getCollection, type CollectionDetail } from "../../lib/storefront-client";
+
   interface CatalogProduct {
+    handle: string;
     title: string;
     vendor: string;
     price: string;
     url: string;
+    available: boolean;
     image?: string;
     imageSrcset?: string;
+    imageAspect: number;
   }
 
+  const BASE = import.meta.env.BASE_URL ?? "/";
   const hero = document.querySelector<HTMLElement>(".hero-video");
   const stencil = hero?.querySelector<HTMLElement>(".hero__stencil");
   const dj = hero?.querySelector<HTMLElement>(".hero__dj");
   const catalog = hero?.querySelector<HTMLElement>(".hero__catalog");
   const catalogTitle = hero?.querySelector<HTMLElement>("[data-catalog-title]");
+  const catalogDescription = hero?.querySelector<HTMLElement>("[data-catalog-description]");
+  const catalogDescriptionSeparator = hero?.querySelector<HTMLElement>("[data-catalog-description-separator]");
   const catalogViewport = hero?.querySelector<HTMLElement>("[data-catalog-viewport]");
   const catalogTrack = hero?.querySelector<HTMLElement>("[data-catalog-track]");
   const catalogClose = hero?.querySelector<HTMLButtonElement>("[data-catalog-close]");
@@ -299,6 +311,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   let rowIndex = 0;
   let lastRowIndex = 0;
   let isPaging = false;
+  const liveCollectionCache = new Map<string, Promise<CollectionDetail | null>>();
   let filmHasStarted = false;
   let pagingFallback: ReturnType<typeof window.setTimeout> | undefined;
   let stencilReturnCleanup: (() => void) | undefined;
@@ -319,6 +332,30 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   const catalogData = parseCatalogData();
 
+  const getProductHref = (handle: string) => {
+    const base = BASE.replace(/\/$/, "");
+    return `${base}/product/?handle=${encodeURIComponent(handle)}`;
+  };
+
+  const getLiveCollection = (collection: string) => {
+    const cachedCollection = liveCollectionCache.get(collection);
+    if (cachedCollection) return cachedCollection;
+
+    const liveCollection = getCollection(collection);
+    liveCollectionCache.set(collection, liveCollection);
+    return liveCollection;
+  };
+
+  const getImageCompareKey = (src: string | undefined) => {
+    if (!src) return "";
+
+    try {
+      return new URL(src).pathname;
+    } catch {
+      return src.split("?")[0] ?? src;
+    }
+  };
+
   const setPagingReady = () => {
     isPaging = false;
     if (pagingFallback) {
@@ -331,7 +368,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (!catalogTrack) return;
 
     rowIndex = Math.max(0, Math.min(nextIndex, lastRowIndex));
-    catalogTrack.style.setProperty("--catalog-row-index", String(rowIndex));
+    const rows = Array.from(catalogTrack.querySelectorAll<HTMLElement>(".hero__catalog-row"));
+    const row = rows[rowIndex];
+    const offsetTop = row ? row.offsetTop : 0;
+    catalogTrack.style.setProperty("--catalog-row-offset", `${-offsetTop}px`);
   };
 
   const pageRows = (direction: number) => {
@@ -575,7 +615,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const createProductCard = (product: CatalogProduct) => {
     const card = document.createElement("a");
     card.className = "product-card";
-    card.href = product.url;
+    card.href = getProductHref(product.handle);
+    card.style.setProperty("--card-aspect", String(product.imageAspect || 0.75));
+    card.classList.toggle("is-sold-out", product.available === false);
 
     const media = document.createElement("span");
     media.className = "product-card__media";
@@ -590,6 +632,12 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       image.loading = "lazy";
       image.decoding = "async";
       media.append(image);
+    }
+    if (product.available === false) {
+      const soldOut = document.createElement("span");
+      soldOut.className = "product-card__sold-out";
+      soldOut.textContent = "sold out";
+      media.append(soldOut);
     }
 
     const body = document.createElement("span");
@@ -612,14 +660,19 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     return card;
   };
 
-  const renderCatalogContent = (collection: string, label: string) => {
-    if (!hero || !catalogTitle || !catalogTrack) return;
+  const renderCatalogHeader = (title: string, description = "") => {
+    if (!catalogTitle || !catalogDescription || !catalogDescriptionSeparator) return;
 
-    hero.dataset.activeCollection = collection;
-    catalogTitle.textContent = label;
-    setActiveButton(collection);
+    const trimmedDescription = description.trim();
+    catalogTitle.textContent = title;
+    catalogDescription.textContent = trimmedDescription;
+    catalogDescription.hidden = !trimmedDescription;
+    catalogDescriptionSeparator.hidden = !trimmedDescription;
+  };
 
-    const products = catalogData[collection] ?? [];
+  const renderCatalogRows = (products: CatalogProduct[], targetRowIndex: number) => {
+    if (!catalogTrack) return;
+
     const rows: HTMLDivElement[] = [];
     for (let index = 0; index < products.length; index += 3) {
       const row = document.createElement("div");
@@ -633,7 +686,49 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     catalogTrack.replaceChildren(...rows);
     lastRowIndex = Math.max(0, rows.length - 1);
     setPagingReady();
-    setRowIndex(0);
+    setRowIndex(Math.min(targetRowIndex, lastRowIndex));
+  };
+
+  const getComparableProducts = (products: CatalogProduct[]) =>
+    products.map((product) => ({
+      handle: product.handle,
+      title: product.title,
+      vendor: product.vendor,
+      price: product.price,
+      available: product.available,
+      image: getImageCompareKey(product.image),
+      imageAspect: product.imageAspect,
+    }));
+
+  const hasLiveCatalogChanged = (
+    liveCollection: CollectionDetail,
+    snapshotProducts: CatalogProduct[],
+  ) => {
+    if (liveCollection.description.trim()) return true;
+
+    return (
+      JSON.stringify(getComparableProducts(liveCollection.products)) !==
+      JSON.stringify(getComparableProducts(snapshotProducts))
+    );
+  };
+
+  const renderCatalogContent = (collection: string, label: string) => {
+    if (!hero || !catalogTitle || !catalogTrack) return;
+
+    hero.dataset.activeCollection = collection;
+    renderCatalogHeader(label);
+    setActiveButton(collection);
+
+    const snapshotProducts = catalogData[collection] ?? [];
+    renderCatalogRows(snapshotProducts, 0);
+
+    void getLiveCollection(collection).then((liveCollection) => {
+      if (!liveCollection || hero.dataset.activeCollection !== collection) return;
+      if (!hasLiveCatalogChanged(liveCollection, snapshotProducts)) return;
+
+      renderCatalogHeader(label, liveCollection.description);
+      renderCatalogRows(liveCollection.products, rowIndex);
+    });
   };
 
   const openCatalog = (collection: string, label: string) => {
@@ -870,4 +965,5 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     preorderObserver?.observe(preorderShell);
     window.addEventListener("resize", resizePreorderFrame);
   }
+  window.addEventListener("resize", () => setRowIndex(rowIndex));
 </script>

@@ -122,13 +122,19 @@ function formatMoney(money: Money | null | undefined): string {
 }
 
 function mapCatalogProduct(product: StorefrontCollectionProduct): CatalogProduct {
+  const imageWidth = product.featuredImage?.width;
+  const imageHeight = product.featuredImage?.height;
+
   return {
+    handle: product.handle,
     title: product.title,
     vendor: product.vendor,
     price: formatMoney(product.priceRange.minVariantPrice),
     url: getProductUrl(product.handle),
+    available: product.availableForSale,
     image: getSizedShopifyImageUrl(product.featuredImage?.url, 1100),
     imageSrcset: getShopifyImageSrcset(product.featuredImage?.url),
+    imageAspect: imageWidth && imageHeight ? imageWidth / imageHeight : 0.75,
   };
 }
 

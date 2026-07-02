@@ -1,10 +1,13 @@
 export interface CatalogProduct {
+  handle: string;
   title: string;
   vendor: string;
   price: string;
   url: string;
+  available: boolean;
   image?: string;
   imageSrcset?: string;
+  imageAspect: number;
 }
 
 interface ShopifyProductFeed {
@@ -21,16 +24,18 @@ interface ShopifyProduct {
 
 interface ShopifyVariant {
   price?: string;
+  available?: boolean;
 }
 
 interface ShopifyImage {
   src?: string;
+  width?: number;
+  height?: number;
 }
 
 const PRODUCT_FEED_BASE_URL = "https://shopandson.com/collections";
 const PRODUCT_PAGE_BASE_URL = "https://shopandson.com/products";
-// Cap collection output for now; clothing can return 250 and house 27, and we can raise or paginate later.
-const PRODUCT_CAP = 60;
+const PRODUCT_CAP = 250;
 const SHOPIFY_IMAGE_WIDTHS = [700, 1100, 1600] as const;
 const FETCH_SPACING_MS = 250;
 const FETCH_ATTEMPTS = 3;
@@ -73,13 +78,19 @@ export const getShopifyImageSrcset = (src: string | undefined): string | undefin
 const mapProduct = (product: ShopifyProduct): CatalogProduct => {
   const handle = product.handle ?? "";
   const imageSrc = product.images?.[0]?.src;
+  const imageWidth = product.images?.[0]?.width;
+  const imageHeight = product.images?.[0]?.height;
+  const imageAspect = imageWidth && imageHeight ? imageWidth / imageHeight : 0.75;
 
   return {
+    handle,
     title: product.title ?? "",
     vendor: product.vendor ?? "",
     price: formatPrice(product.variants?.[0]?.price),
+    available: product.variants?.some((variant) => variant.available) ?? false,
     image: getSizedShopifyImageUrl(imageSrc, 1100),
     imageSrcset: getShopifyImageSrcset(imageSrc),
+    imageAspect,
     url: `${PRODUCT_PAGE_BASE_URL}/${handle}`,
   };
 };
@@ -151,7 +162,24 @@ export async function getCatalogProducts(collection: string): Promise<CatalogPro
 }
 
 async function fetchCatalogProducts(collection: string): Promise<CatalogProduct[]> {
-  const url = `${PRODUCT_FEED_BASE_URL}/${collection}/products.json?limit=${PRODUCT_CAP}`;
+  const products: ShopifyProduct[] = [];
+  let page = 1;
+
+  while (true) {
+    const pageProducts = await fetchCatalogProductPage(collection, page);
+    if (!pageProducts) return [];
+
+    products.push(...pageProducts);
+    if (pageProducts.length < PRODUCT_CAP) break;
+
+    page += 1;
+  }
+
+  return products.map(mapProduct);
+}
+
+async function fetchCatalogProductPage(collection: string, page: number): Promise<ShopifyProduct[] | null> {
+  const url = `${PRODUCT_FEED_BASE_URL}/${collection}/products.json?limit=${PRODUCT_CAP}&page=${page}`;
   let lastFailure: unknown;
 
   for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt += 1) {
@@ -169,7 +197,7 @@ async function fetchCatalogProducts(collection: string): Promise<CatalogProduct[
       }
 
       const feed = (await response.json()) as ShopifyProductFeed;
-      return (feed.products ?? []).slice(0, PRODUCT_CAP).map(mapProduct);
+      return feed.products ?? [];
     } catch (err) {
       lastFailure = err;
 
@@ -181,8 +209,8 @@ async function fetchCatalogProducts(collection: string): Promise<CatalogProduct[
   }
 
   console.warn(
-    `[catalog] Failed to fetch ${collection} products after ${FETCH_ATTEMPTS} attempts:`,
+    `[catalog] Failed to fetch ${collection} products page ${page} after ${FETCH_ATTEMPTS} attempts:`,
     formatFailure(lastFailure),
   );
-  return [];
+  return null;
 }
