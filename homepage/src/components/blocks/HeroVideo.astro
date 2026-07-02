@@ -264,6 +264,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 </section>
 
 <script>
+  import { getLiveHeroMenu, type LiveHeroMenuEntry } from "../../lib/menu";
   import { getCollection, type CollectionDetail } from "../../lib/storefront-client";
 
   interface CatalogProduct {
@@ -301,9 +302,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const filmOpen = hero?.querySelector<HTMLButtonElement>("[data-film-open]");
   const famPanel = hero?.querySelector<HTMLElement>(".hero__fam");
   const catalogDataNode = hero?.querySelector<HTMLScriptElement>("#catalog-data");
-  const collectionButtons = hero
-    ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-shop-all]"))
-    : [];
+  const heroMenuElement = hero?.querySelector<HTMLElement>(".hero__menu");
   const menuSections = hero ? Array.from(hero.querySelectorAll<HTMLElement>("[data-hero-dropdown]")) : [];
   const subgroupToggles = hero ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-menu-subgroup]")) : [];
   const desktopPagerQuery = window.matchMedia("(min-width: 761px)");
@@ -343,6 +342,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     const aspect = Number(imageAspect);
     return Number.isFinite(aspect) && aspect > 0 ? aspect : fallbackCardAspect;
   };
+
+  const getCollectionButtons = () =>
+    hero ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-shop-all]")) : [];
 
   const getLiveCollection = (collection: string) => {
     const cachedCollection = liveCollectionCache.get(collection);
@@ -393,11 +395,114 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   };
 
   const setActiveButton = (collection: string | null) => {
-    collectionButtons.forEach((button) => {
+    getCollectionButtons().forEach((button) => {
       const isActive = Boolean(collection && button.dataset.collection === collection);
       button.classList.toggle("is-active", isActive);
       button.setAttribute("aria-pressed", String(isActive));
     });
+  };
+
+  const getMenuLabel = (value: string | null | undefined) =>
+    (value ?? "")
+      .replace(/[+\u2013-]\s*$/, "")
+      .trim()
+      .replace(/\s+/g, " ")
+      .toLocaleUpperCase("en-US");
+
+  const getMenuSection = (label: string) =>
+    menuSections.find((section) => {
+      const trigger = section.querySelector<HTMLElement>(".hero__menu-header");
+      return getMenuLabel(trigger?.textContent).startsWith(label);
+    });
+
+  const getSubgroupList = (section: HTMLElement | undefined, label: string) => {
+    if (!section) return null;
+
+    const subgroup = Array.from(section.querySelectorAll<HTMLButtonElement>("[data-menu-subgroup]")).find((button) =>
+      getMenuLabel(button.textContent).startsWith(label),
+    );
+    return subgroup?.closest(".hero__menu-item--group")?.querySelector<HTMLUListElement>(".hero__menu-nested") ?? null;
+  };
+
+  const getCollectionEntries = (items: Element[]): LiveHeroMenuEntry[] =>
+    items.flatMap((item) => {
+      const button = item.querySelector<HTMLButtonElement>("[data-shop-all]");
+      const collection = button?.dataset.collection;
+      if (!button || !collection) return [];
+
+      const label = getMenuLabel(button.dataset.collectionLabel ?? button.textContent);
+      return [
+        {
+          label,
+          collection,
+          collectionLabel: label,
+        },
+      ];
+    });
+
+  const entriesMatch = (currentEntries: LiveHeroMenuEntry[], nextEntries: LiveHeroMenuEntry[]) =>
+    currentEntries.length === nextEntries.length &&
+    currentEntries.every(
+      (entry, index) =>
+        entry.collection === nextEntries[index]?.collection &&
+        entry.collectionLabel === nextEntries[index]?.collectionLabel,
+    );
+
+  const createCollectionMenuItem = (entry: LiveHeroMenuEntry, variant: "bullet" | "dash") => {
+    const item = document.createElement("li");
+    if (variant === "dash") {
+      item.className = "hero__menu-item";
+    }
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `hero__menu-link hero__menu-link--${variant}`;
+    button.setAttribute("data-shop-all", "");
+    button.dataset.collection = entry.collection;
+    button.dataset.collectionLabel = entry.collectionLabel;
+    button.setAttribute("aria-pressed", String(hero?.dataset.activeCollection === entry.collection));
+    button.classList.toggle("is-active", hero?.dataset.activeCollection === entry.collection);
+    button.textContent = entry.label;
+    item.append(button);
+    return item;
+  };
+
+  const reconcileNestedMenuList = (list: HTMLUListElement | null, nextEntries: LiveHeroMenuEntry[]) => {
+    if (!list || nextEntries.length === 0) return;
+
+    const currentEntries = getCollectionEntries(Array.from(list.children));
+    if (entriesMatch(currentEntries, nextEntries)) return;
+
+    list.replaceChildren(...nextEntries.map((entry) => createCollectionMenuItem(entry, "bullet")));
+  };
+
+  const reconcileObjectsMenuList = (section: HTMLElement | undefined, nextEntries: LiveHeroMenuEntry[]) => {
+    if (!section || nextEntries.length === 0) return;
+
+    const panel = section.querySelector<HTMLUListElement>(".hero__menu-panel");
+    if (!panel) return;
+
+    const items = Array.from(panel.children);
+    const shopAllIndex = items.findIndex((item) => item.querySelector("[data-shop-all]"));
+    if (shopAllIndex === -1) return;
+
+    const currentLeafItems = items.slice(shopAllIndex + 1);
+    const currentEntries = getCollectionEntries(currentLeafItems);
+    if (entriesMatch(currentEntries, nextEntries)) return;
+
+    currentLeafItems.forEach((item) => item.remove());
+    items[shopAllIndex]?.after(...nextEntries.map((entry) => createCollectionMenuItem(entry, "dash")));
+  };
+
+  const hydrateLiveMenu = async () => {
+    const liveMenu = await getLiveHeroMenu();
+    if (!liveMenu) return;
+
+    const clothesSection = getMenuSection("CLOTHES");
+    const objectsSection = getMenuSection("OBJECTS");
+    reconcileNestedMenuList(getSubgroupList(clothesSection, "CATEGORIES"), liveMenu.categories);
+    reconcileNestedMenuList(getSubgroupList(clothesSection, "DESIGNERS"), liveMenu.designers);
+    reconcileObjectsMenuList(objectsSection, liveMenu.objects);
   };
 
   const setMenuSubgroupState = (button: HTMLButtonElement, isOpen: boolean) => {
@@ -879,13 +984,18 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     activeStage = "landing";
   };
 
-  collectionButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      const collection = button.dataset.collection;
-      const label = button.dataset.collectionLabel ?? button.textContent?.trim() ?? "";
-      if (!collection) return;
-      openCatalog(collection, label);
-    });
+  heroMenuElement?.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const button = target.closest<HTMLButtonElement>("[data-shop-all]");
+    if (!button || !heroMenuElement.contains(button)) return;
+
+    const collection = button.dataset.collection;
+    const label = button.dataset.collectionLabel ?? button.textContent?.trim() ?? "";
+    if (!collection) return;
+
+    openCatalog(collection, label);
   });
 
   subgroupToggles.forEach((button) => {
@@ -1004,4 +1114,5 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     window.addEventListener("resize", resizePreorderFrame);
   }
   window.addEventListener("resize", () => setRowIndex(rowIndex));
+  void hydrateLiveMenu();
 </script>
