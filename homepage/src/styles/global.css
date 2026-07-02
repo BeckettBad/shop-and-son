@@ -301,6 +301,7 @@ body{
 .hero__cart-count[hidden],
 .product-detail__cart-count[hidden]{display:none}
 .hero-video.is-catalog .hero__cart,
+.hero-video.is-product .hero__cart,
 .hero-video.is-preorder .hero__cart,
 .hero-video.is-film .hero__cart,
 .hero-video.is-fam .hero__cart{
@@ -326,6 +327,7 @@ body{
   .hero__stencil:hover{background-color:var(--neon-green)}
 }
 .hero-video.is-catalog .hero__stencil,
+.hero-video.is-product .hero__stencil,
 .hero-video.is-preorder .hero__stencil,
 .hero-video.is-music .hero__stencil,
 .hero-video.is-film .hero__stencil,
@@ -407,6 +409,7 @@ body{
   color:#000000;
 }
 .hero__catalog,
+.hero__product,
 .hero__preorder{
   position:absolute; top:0; right:0; bottom:0; left:max(36.5vw,260px); z-index:2;
   display:flex; flex-direction:column;
@@ -416,6 +419,11 @@ body{
   transition:transform .55s ease-in-out,opacity .55s ease-in-out,visibility 0s linear .55s;
 }
 .hero__catalog{left:max(30vw,240px); padding:5vh 2.25vw 5vh 1.25vw}
+.hero__product{
+  left:max(30vw,240px); padding:5vh 2.25vw 5vh 1.25vw;
+  overflow-y:auto; overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
 .hero__preorder{
   left:max(31vw,220px);
   padding:2vh .75vw 2vh .75vw;
@@ -460,6 +468,7 @@ body{
   line-height:1.2; font-style:italic; color:rgba(0,0,0,.62);
 }
 .hero-video.is-catalog .hero__catalog,
+.hero-video.is-product .hero__product,
 .hero-video.is-preorder .hero__preorder,
 .hero-video.is-film .hero__film,
 .hero-video.is-fam .hero__fam{
@@ -467,6 +476,7 @@ body{
   transition:transform .55s ease-in-out,opacity .55s ease-in-out,visibility 0s;
 }
 .hero-video .hero__catalog.is-exiting-left,
+.hero-video .hero__product.is-exiting-left,
 .hero-video .hero__preorder.is-exiting-left,
 .hero-video .hero__film.is-exiting-left,
 .hero-video .hero__fam.is-exiting-left{
@@ -545,11 +555,35 @@ body{
 .hero__catalog-description-separator{
   color:rgba(0,0,0,.42); font-size:clamp(10px,.82vw,12px); line-height:1.28;
 }
-.hero__catalog-close{
+.hero__catalog-close,
+.hero__product-close{
   width:30px; height:30px; flex:0 0 auto;
   border:1px solid rgba(0,0,0,.55); background:rgba(255,255,255,.22);
   color:#000000; font-family:inherit; font-size:22px; line-height:26px;
   cursor:pointer; text-align:center;
+}
+.hero__product-close{
+  position:sticky; top:0; right:0; z-index:4;
+  align-self:flex-end; margin:0 0 14px auto;
+  background:rgba(255,255,255,.72);
+}
+.hero__product-view{
+  width:100%; min-height:0; flex:0 0 auto;
+}
+.hero__product .product-detail__content{
+  min-height:calc(100vh - 10vh - 44px);
+  grid-template-columns:minmax(0,56fr) minmax(260px,44fr);
+  gap:clamp(22px,3vw,54px);
+}
+.hero__product .product-detail__state{
+  padding:clamp(34px,8vh,88px) 0;
+}
+.hero__product .product-detail__panel{
+  top:0; min-height:calc(100vh - 10vh);
+  padding:clamp(22px,3.5vw,52px) clamp(14px,3vw,44px) clamp(34px,7vh,84px) 0;
+}
+.hero__product .product-detail__title{
+  font-size:clamp(30px,4.2vw,62px);
 }
 .hero__catalog-viewport{
   flex:1 1 auto; min-height:0; overflow:hidden;
@@ -634,6 +668,7 @@ body{
     color:var(--neon-green); background:rgba(255,255,255,.94);
   }
   .hero__catalog-close:hover,
+  .hero__product-close:hover,
   .hero__film-close:hover,
   .hero__film-toggle:hover{
     color:var(--neon-green); background:rgba(255,255,255,.46);
@@ -762,14 +797,34 @@ body{
   }
   .hero__menu-nested{padding-left:1.4em; margin-top:0.2em}
   .hero__catalog,
+  .hero__product,
   .hero__preorder{
     top:clamp(88px,16vh,132px); right:0; bottom:0; left:0;
     padding:0 4vw max(5vh, env(safe-area-inset-bottom));
+  }
+  .hero__product{
+    overflow-y:auto; overscroll-behavior:contain;
   }
   .hero__preorder{overflow:hidden}
   .hero__preorder-close{
     top:0; right:4vw;
   }
+  .hero__product-close{
+    top:0; right:0; margin-bottom:12px;
+  }
+  .hero__product .product-detail__content{
+    min-height:0; display:flex; flex-direction:column; gap:0;
+  }
+  .hero__product .product-detail__gallery{width:100%}
+  .hero__product .product-detail__panel{
+    position:static; min-height:0; width:100%;
+    padding:28px 0 56px;
+  }
+  .hero__product .product-detail__title{
+    max-width:18ch; font-size:clamp(34px,12vw,54px);
+  }
+  .hero__product .product-detail__add{width:100%}
+  .hero__product .product-detail__desc{width:100%; max-width:none}
   .hero__preorder-shell{
     overflow:auto;
     -webkit-overflow-scrolling:touch;
