@@ -409,19 +409,20 @@ body{
   overflow:hidden;
 }
 .hero__film{
-  position:absolute; top:0; right:0; bottom:0; left:max(27vw,240px); z-index:2;
+  position:absolute; top:0; right:4.5vw; bottom:0; left:max(27vw,240px); z-index:2;
   display:flex; align-items:center; justify-content:center;
-  padding:0 2vw 0 0; color:#000000;
+  padding:0; color:#000000;
   font-family:"Helvetica Now","Helvetica Neue",Helvetica,Arial,sans-serif;
   transform:translateX(calc(50vw + 100%)); opacity:0; visibility:hidden; pointer-events:none;
   transition:transform .55s ease-in-out,opacity .55s ease-in-out,visibility 0s linear .55s;
 }
 .hero__film-frame{
   position:relative; display:flex; align-items:center; justify-content:center;
-  width:100%; height:auto; max-width:100%; max-height:86vh;
+  aspect-ratio:16 / 9; width:100%; max-width:calc(88vh * 16 / 9); max-height:88vh;
+  margin:auto;
 }
 .hero__film-video{
-  display:block; width:100%; height:auto; max-width:100%; max-height:86vh; object-fit:contain;
+  display:block; width:100%; height:100%; object-fit:contain;
   background:transparent; cursor:pointer;
 }
 .hero__fam{
@@ -468,10 +469,11 @@ body{
 }
 .hero__film-toggle{
   position:absolute; left:0; bottom:0; z-index:4;
-  margin:0; padding:4px 7px;
-  border:1px solid rgba(0,0,0,.55); background:rgba(255,255,255,.22);
+  display:inline-flex; align-items:center; min-height:44px;
+  margin:0; padding:9px 12px;
+  border:1px solid rgba(0,0,0,.55); background:rgba(255,255,255,.5);
   color:#000000; font-family:"Courier New",Courier,monospace;
-  font-size:12px; line-height:1; text-transform:lowercase;
+  font-size:14px; line-height:1; text-transform:lowercase;
   cursor:pointer;
 }
 .hero__film-playback{
