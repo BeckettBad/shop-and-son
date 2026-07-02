@@ -55,7 +55,13 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     <source src={withBase("/videos/homepage-hero-mobile.mp4")} type="video/mp4" />
   </video>
 
-  <img class="hero__stencil" src={withBase("/images/hero-stencil.png")} alt="" aria-hidden="true" />
+  <button
+    type="button"
+    class="hero__stencil"
+    data-film-open
+    aria-label="about & son"
+    style={`--stencil-mask-url:url("${withBase("/images/hero-stencil.png")}")`}
+  ></button>
 
   <div class="hero__dj dj-content-wrapper" aria-hidden="true">
     <img class="dj-cutout-image" src={withBase("/images/dj-in-action-cutout.png")} alt="" />
@@ -103,12 +109,13 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
             class="hero__menu-section"
             data-hero-dropdown
             data-preorder={section.preorder ? "true" : undefined}
+            data-fam={section.fam ? "true" : undefined}
             data-music={section.music ? "true" : undefined}
           >
             <button type="button" class="hero__menu-header" aria-expanded="false">
               {section.label} <span class="hero__menu-toggle">+</span>
             </button>
-            {!section.preorder && (
+            {!section.preorder && !section.fam && (
               <ul class="hero__menu-panel">
                 {
                   section.items.map((item) => (
@@ -223,6 +230,31 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     </div>
   </aside>
 
+  <aside class="hero__film" aria-hidden="true">
+    <div class="hero__film-frame">
+      <video class="hero__film-video" src={withBase("/videos/about-film.mp4")} preload="metadata" playsinline></video>
+      <button type="button" class="hero__film-close" data-film-close aria-label="Close">&times;</button>
+      <button type="button" class="hero__film-playback" data-film-playback aria-label="Play film">
+        <svg class="hero__film-glyph hero__film-glyph--play" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+          <path d="M22 14v36l29-18z"></path>
+        </svg>
+        <svg class="hero__film-glyph hero__film-glyph--pause" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+          <rect x="18" y="14" width="10" height="36" rx="2"></rect>
+          <rect x="36" y="14" width="10" height="36" rx="2"></rect>
+        </svg>
+      </button>
+      <button type="button" class="hero__film-toggle" data-film-mute aria-label="Mute film">sound on</button>
+    </div>
+  </aside>
+
+  <aside class="hero__fam" aria-hidden="true">
+    <img class="hero__fam-image" src={withBase("/images/fam-tattoo.jpg")} alt="& fam" />
+    <p class="hero__fam-copy">
+      an interview series that takes an in-depth look at designers we carry like you've never seen them before, unless you're related to them.
+    </p>
+    <p class="hero__fam-kicker">coming soon…</p>
+  </aside>
+
   <script is:inline type="application/json" id="catalog-data" set:html={catalogDataJson}></script>
 </section>
 
@@ -248,6 +280,13 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const preorderShell = hero?.querySelector<HTMLElement>("[data-preorder-shell]");
   const preorderFrame = hero?.querySelector<HTMLIFrameElement>(".hero__preorder-frame");
   const preorderClose = hero?.querySelector<HTMLButtonElement>("[data-preorder-close]");
+  const filmPanel = hero?.querySelector<HTMLElement>(".hero__film");
+  const filmVideo = hero?.querySelector<HTMLVideoElement>(".hero__film-video");
+  const filmPlayback = hero?.querySelector<HTMLButtonElement>("[data-film-playback]");
+  const filmMute = hero?.querySelector<HTMLButtonElement>("[data-film-mute]");
+  const filmClose = hero?.querySelector<HTMLButtonElement>("[data-film-close]");
+  const filmOpen = hero?.querySelector<HTMLButtonElement>("[data-film-open]");
+  const famPanel = hero?.querySelector<HTMLElement>(".hero__fam");
   const catalogDataNode = hero?.querySelector<HTMLScriptElement>("#catalog-data");
   const collectionButtons = hero
     ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-shop-all]"))
@@ -260,11 +299,12 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   let rowIndex = 0;
   let lastRowIndex = 0;
   let isPaging = false;
+  let filmHasStarted = false;
   let pagingFallback: ReturnType<typeof window.setTimeout> | undefined;
   let stencilReturnCleanup: (() => void) | undefined;
   let stageCleanup: ReturnType<typeof window.setTimeout> | undefined;
-  type HeroStage = "landing" | "catalog" | "preorder" | "music";
-  type PanelStage = "catalog" | "preorder" | "music";
+  type HeroStage = "landing" | "catalog" | "preorder" | "music" | "film" | "fam";
+  type PanelStage = "catalog" | "preorder" | "music" | "film" | "fam";
 
   let activeStage: HeroStage = "landing";
   let touchStartY: number | null = null;
@@ -345,7 +385,15 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   };
 
   const getStagePanel = (stage: PanelStage) =>
-    stage === "catalog" ? catalog : stage === "preorder" ? preorder : dj;
+    stage === "catalog"
+      ? catalog
+      : stage === "preorder"
+        ? preorder
+        : stage === "music"
+          ? dj
+          : stage === "film"
+            ? filmPanel
+            : famPanel;
 
   const setPanelHidden = (stage: PanelStage, isHidden: boolean) => {
     const panel = getStagePanel(stage);
@@ -364,6 +412,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     catalog?.classList.remove("is-exiting-left");
     preorder?.classList.remove("is-exiting-left");
     dj?.classList.remove("is-exiting-left");
+    filmPanel?.classList.remove("is-exiting-left");
+    famPanel?.classList.remove("is-exiting-left");
     setMusicSettled(false);
   };
 
@@ -380,16 +430,18 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     const hasActiveStage =
       hero.classList.contains("is-catalog") ||
       hero.classList.contains("is-preorder") ||
-      hero.classList.contains("is-music");
+      hero.classList.contains("is-music") ||
+      hero.classList.contains("is-film") ||
+      hero.classList.contains("is-fam");
     if (!stencil || !hasActiveStage) {
-      hero.classList.remove("is-catalog", "is-preorder", "is-music", "is-settled");
+      hero.classList.remove("is-catalog", "is-preorder", "is-music", "is-film", "is-fam", "is-settled");
       return;
     }
 
     clearStencilReturn();
     stencil.style.transition = "none";
     stencil.style.transform = "translateX(calc(50vw + 100%))";
-    hero.classList.remove("is-catalog", "is-preorder", "is-music", "is-settled");
+    hero.classList.remove("is-catalog", "is-preorder", "is-music", "is-film", "is-fam", "is-settled");
     void stencil.offsetWidth;
 
     const finishReturn = (event?: TransitionEvent) => {
@@ -435,7 +487,15 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   };
 
   const getStageClass = (stage: PanelStage) =>
-    stage === "catalog" ? "is-catalog" : stage === "preorder" ? "is-preorder" : "is-music";
+    stage === "catalog"
+      ? "is-catalog"
+      : stage === "preorder"
+        ? "is-preorder"
+        : stage === "music"
+          ? "is-music"
+          : stage === "film"
+            ? "is-film"
+            : "is-fam";
 
   const activatePanel = (stage: PanelStage) => {
     hero?.classList.add(getStageClass(stage));
@@ -456,6 +516,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     const previousStage = activeStage;
     const previousPanelStage: PanelStage | undefined = previousStage === "landing" ? undefined : previousStage;
     const previousPanel = previousPanelStage ? getStagePanel(previousPanelStage) : undefined;
+    if (previousStage === "film") {
+      filmVideo?.pause();
+      resetFilmMute();
+    }
 
     if (previousStage === nextStage) {
       previousPanel?.classList.add("is-exiting-left");
@@ -598,10 +662,77 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     transitionToStage("music", () => undefined);
   };
 
+  const openFam = () => {
+    if (!hero || !famPanel) return;
+
+    delete hero.dataset.activeCollection;
+    setActiveButton(null);
+    setPagingReady();
+    setRowIndex(0);
+    transitionToStage("fam", () => undefined);
+  };
+
+  const openFilm = () => {
+    if (!hero || !filmPanel) return;
+
+    delete hero.dataset.activeCollection;
+    setActiveButton(null);
+    setPagingReady();
+    setRowIndex(0);
+    transitionToStage("film", () => undefined);
+  };
+
+  const updateFilmPlayback = () => {
+    if (!filmVideo || !filmPlayback) return;
+
+    const isPlaying = !filmVideo.paused && !filmVideo.ended;
+    filmPlayback.hidden = isPlaying;
+    filmPlayback.classList.toggle("is-paused-after-start", filmHasStarted && !isPlaying);
+    filmPlayback.setAttribute("aria-label", isPlaying ? "Pause film" : "Play film");
+    filmPlayback.setAttribute("aria-pressed", String(isPlaying));
+  };
+
+  const toggleFilmPlayback = () => {
+    if (!filmVideo) return;
+
+    if (filmVideo.paused || filmVideo.ended) {
+      void filmVideo.play().then(updateFilmPlayback).catch(updateFilmPlayback);
+      return;
+    }
+
+    filmVideo.pause();
+    updateFilmPlayback();
+  };
+
+  const updateFilmMute = () => {
+    if (!filmVideo || !filmMute) return;
+
+    filmMute.textContent = filmVideo.muted ? "sound off" : "sound on";
+    filmMute.setAttribute("aria-label", filmVideo.muted ? "Turn film sound on" : "Mute film");
+    filmMute.setAttribute("aria-pressed", String(filmVideo.muted));
+  };
+
+  const resetFilmMute = () => {
+    if (!filmVideo) return;
+
+    filmVideo.muted = false;
+    updateFilmMute();
+  };
+
+  const toggleFilmMute = () => {
+    if (!filmVideo) return;
+
+    filmVideo.muted = !filmVideo.muted;
+    updateFilmMute();
+  };
+
   const closeStage = () => {
     if (!hero) return;
 
     clearStageCleanup();
+    filmVideo?.pause();
+    resetFilmMute();
+    updateFilmPlayback();
     setPagingReady();
     setRowIndex(0);
     returnStencilFromRight();
@@ -609,6 +740,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     catalog?.setAttribute("aria-hidden", "true");
     preorder?.setAttribute("aria-hidden", "true");
     dj?.setAttribute("aria-hidden", "true");
+    filmPanel?.setAttribute("aria-hidden", "true");
+    famPanel?.setAttribute("aria-hidden", "true");
     setActiveButton(null);
     activeStage = "landing";
   };
@@ -637,6 +770,27 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     setMenuSectionState(null);
     closeStage();
   });
+  filmClose?.addEventListener("click", () => {
+    setMenuSectionState(null);
+    closeStage();
+  });
+  filmOpen?.addEventListener("click", () => {
+    if (activeStage !== "landing") return;
+
+    setMenuSectionState(null);
+    openFilm();
+  });
+  filmVideo?.addEventListener("click", toggleFilmPlayback);
+  filmVideo?.addEventListener("play", () => {
+    filmHasStarted = true;
+    updateFilmPlayback();
+  });
+  filmVideo?.addEventListener("pause", updateFilmPlayback);
+  filmVideo?.addEventListener("ended", updateFilmPlayback);
+  filmPlayback?.addEventListener("click", toggleFilmPlayback);
+  filmMute?.addEventListener("click", toggleFilmMute);
+  resetFilmMute();
+  updateFilmPlayback();
 
   catalogViewport?.addEventListener(
     "wheel",
@@ -681,6 +835,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     trigger.addEventListener("click", () => {
       const isPreorderSection = section.dataset.preorder === "true";
+      const isFamSection = section.dataset.fam === "true";
       const isMusicSection = section.dataset.music === "true";
       const isOpen = !section.classList.contains("is-open");
 
@@ -693,6 +848,12 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       if (isMusicSection && isOpen) {
         setMenuSectionState(section);
         openMusic();
+        return;
+      }
+
+      if (isFamSection && isOpen) {
+        setMenuSectionState(section);
+        openFam();
         return;
       }
 

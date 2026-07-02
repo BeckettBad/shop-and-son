@@ -68,14 +68,14 @@ diff against that sub-task's **Done when** + the risks list before the next
 dispatch. Before each dispatch, Claude updates the line below so Codex has ONE
 target; everything else in this file is context, not instruction.
 
-> **ACTIVE SUB-TASK: (none — Wave 1 + M1b shipping to main; next: K1 after ship)**
+> **ACTIVE SUB-TASK: (none — Wave 3 + all film revisions COMPLETE on dev through M3-rev4 (951cce8). Film stack: M3 0e5a442+32d2e21, M3-rev 5b4e851, M3-rev2 1a31085, M3-rev3 184b2ad, M3-rev3b 671c6fe, M3-rev4 951cce8; plus M2 193e0b8, M2b 58e8030, L3 5fb0f1f+76efa7d. Reviewed + built green, held UNPUSHED for operator verify → ship Wave 3 as its own PR (K1 + plan-docs ride along, approved). K2+ paused on token.)**
 
 Recommended order (three waves, operator verifies on `dev` after each wave and
 ships dev → main per wave, not one giant merge):
 1. **Wave 1 — no prerequisites, quick wins:** L2 → M1 → L1. (L1 is the invasive
    one: after it, click through every stage + confirm the page can't scroll.)
-2. **Wave 2 — after K0 (token live in `homepage/.env`):** K1 → K2 → K3 → K4 →
-   K6 → K5. Browser-verify K2's pager and K4's cart flow by hand, not just
+2. **Wave 2 — after K0 (token live in `homepage/.env`):** K1 → K2 → K3 → L4 →
+   K4 → K6 → K5. Browser-verify K2's pager and K4's cart flow by hand, not just
    build+check.
 3. **Wave 3 — assets confirmed first:** M2 → M3 → L3 (M3 and L3 both extend the
    stage machinery — keep them adjacent so the second copies the first's
@@ -84,13 +84,14 @@ ships dev → main per wave, not one giant merge):
 If a diff misses the brief: revert and re-dispatch with the brief amended —
 never patch-on-patch, never let Codex "fix forward" a wrong commit.
 **Task:** Phase K — commerce core (K1–K6), Phase L — chrome/editorial edits
-(L1–L3), **and** Phase M — neon interaction language + the house film stage
+(L1–L4), **and** Phase M — neon interaction language + the house film stage
 (M1–M3). The homepage becomes a proper selling site: in-site product pages,
 on-site cart, checkout handed to Shopify, menus + listings that mirror Shopify
 admin automatically. **One focused commit each**, `npm run build` **and**
 `npx astro check` green after every one. K runs in order (K6 depends only on K1);
-L1–L3 are independent of K and of each other; M1–M2 are independent, M3 needs M2
-(the stencil must be clickable) — all of M is independent of K and L. Scope:
+L1–L3 are independent of K and of each other; L4 depends on K1+K3; M1–M2 are
+independent, M3 needs M2 (the stencil must be clickable) — all of M is
+independent of K and L. Scope:
 `homepage/` only — EXCEPT K5, which (with operator awareness) touches
 `.github/workflows/deploy.yml`.
 
@@ -424,7 +425,8 @@ without the token the menu is byte-identical to today's.
 
 ---
 
-## PHASE L — chrome & editorial edits (independent of Phase K; any order)
+## PHASE L — chrome & editorial edits (L1–L3 independent of Phase K, any order;
+L4 depends on K1+K3)
 
 ### L1 — Remove the footer entirely; legal links move into the about block
 
@@ -454,6 +456,8 @@ minimum, tucked subtly into the bottom-left about block.
   <a …>terms of service</a></p>` linking out (full https, `rel="noopener"`, no
   `withBase`) to `https://shopandson.com/policies/refund-policy`,
   `/policies/privacy-policy`, `/policies/terms-of-service`.
+  **Transitional:** L4 (after K1/K3 land) repoints these three hrefs at the
+  IN-SITE policy page — the external URLs are the interim + no-token fallback.
   These three are the required set for a US store (privacy is legally required;
   refund terms must be conspicuous; ToS is the contract) — contact info is already
   the line above. **Subtle is the spec:** same mono font, ~1–2px smaller than the
@@ -534,6 +538,57 @@ flag — don't substitute anything.
 (photo + the two lines, correctly typeset); no interview items remain anywhere;
 stage opens/closes/switches cleanly against catalog/preorder/music; other stages
 unaffected.
+
+---
+
+### L4 — In-site policy pages (kills the last old-site content links)
+
+**Why:** the goal is a fully separate storefront — the old Shopify-rendered site
+should leave no visible trace beyond checkout itself. Shopify exposes the store
+policies as CONTENT via the Storefront API (`shop { refundPolicy { title body }
+privacyPolicy { title body } termsOfService { title body } }` — `body` is HTML,
+straight from what Ben edits in admin → auto-updating like everything else).
+Host them here. **Depends on K1 (client data layer) + K3 (the `bare` Base prop);
+sequence it after K3 — it is NOT part of Wave 1.**
+
+**Files:** new `src/pages/policies.astro`; `src/lib/storefront-client.ts` (add
+`getPolicies()`); `src/components/blocks/HeroVideo.astro` (the three L1 hrefs).
+
+- **One page, query-param routed** (same pattern as K3):
+  `/policies/?policy=refund-policy | privacy-policy | terms-of-service`.
+  `<Base bare>`, homepage skin: small uppercase mono title (the policy title from
+  Shopify), the body HTML rendered inside a contained `.policy__body` wrapper
+  (sane type styles, links styled per site, Shopify markup can't restyle the
+  page), a `← back` control like K3's. Nothing else on the page.
+- `getPolicies()` in the client layer fetches all three in one query, cached for
+  the session. Verify at implementation whether the `shop` policy fields need any
+  scope beyond what K0 grants — flag if so.
+- **Repoint the L1 links:** the three about-block hrefs become
+  `withBase("/policies/?policy=<handle>")` (internal, no `target=_blank`).
+- **Fallback:** unknown `?policy=`, fetch failure, or no token → the page shows a
+  plain link out to the same policy on `https://shopandson.com/policies/…` (never
+  a dead end, mirroring K3's fallback convention).
+
+**Done when:** build+check green; all three policy links open in-site pages
+showing the exact text from Shopify admin, typeset in the site skin; editing a
+policy in admin shows on next load without a redeploy; without a token the pages
+degrade to an outbound link; no `shopandson.com/policies` hrefs remain in the
+about block.
+
+---
+
+### FUTURE — domain cutover (NOT scheduled; operator decision, recorded so
+nothing built now blocks it)
+
+End state: `shopandson.com` points at THIS site and the old Shopify storefront
+disappears from public view. When Beckett + Ben call it: (1) the Pages site gets
+the custom domain (repo Settings → Pages → custom domain; base path drops from
+`/shop-and-son` to `/` — `withBase` everywhere is what makes that a config-only
+change, keep it disciplined); (2) `PUBLIC_SHOPIFY_STORE_DOMAIN` and the
+build-time `products.json` fetches switch to the store's `*.myshopify.com`
+domain (the custom domain will no longer serve Shopify); (3) checkout continues
+uninterrupted on Shopify's domain. Until then the old site stays live at
+shopandson.com and the fallback/external links above remain correct.
 
 ---
 
@@ -678,6 +733,142 @@ nothing plays until the user hits play; play/pause toggles by click and by the
 button; `×` (or opening any menu section/stage) pauses the film and the house
 glides back in from the right; switching to catalog/preorder/music from the film
 stage is flicker-free; audio plays when the user plays.
+
+---
+
+### M3-rev — film panel: contain the video clear of the menu + visible play control
+
+**Operator revision (2026-07-01, screenshot-verified):** the M3 film currently
+uses `inset:0; margin:auto` (centres in the FULL viewport) so it spans into the
+left menu column, overlapping the menu text + about block. This is a LAYOUT fix
+only. **DO NOT touch the video file — no re-encode, no crop.** The displayed box
+shrinks; the asset + its quality stay exactly as they are.
+
+**Files:** `src/styles/global.css` (primary); `src/components/blocks/HeroVideo.astro`
+only if the visible control needs a wrapper.
+
+- **Confine right of the menu:** give `.hero__film` the same panel-geometry
+  discipline as `.hero__catalog` — content area starts RIGHT of the menu:
+  `left:max(30vw,240px)` (match `.hero__catalog`'s override), `top:0; right:0;
+  bottom:0`, ~2vw right padding, vertically centred. Replace the `inset:0;
+  margin:auto; aspect-ratio:16/9; max-height:47.25vw` centred-box model. The
+  video sizes WITHIN that box: `max-height:~78vh`, `object-fit:contain`, native
+  aspect (no crop, no distortion). It must NEVER overlap the menu column, the
+  about block/legal links, or the cart/× zone, at any viewport width.
+- **Keep the animation exactly as-is:** the film stays in the shared
+  slide-in-from-right / exit-left behaviour (same transforms — the off-screen
+  `translateX(calc(50vw + 100%))`, active `translateX(0)` via the shared
+  `.is-film` rule, exit `translateX(-110%)`). Only the box geometry changes.
+- **Visible play control:** a real `<button>` overlaid on the video, BOTTOM-LEFT
+  OF THE VIDEO BOX (not the letterbox margin — wrap the `<video>` in a
+  shrink-to-video frame if needed so the button and × sit on the video). Site
+  skin: lowercase mono label `play` ⇄ `pause`, `aria-label`, neon-green on hover
+  per M1 (`@media (hover:hover)` only). Clicking the video itself still toggles
+  playback. Never autoplays; audio stays.
+- **Mobile:** the box sits clear of the horizontal menu tabs (top offset like
+  the catalog/preorder mobile rule `top:clamp(88px,16vh,132px); left:0; right:0`),
+  full available width, `contain`; × reachable.
+
+**Done when:** build+check green; the film opens fully inside its panel area with
+the menu column completely clear (native aspect, sharp); the visible button
+toggles play/pause and highlights green on hover; × and every stage switch still
+pause the film and glide the house back; mobile sane.
+
+---
+
+### M3-rev2 — film presence + classic centered play control + mute toggle
+
+**Operator revision (2026-07-01, screenshot-verified after M3-rev):** layout is
+clear of the menu, but the film reads too small (dead paper both sides) and the
+controls should be a classic centered play/pause + a bottom-left mute. **Video
+FILE untouched, as always.** Files: `src/styles/global.css`,
+`src/components/blocks/HeroVideo.astro`.
+
+1. **PRESENCE — the video dominates the area right of the menu.** Size it
+   **width-first**: the video fills the panel's available width, up to
+   `max-height:~86vh`, whichever binds first, native aspect (`contain`, no crop).
+   Trim dead space — the gap between the menu column's right edge and the video's
+   left edge should be a modest margin (~2–3vw), visually similar to the right
+   margin; pull the panel's left edge in (e.g. `left:max(27vw,240px)`) if needed,
+   **but the menu column incl. expanded CLOTHES must stay completely clear** at
+   every width. Vertically centered. **Slide animations unchanged.**
+
+2. **CENTERED CLASSIC PLAY/PAUSE** (replaces the current bottom-left text button
+   as the playback control). Classic glyphs — **solid triangle ▶ play, two bars
+   ⏸ pause** — flat/minimal, blends with the site (NO player chrome, NO circles;
+   ink-style glyph with a subtle legibility treatment over the footage — e.g. a
+   soft shadow/halo, not a background pill), ~56–64px, centered in the video
+   frame. Real `<button>`, `aria-label`. **Exact state machine:**
+   - **Before first play:** centered ▶ visible + persistent. **Never autoplays** —
+     user must press it.
+   - **Playing:** all controls vanish (like a normal player). Clicking anywhere on
+     the video pauses.
+   - **Paused** (user clicked the video or the glyph): centered icon reappears and
+     STAYS until playback resumes. **Per operator spec the paused state shows the
+     PAUSE icon (⏸)** — implement as written **and FLAG in the log** for operator
+     verify (conventional players show ▶ when paused; one-glyph swap if he wants
+     it flipped after seeing it).
+   - **Hover** (hover-capable only): the centered glyph goes neon-green (M1).
+   - Clicking the glyph toggles playback in every state.
+
+3. **MUTE TOGGLE bottom-left** (replaces the play/pause text button that lives
+   there now — SAME position + style: lowercase mono text, real `<button>`,
+   neon-green on hover). Label reflects state and click toggles it: `sound on`
+   (default — audio audible once playing) ⇄ `sound off` (muted), wired to
+   `video.muted`. Persist the choice while the stage stays open; **reset to
+   `sound on` (unmuted) when the stage fully closes** (`closeStage`).
+
+**Done when:** build+check green; the film commands the space right of the menu
+(minimal dead paper both sides, native aspect, sharp, menu untouched at every
+width incl. CLOTHES fully expanded); the centered classic control follows the
+state machine exactly and greens on hover; bottom-left is now `sound on`/`sound
+off` in the old button's style; × and stage switches still pause the film and
+glide the house back; mobile sane.
+
+---
+
+### M3-rev3 — film: larger still, re-centered off the right edge, bigger sound toggle
+
+**Operator revision (2026-07-01, screenshot after rev2).** `src/styles/global.css`
+ONLY (geometry + control sizing). **Video FILE and the rev2 control
+behaviour/state machine stay EXACTLY as they are** (no JS, no glyph/markup
+changes, no touching the play/pause state machine or the mute wiring).
+
+1. **GEOMETRY.** Current: the video hugs the RIGHT viewport edge (right margin
+   ≈0) with dead space pooled on the menu side (root cause: `.hero__film-video`
+   uses `width:100%` + `max-height:86vh` + `object-fit:contain`, so when the cap
+   binds the video pillarboxes instead of filling). Invert it — the video gets
+   LARGER and sits balanced in the region right of the menu:
+   - **LEFT:** small ~2vw gap between the menu column and the video's left edge
+     (menu incl. FULLY-EXPANDED CLOTHES stays completely clear — hard constraint
+     at every width; `left:max(27vw,240px)` is the starting point, nudge out only
+     if CLOTHES overlaps).
+   - **RIGHT:** a real ~4–5vw margin between the video's right edge and the
+     viewport — it must no longer touch/crowd the right edge (add `right:4.5vw`,
+     drop the old `padding:0 2vw 0 0`).
+   - **SIZE / fill:** kill the pillarbox by giving `.hero__film-frame`
+     `aspect-ratio:16 / 9` (the asset is exactly 16:9) with `width:100%`,
+     `max-height:~88vh`, `margin:auto` — so the frame fills the box width-first,
+     caps at 88vh on very wide/short viewports, and the video (`width:100%;
+     height:100%; object-fit:contain`) fills the frame edge-to-edge with NO dead
+     space and the ×/mute/centre buttons land on the true video corners. Net:
+     bigger than rev2 in both dimensions, commanding, balanced not right-hugging.
+   - **Vertical:** centered. × stays top-right ON the frame; **slide transforms
+     stay byte-identical** (only left/right insets + frame sizing change).
+
+2. **SOUND TOGGLE — a known feature, not a whisper.** Same bottom-left position
+   on the video, same lowercase-mono style + `sound on`⇄`sound off` behaviour,
+   but visibly LARGER: ~13–14px font with comfortable padding / larger hit area,
+   **min ~44px touch target**. Keep/STRENGTHEN the subtle backing so it stays
+   legible over any footage (e.g. bump the translucent bg, keep the border).
+   Neon-green on hover unchanged.
+
+**Done when:** build+check green; the film opens large and centered in the space
+right of the menu — small consistent ~2vw gap to the menu, clear ~4–5vw margin to
+the right edge, nothing overlapped, native aspect, sharp; the rev2 centered
+play/pause state machine is UNTOUCHED and still greens on hover; the sound toggle
+reads at a glance and greens on hover; × and stage switches still pause + glide
+the house back; mobile unaffected or improved.
 
 ---
 
@@ -832,15 +1023,26 @@ scrolling down reveals it; CLOTHES stays anchored at the top.
 
 ## Log (Phase K — Codex appends newest at top)
 
+- 2026-07-01 — Phase K1: client-side Storefront data layer — b0b6a3c — build:green check:green — NEW src/lib/storefront-client.ts (420 lines, browser-safe: fetch/AbortController/URL/import.meta.env, no Node APIs) + catalog.ts (exported getSizedShopifyImageUrl + getShopifyImageSrcset, keyword-only) + .env.example (PUBLIC_SHOPIFY_STORE_DOMAIN / PUBLIC_SHOPIFY_STOREFRONT_API_TOKEN, commented, no values). Exports: isStorefrontConfigured, storefrontFetch<T> (POST /api/2025-01/graphql.json, X-Shopify-Storefront-Access-Token, non-OK→null, GraphQL errors[]→null, 10s AbortController, timeout cleared in finally), getCollection (cursor pagination past 250, maps to current CatalogProduct shape via imported helpers, returns {title,description,products}), getMenu (parses /collections/<handle> abs+rel → collectionHandle else href, [] unconfigured), getProduct (full detail, exports ProductDetail + ProductImage/ProductOption/ProductVariant types for K3/K4). formatMoney strips .00, USD→$ else `amount CODE`. Every fn guards isStorefrontConfigured + try/catch → null/[] (quiet degradation). Reviewed clean by Claude (read full module). NOTE: homepage/.env has NO PUBLIC_ token yet (K0 not done) → live fetch not testable; acceptance = build-green + graceful degradation, both confirmed. mapCatalogProduct targets the CURRENT CatalogProduct shape (handle/available/imageAspect are added by K2, not K1 — correct sequencing). committed @ b0b6a3c — NOT pushed (holding so PR #6 stays Wave-1-only). Awaiting operator: (a) merge PR #6, (b) confirm PUBLIC_ token in homepage/.env before K2+.
+
 - (empty)
 
 ## Log (Phase L — Codex appends newest at top)
 
 - 2026-07-01 — Phase L1: footer removed entirely; legal links into about block — aedac2b — build:green check:green (Claude re-ran independently: 0 err/0 warn/6 pre-existing hints) — reverses H5+J1 cleanly. index.astro → <Base landing> (Footer import+usage dropped); Base.astro footer prop + has-footer plumbing deleted (landing/TopBar/IndexOverlay behavior intact); Footer.astro DELETED + footer-chronicle.png (1.1MB) git-rm'd; legacy.astro Footer import+usage removed too (REQUIRED — it rendered <Footer/>, deleting the component would break its build; legacy is the non-live full-scroll page). global.css: 3-variant lock (has-footer unlock + is-scroll-locked re-lock) collapsed to ONE rule `html.landing,html.landing body{overflow:hidden;height:100%}`; all 76 lines of .site-footer* clone CSS deleted. HeroVideo.astro: updatePageScrollLock() + all 4 call sites (setMenuSectionState, both transitionToStage paths, closeStage) + scrollTo(0,0) guard removed — stage/pager logic otherwise byte-identical. Added <p class="hero-info__legal"> under contact: refund/privacy/terms policy links, &middot;-separated, full https target=_blank rel=noopener (no withBase), muted rgba(0,0,0,.55) 10px (9px mobile), hover-underline. Newsletter died with footer (not relocated, intentional). Orphan grep clean (only match is an unrelated 'Footer line on the card' comment in content.ts). Reviewed clean by Claude. committed @ aedac2b — ready for operator verify. Not pushed. NOTE: page is now permanently locked (pure 100vh hero, pre-H5 state) — operator should click every stage open/close + confirm no scroll.
+- 2026-07-01 — Phase L3: & FAM interview-series teaser stage (Wave 3; copies M3's stage pattern) — 5fb0f1f (code) + fam photo asset (prior commit) — build:green check:green (Claude re-ran independently: 0 err/0 warn/6 hints; confirmed dist/images/fam-tattoo.jpg + hero__fam markup in dist/index.html; grep confirms ZERO interview items remain anywhere). ASSET: fam photo found at archive/assets-src/& son homepage assets/& fam-tatoo.jpg, copied → public/images/fam-tattoo.jpg (1721×2295 portrait, committed separately). content.ts: added fam? flag to HeroMenuSection; & FAM section — 3 interview items DELETED, fam:true, items:[] (headerless like PRE-ORDER). HeroVideo.astro: data-fam attr + panel guard `!section.preorder && !section.fam` (no menu-panel); 5th stage 'fam' mirrors M3's 'film' exactly — HeroStage/PanelStage unions, getStagePanel→famPanel, getStageClass→'is-fam', is-fam in both returnStencilFromRight lists + clearStencilReturn + cart-hide + stencil exit-left, famPanel query, openFam() (mirrors openMusic), closeStage aria-hidden, section-header isFamSection branch → openFam. NO × close (closes via & FAM header re-click, matching MUSIC); no video ⇒ no pause logic. <aside class="hero__fam">: <img withBase(/images/fam-tattoo.jpg) alt="& fam" no border> + copy <p> (verbatim: 'an interview series that takes an in-depth look at designers we carry like you've never seen them before, unless you're related to them.') + kicker <p> 'coming soon…' (serif italic muted). CSS: centered portrait column (width:min(34vw,48vh)), enter-from-right 550ms, is-fam active + exit-left rules, mobile override. Codex Chrome-verified open/close/switch + stencil out-left/return. Reviewed clean by Claude (full diff). committed @ 5fb0f1f — ready for operator verify. Not pushed.
 - 2026-07-01 — Phase L2: MUSIC single Spotify playlist — 21a5aeb — build:green check:green — content.ts + HeroVideo.astro; deleted WILLIAM FREDERICK PLAYLIST + SMALL TALK STUDIO PLAYLIST, kept & SON OFFICIAL PLAYLIST with bare href https://open.spotify.com/playlist/6MD3a8wIY0582I3iWIngqE; music:true preserved (header still opens DJ stage). HeroVideo: added isExternalHref=^https?:// gating target=_blank rel=noopener on BOTH the top-level item <a> and the child <a> branches — internal base-relative (/…) links correctly do NOT inherit _blank. Radio-block `music` export untouched. Reviewed clean by Claude. committed @ 21a5aeb — ready for operator verify. Not pushed.
 
 ## Log (Phase M — Codex appends newest at top)
 
+- 2026-07-01 — Phase M3-rev4: enlarge film video, tighter left / bigger right margin (operator revision) — 951cce8 — build:green check:green (Claude re-ran: 0 err/0 warn/6 hints) — global.css .hero__film ONLY, two values: left max(27vw,240px)→max(19vw,232px) (video left edge ~5vw from the menu text which ends ~14vw — reduced dead gap), right 4.5vw→7vw (more margin to page edge). Box ~68.5vw→~74vw so the aspect-ratio:16/9 frame grows the video in both dims (still width-bound, under the 88vh cap). Per operator: sound toggle (.hero__film-toggle) + × (.hero__film-close) NOT scaled — untouched, controls stay their rev3/rev3b size on the now-larger video. Transforms + mobile override (left:0/right:0) untouched. Reviewed clean by Claude. committed @ 951cce8 — ready for operator verify. Not pushed. Note: if the left ~5vw gap still reads too wide (or 19vw ever crowds expanded CLOTHES on some width), it's a one-value nudge.
+- 2026-07-01 — Phase M3-rev3b: enlarge film × close to match rev3 controls (operator follow-up) — 671c6fe — build:green check:green — global.css .hero__film-close only: width/height 30→44px, font 22→28px (line-height 26px→1), bg .22→.5, added display:inline-flex + align/justify center so the × stays centered in the bigger box; position/border/color/z-index/neon-hover unchanged. Reviewed clean by Claude. committed @ 671c6fe — ready for operator verify. Not pushed.
+- 2026-07-01 — Phase M3-rev3: film larger/re-centered off right edge + bigger sound toggle (operator revision) — 184b2ad — build:green check:green (Claude re-ran: 0 err/0 warn/6 hints) — global.css ONLY (video file + rev2 JS/state-machine/markup untouched). GEOMETRY: .hero__film right:0→4.5vw (real right margin), padding:0 2vw 0 0→0, left stays max(27vw,240px) (~2vw menu gap); .hero__film-frame now aspect-ratio:16/9 + width:100% + max-width:calc(88vh*16/9) + max-height:88vh + margin:auto — the 16:9 frame fills the box width-first, precisely caps at 88vh tall, centered; .hero__film-video width:100%/height:100%/object-fit:contain fills the frame edge-to-edge (both 16:9 → NO pillarbox, root cause of rev2's dead-paper/right-hug fixed) so ×/mute/centered controls sit on the TRUE video corners. Bigger both dims, balanced. Transforms byte-identical. SOUND TOGGLE .hero__film-toggle: display:inline-flex/align-items:center/min-height:44px, padding 4px7px→9px12px, font 12→14px, bg .22→.5 (stronger legibility), border + neon hover kept. Reviewed clean by Claude. committed @ 184b2ad — ready for operator verify. Not pushed.
+- 2026-07-01 — Phase M3-rev2: film presence + classic centered play/pause glyph + bottom-left mute (operator revision) — 1a31085 — build:green check:green (Claude re-ran: 0 err/0 warn/6 hints) — video file UNTOUCHED (HeroVideo.astro + global.css only). PRESENCE: .hero__film left:max(30vw→27vw,240px); .hero__film-frame + .hero__film-video now width:100% (width-first, fills panel width), max-height 78vh→86vh, object-fit contain native aspect — video now commands the space, minimal side dead paper. CENTERED PLAYBACK: new <button class="hero__film-playback" data-film-playback> centered in frame (62px, 58px mobile), two inline-SVG glyphs (filled triangle --play / two rounded bars --pause), ink #000 with white drop-shadow halo for legibility (no chrome/circle), neon-green on hover (@media hover:hover). State machine via updateFilmPlayback + filmHasStarted flag: hidden=isPlaying (controls vanish while playing); default(no class)=▶; .is-paused-after-start (filmHasStarted && paused)=⏸; filmHasStarted set on first 'play'; clicking glyph OR video toggles. MUTE: bottom-left .hero__film-toggle repurposed to data-film-mute, same lowercase-mono style + neon hover; label 'sound on'⇄'sound off' wired to video.muted; resetFilmMute() (muted=false) on init + closeStage + on leaving film via transitionToStage. Reviewed clean by Claude (full diff). committed @ 1a31085 — ready for operator verify. Not pushed. FLAGS for operator: (1) PER SPEC the PAUSED-after-start state shows the PAUSE glyph ⏸ (conventional players show ▶ when paused) — one-glyph swap (.is-paused-after-start rule) if you want it flipped after seeing it; (2) 'all controls vanish while playing' implemented as the CENTERED playback glyph hiding while playing — the × and mute stay accessible (so you can close/mute without pausing first); say if you want those to auto-hide-on-play + reveal-on-hover too; (3) mute also resets to sound-on when you switch from film to another stage (not just on ×) — matches 'reset when the stage closes'.
+- 2026-07-01 — Phase M3-rev: film panel contained clear of the menu + visible play control (operator revision, screenshot-verified) — 5b4e851 — build:green check:green (Claude re-ran: 0 err/0 warn/6 hints) — LAYOUT ONLY, video file untouched (only HeroVideo.astro + global.css changed). .hero__film re-geometried from inset:0/margin:auto (centred in full viewport → spilled into menu) to position top:0/right:0/bottom:0/left:max(30vw,240px) (matches .hero__catalog), flex-centred, padding 0 2vw 0 0 — confined RIGHT of the menu, never overlapping menu/about/cart. Slide transforms KEPT byte-identical (off-screen translateX(calc(50vw+100%)), shared active translateX(0), shared exit translateX(-110%)). New wrapper <div class="hero__film-frame"> (position:relative; inline-flex; fit-content; max-height:78vh) shrink-wraps the video so the × (top-right) + play/pause (bottom-left) buttons anchor to the VIDEO corners, not the letterbox — buttons' own CSS unchanged, just reparented. Video: width/height auto, max-width:100%, max-height:78vh, object-fit:contain (native aspect, no crop). .hero__film-toggle:hover stays neon-green in the @media(hover:hover) group; video-click toggle + updateFilmToggle unchanged; no autoplay, audio stays. Mobile: .hero__film top:clamp(88px,16vh,132px)/left:0/right:0, padding 0 4vw (clear of horizontal menu tabs), frame+video max 100%. Reviewed clean by Claude (full diff). committed @ 5b4e851 — ready for operator verify. Not pushed. ASSET HOUSEKEEPING (operator decisions): new-about-homepage.mp4 DELETED (unused, superseded) — commit prior; about-film.mp4 kept at 32MB (preload=metadata → downloads only on demand) — CANDIDATE FOR A LATER OPTIMIZE PASS (lighter encode) when convenient, not blocking.
+- 2026-07-01 — Phase M2b: stencil white by default, neon-green on hover (operator revision to M2) — 58e8030 — build:green check:green — global.css 2 lines: .hero__stencil background-color var(--neon-green)→#ffffff (white house as before, via mask fill); hover rule filter:brightness(1.28)→background-color:var(--neon-green) inside @media(hover:hover). Now matches the menu-text hover language (white→green only while hovered, signals clickable); touch devices stay white (no stuck green). Mask/sizing/aspect-ratio/transform/exit-left untouched. Reviewed clean by Claude. committed @ 58e8030 — ready for operator verify. Not pushed.
+- 2026-07-01 — Phase M3: click house → about film stage (Wave 3; establishes the 4th-stage pattern L3 copies) — 0e5a442 (code) + 32d2e21 (asset) — build:green check:green (Claude re-ran independently: 0 err/0 warn/6 hints; confirmed dist/videos/about-film.mp4 (32MB) + hero__film markup in dist/index.html). ASSET DECISION (operator asked which path): new-about-homepage.mp4 REJECTED — ffprobe showed a different 17.7s cut (vs master 64.4s), 1920×1080 not native, and NO audio track (spec requires audio). Encoded fresh from master about-original.mp4 → public/videos/about-film.mp4: H.264 high, CRF20, native 2048×1152 (16:9), no crop, AAC stereo audio copied, +faststart; 32MB (large but quality was the stated priority). CODE (HeroVideo.astro + global.css): added 'film' to HeroStage+PanelStage; getStagePanel/getStageClass/is-film; element queries filmPanel/filmVideo/filmToggle/filmClose/filmOpen; is-film added to both returnStencilFromRight class-lists + the cart-hide rule + the stencil exit-left rule (house slides out left). openFilm() mirrors openMusic(). Trigger: [data-film-open] (M2 button) guarded to landing-only → setMenuSectionState(null)+openFilm(). <aside class="hero__film"> = <video src=withBase(/videos/about-film.mp4) preload=metadata playsinline, no autoplay/loop/muted, controls hidden> + × close [data-film-close] + lowercase-mono play/pause [data-film-toggle] bottom-left (real buttons, M1 neon hover). Manual playback: click video OR toggle → play/pause; play/pause/ended events keep the label synced; play() promise .catch guarded. PAUSE ON EVERY EXIT verified: transitionToStage pauses when previousStage==='film' (menu-header switch) AND closeStage pauses + resets label; currentTime NEVER reset → reopen resumes from position. Panel box = stencil's (height:min(82vh,76vw)/max-width:84vw) but aspect-ratio:16/9 + max-height:47.25vw so the film shows at native 16:9 centered where the house was, object-fit:contain no crop; enters-from-right 550ms; z-index:2; mobile override. Reviewed clean by Claude (full script+CSS read). committed @ 0e5a442+32d2e21 — ready for operator verify. Not pushed. Operator: (a) browser-verify the film↔catalog/preorder/music/landing matrix is flicker-free + audio plays on user-initiated play; (b) 32MB asset — fine per quality priority, flag if you want a lighter encode; (c) superseded new-about-homepage.mp4 (4.95MB, tracked, now unused) can be deleted — left in place pending your OK.
+- 2026-07-01 — Phase M2: house stencil white→neon-green + clickable (Wave 3, out of order, operator-authorized) — 193e0b8 — build:green check:green — HeroVideo.astro + global.css. <img class="hero__stencil"> → <button type="button" class="hero__stencil" data-film-open aria-label="about & son" style="--stencil-mask-url:url('<withBase /images/hero-stencil.png>')"> (base-aware mask URL via inline CSS var). CSS: background-color:var(--neon-green) + mask-image/-webkit-mask-image:var(--stencil-mask-url), mask-repeat:no-repeat/position:center/size:contain (+ -webkit-); button reset (border:none/appearance:none/padding:0/display:block); pointer-events none→auto + cursor:pointer; @media(hover:hover) filter:brightness(1.28). KEY: added aspect-ratio:1547/1600 — required because an empty <button> has no intrinsic ratio (an <img> did), and it matches hero-stencil.png's EXACT native dims (verified 1547×1600 via sips) → box ratio == mask ratio, contain fills with no letterbox, clickable area == visible green shape, same size/position as the old img. Preserved byte-identical: inset:0/height:min(82vh,76vw)/max-width:84vw/margin:auto/z-index:1, transform:translateX(0)+transition:transform .55s, the exit-left rule (.is-catalog/.is-preorder/.is-music), and returnStencilFromRight()'s inline-transform dance (script queries stencil as HTMLElement, uses only style.transform/.transition/offsetWidth/transitionend — no <img> assumptions). Green mask used (no fallback). Click does nothing yet — M3 wires data-film-open. Reviewed clean by Claude. committed @ 193e0b8 — ready for operator verify. Not pushed. Operator: visually confirm the green house renders (mask is runtime, not build-checkable) + hover brightens.
 - 2026-07-01 — Phase M1b: persistent neon-green on OPEN sub-folder headers — 7dcfa82 — build:green check:green — global.css one-liner (operator feedback on Wave 1): added `.hero__menu-item--group.is-open > .hero__menu-subheader{color:var(--neon-green)}` at line 482, immediately after the top-level analog (`.hero__menu-section.is-open > .hero__menu-header`), OUTSIDE the @media(hover:hover) block (line 506) so it's a persistent open-state, not hover. CATEGORIES + DESIGNERS subheaders now stay green while expanded, collapse back to ink — mirroring the top-level section header. Reviewed clean by Claude. committed @ 7dcfa82 — shipped with Wave 1.
 - 2026-07-01 — Phase M1: universal neon-green hover on clickable homepage text — 76c1c30 — build:green check:green — global.css only. Consolidated (not just added): removed the old scattered unguarded `:hover{text-decoration:underline}` rules (.hero__cart, .hero__preorder-close, .hero__catalog-close, .product-card__title, .hero__menu-header, .hero__menu-link, .hero__menu-subheader) and rebuilt them inside ONE @media (hover:hover) block adding color:var(--neon-green). Hover honesty verified: uses `a.hero__menu-link:hover` (anchor-only prefix) + `.hero__menu-link[data-shop-all]:hover` so the inert <span> placeholders are excluded (they also lose their old misleading hover-underline — correct). .hero__cart green via currentColor. Active/pressed states untouched (.is-open>.hero__menu-header, .hero__menu-link.is-active stay solid green). No TopBar/--accent touched. Reviewed clean by Claude. committed @ 76c1c30 — ready for operator verify. Not pushed.
 

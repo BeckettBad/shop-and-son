@@ -120,6 +120,7 @@ export interface HeroMenuSubItem {
 export interface HeroMenuSection {
   label: string;
   preorder?: boolean;
+  fam?: boolean;
   music?: boolean;
   items: HeroMenuSubItem[];
 }
@@ -205,11 +206,8 @@ export const heroMenu: HeroMenuSection[] = [
   },
   {
     label: "& FAM",
-    items: [
-      { label: "SMALL TALK STUDIO INTERVIEW" },
-      { label: "WILLIAM FREDERICK INTERVIEW" },
-      { label: "LIV RYAN INTERVIEW" },
-    ],
+    fam: true,
+    items: [],
   },
   {
     label: "PRE-ORDER",
