@@ -787,11 +787,14 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const renderCatalogRows = (products: CatalogProduct[], targetRowIndex: number) => {
     if (!catalogTrack) return;
 
+    const sorted = [...products].sort(
+      (a, b) => Number(a.available === false) - Number(b.available === false),
+    );
     const rows: HTMLDivElement[] = [];
-    for (let index = 0; index < products.length; index += 3) {
+    for (let index = 0; index < sorted.length; index += 3) {
       const row = document.createElement("div");
       row.className = "hero__catalog-row";
-      for (const product of products.slice(index, index + 3)) {
+      for (const product of sorted.slice(index, index + 3)) {
         row.append(createProductCard(product));
       }
       rows.push(row);
