@@ -141,6 +141,27 @@ function mapProductImage(image: StorefrontImage): ProductImage {
   };
 }
 
+export function sanitizeShopifyHtml(html: string): string {
+  if (!html) return "";
+
+  const document = new DOMParser().parseFromString(html, "text/html");
+  document.querySelectorAll("script, iframe, object, embed, form").forEach((element) => element.remove());
+  document.body.querySelectorAll("*").forEach((element) => {
+    for (const attribute of Array.from(element.attributes)) {
+      const name = attribute.name.toLowerCase();
+      const value = attribute.value.trim().toLowerCase();
+      if (name.startsWith("on")) {
+        element.removeAttribute(attribute.name);
+      }
+      if ((name === "href" || name === "src") && value.startsWith("javascript:")) {
+        element.removeAttribute(attribute.name);
+      }
+    }
+  });
+
+  return document.body.innerHTML;
+}
+
 function getCollectionHandleFromUrl(url: string | null | undefined): string | undefined {
   if (!url) return undefined;
 

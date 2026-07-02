@@ -1,0 +1,290 @@
+---
+import Base from "../layouts/Base.astro";
+
+const homeUrl = import.meta.env.BASE_URL.replace(/\/$/, "") + "/";
+---
+
+<Base bare title="&son">
+  <main class="product-detail" data-product-detail>
+    <header class="product-detail__top">
+      <button type="button" class="product-detail__back" data-product-back>← back</button>
+      <a class="product-detail__cart" href={homeUrl} aria-label="cart">
+        <svg focusable="false" class="icon icon-bag" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 20 20" style="enable-background:new 0 0 24 24;" xml:space="preserve">
+<path fill="currentColor" d="M17.200012,5.519043h-3.573059V4.60791c0-2-1.626953-3.626953-3.626953-3.626953S6.373047,2.60791,6.373047,4.60791
+	v0.911133H2.799988L1,18.519043h18L17.200012,5.519043z M7.373047,4.60791c0-1.44873,1.178223-2.626953,2.626953-2.626953
+	c1.448242,0,2.626953,1.178223,2.626953,2.626953v0.911133H7.373047V4.60791z M3.671082,6.519043h2.701965v1h1v-1h5.253906v1h1v-1
+	h2.701965l1.523071,11H2.14801L3.671082,6.519043z"/>
+</svg>
+      </a>
+    </header>
+    <section class="product-detail__state" data-product-state>loading</section>
+  </main>
+
+  <script>
+    import {
+      getProduct,
+      isStorefrontConfigured,
+      sanitizeShopifyHtml,
+      type ProductDetail,
+      type ProductOption,
+      type ProductVariant,
+    } from "../lib/storefront-client";
+
+    declare global {
+      interface Window {
+        __cartReady?: boolean;
+      }
+    }
+
+    const homeUrl = import.meta.env.BASE_URL.replace(/\/$/, "") + "/";
+    const shopifyProductUrl = (handle: string) =>
+      `https://shopandson.com/products/${encodeURIComponent(handle)}`;
+    const state = document.querySelector<HTMLElement>("[data-product-state]");
+    const back = document.querySelector<HTMLButtonElement>("[data-product-back]");
+    const handle = new URLSearchParams(window.location.search).get("handle")?.trim() ?? "";
+
+    back?.addEventListener("click", () => {
+      if (window.history.length > 1) {
+        window.history.back();
+        return;
+      }
+      window.location.assign(homeUrl);
+    });
+
+    const setText = (element: HTMLElement, value: string) => {
+      element.textContent = value;
+    };
+
+    const renderHomeLink = () => {
+      const link = document.createElement("a");
+      link.className = "product-detail__home-link";
+      link.href = homeUrl;
+      link.textContent = "back home";
+      return link;
+    };
+
+    const renderMessage = (message: string) => {
+      if (!state) return;
+      const line = document.createElement("p");
+      line.className = "product-detail__message";
+      line.textContent = message;
+      state.className = "product-detail__state product-detail__state--message";
+      state.replaceChildren(line, renderHomeLink());
+    };
+
+    const renderStorefrontFallback = () => {
+      if (!state) return;
+      const link = document.createElement("a");
+      link.className = "product-detail__fallback-link";
+      link.href = shopifyProductUrl(handle);
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.textContent = "buy on shopandson.com";
+      state.className = "product-detail__state product-detail__state--message";
+      state.replaceChildren(link);
+    };
+
+    const getVisibleOptions = (product: ProductDetail) =>
+      product.options.filter((option) => option.values.length > 0);
+
+    const isSingleVariantProduct = (product: ProductDetail) => {
+      const options = getVisibleOptions(product);
+      return options.length === 0 || (options.length === 1 && options[0].values.length <= 1);
+    };
+
+    const optionKey = (name: string) => name.toLowerCase();
+
+    const valuesMatchVariant = (variant: ProductVariant, selectedValues: Map<string, string>) =>
+      variant.selectedOptions.every((selectedOption) => {
+        const selectedValue = selectedValues.get(optionKey(selectedOption.name));
+        return selectedValue === selectedOption.value;
+      });
+
+    const resolveVariant = (variants: ProductVariant[], selectedValues: Map<string, string>) =>
+      variants.find((variant) => valuesMatchVariant(variant, selectedValues));
+
+    const copySelectedValues = (selectedValues: Map<string, string>) => new Map(selectedValues);
+
+    const setValuesFromVariant = (selectedValues: Map<string, string>, variant: ProductVariant | undefined) => {
+      variant?.selectedOptions.forEach((selectedOption) => {
+        selectedValues.set(optionKey(selectedOption.name), selectedOption.value);
+      });
+    };
+
+    const makeButtonOrLink = (product: ProductDetail, variant: ProductVariant | undefined) => {
+      const hasCart = window.__cartReady === true;
+      if (!hasCart && product.availableForSale !== false) {
+        const link = document.createElement("a");
+        link.className = "product-detail__add";
+        link.href = shopifyProductUrl(product.handle);
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = "buy on shopandson.com";
+        return link;
+      }
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "product-detail__add";
+
+      if (product.availableForSale === false) {
+        button.textContent = "sold out";
+        button.disabled = true;
+        return button;
+      }
+
+      button.textContent = "add to cart";
+      button.disabled = !variant?.availableForSale;
+      button.addEventListener("click", () => {
+        if (!variant?.availableForSale) return;
+        document.dispatchEvent(
+          new CustomEvent("cart:add", {
+            detail: {
+              variantId: variant.id,
+              quantity: 1,
+            },
+          }),
+        );
+      });
+      return button;
+    };
+
+    const renderVariantSelector = (
+      product: ProductDetail,
+      selectedValues: Map<string, string>,
+      onSelect: (option: ProductOption, value: string) => void,
+    ) => {
+      if (isSingleVariantProduct(product)) return undefined;
+
+      const selector = document.createElement("div");
+      selector.className = "product-detail__variants";
+
+      getVisibleOptions(product).forEach((option) => {
+        const row = document.createElement("div");
+        row.className = "product-detail__variant-row";
+
+        const label = document.createElement("p");
+        label.className = "product-detail__variant-label";
+        label.textContent = option.name;
+
+        const list = document.createElement("div");
+        list.className = "product-detail__variant-values";
+
+        option.values.forEach((value) => {
+          const button = document.createElement("button");
+          const candidateValues = copySelectedValues(selectedValues);
+          candidateValues.set(optionKey(option.name), value);
+          const candidateVariant = resolveVariant(product.variants, candidateValues);
+          const isUnavailable = !candidateVariant?.availableForSale;
+
+          button.type = "button";
+          button.className = "product-detail__variant";
+          button.textContent = value;
+          button.disabled = isUnavailable;
+          button.classList.toggle("is-selected", selectedValues.get(optionKey(option.name)) === value);
+          button.classList.toggle("is-unavailable", isUnavailable);
+          button.addEventListener("click", () => onSelect(option, value));
+          list.append(button);
+        });
+
+        row.append(label, list);
+        selector.append(row);
+      });
+
+      return selector;
+    };
+
+    const renderProduct = (product: ProductDetail) => {
+      if (!state) return;
+
+      const selectedValues = new Map<string, string>();
+      const initialVariant = product.variants.find((variant) => variant.availableForSale) ?? product.variants[0];
+      setValuesFromVariant(selectedValues, initialVariant);
+
+      const gallery = document.createElement("section");
+      gallery.className = "product-detail__gallery";
+      product.images.forEach((productImage, index) => {
+        const image = document.createElement("img");
+        image.className = "product-detail__image";
+        image.src = productImage.url;
+        image.alt = productImage.altText || product.title;
+        image.decoding = "async";
+        image.loading = index === 0 ? "eager" : "lazy";
+        image.fetchPriority = index === 0 ? "high" : "auto";
+        if (productImage.width) image.width = productImage.width;
+        if (productImage.height) image.height = productImage.height;
+        if (productImage.srcset) {
+          image.srcset = productImage.srcset;
+          image.sizes = "(max-width: 760px) 100vw, 55vw";
+        }
+        gallery.append(image);
+      });
+
+      const detail = document.createElement("section");
+      detail.className = "product-detail__panel";
+
+      const vendor = document.createElement("p");
+      vendor.className = "product-detail__vendor";
+      setText(vendor, product.vendor);
+
+      const title = document.createElement("h1");
+      title.className = "product-detail__title";
+      setText(title, product.title);
+
+      const price = document.createElement("p");
+      price.className = "product-detail__price";
+
+      const controlSlot = document.createElement("div");
+      controlSlot.className = "product-detail__control";
+
+      const desc = document.createElement("div");
+      desc.className = "product-detail__desc";
+      desc.innerHTML = sanitizeShopifyHtml(product.descriptionHtml);
+
+      const renderControls = () => {
+        const variant = isSingleVariantProduct(product)
+          ? initialVariant
+          : resolveVariant(product.variants, selectedValues);
+        price.textContent = variant?.price ?? initialVariant?.price ?? "";
+        const selector = renderVariantSelector(product, selectedValues, (option, value) => {
+          selectedValues.set(optionKey(option.name), value);
+          renderControls();
+        });
+        const addControl = makeButtonOrLink(product, variant);
+        const controls: Node[] = selector ? [selector, addControl] : [addControl];
+        controlSlot.replaceChildren(...controls);
+      };
+
+      renderControls();
+      detail.append(vendor, title, price, controlSlot, desc);
+
+      state.className = "product-detail__content";
+      state.replaceChildren(gallery, detail);
+    };
+
+    const init = async () => {
+      if (!state) return;
+
+      if (!handle) {
+        renderMessage("this piece is no longer listed");
+        return;
+      }
+
+      if (!isStorefrontConfigured) {
+        renderStorefrontFallback();
+        return;
+      }
+
+      const product = await getProduct(handle);
+      if (!product) {
+        renderMessage("this piece is no longer listed");
+        return;
+      }
+
+      renderProduct(product);
+    };
+
+    void init();
+  </script>
+</Base>
