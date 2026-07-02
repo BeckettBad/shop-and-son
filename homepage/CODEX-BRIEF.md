@@ -73,7 +73,7 @@ diff against that sub-task's **Done when** + the risks list before the next
 dispatch. Before each dispatch, Claude updates the line below so Codex has ONE
 target; everything else in this file is context, not instruction.
 
-> **ACTIVE SUB-TASK: (none — WAVE 2 COMPLETE on origin/dev: K1 b0b6a3c · K2 c68cfc9 (+fix 76ebf36) · K3 6fa12ec · L4 d9ff640 · K4 6b4710e (+d48790e +42d1cca) · K6 3dc8053 · K7 93694bf · K5 deploy.yml. All reviewed + built green, pushed. AT THE WAVE-2 SHIP GATE: awaiting operator's full dev eyeball (cart end-to-end, product pages, live menus, K7 sort) then an EXPLICIT "ship wave 2". Ship carries Wave 2 only [dev is Wave 2 + the already-live Wave 3/K1 already on main]. Deferred last-pass: the parked "now playing in store" idea (needs Ben's OK).)**
+> **ACTIVE SUB-TASK: N2 — The product stage inside the hero** (see the Phase N section below). N1 done (e70e5ae): mountProductView(container, handle) ready. Add "product" PanelStage entered FROM catalog (keep catalogue DOM alive + save {collection,rowIndex}); card plain-left-click intercept (cmd/ctrl/shift/middle pass to standalone page); URL sync 4 paths (pushState ?product / history.back on close / popstate / direct-load + replaceState strip); panel own scroll OUTSIDE [data-catalog-viewport]; close→saved catalogue; cart drawer above + Esc priority to drawer; /product/ still works. Ships WITH Wave 2.
 
 Recommended order (three waves, operator verifies on `dev` after each wave and
 ships dev → main per wave, not one giant merge):
@@ -970,6 +970,92 @@ the house back; mobile unaffected or improved.
 
 ---
 
+## PHASE N — product view as an in-page stage (ships WITH Wave 2)
+
+Operator decisions (made 2026-07-02, do NOT re-ask): Wave 2 holds and ships
+together with Phase N; the standalone `/product/` page STAYS (direct links, new
+tabs, shares) and URLs sync; product images are a free-scrolling stack; closing a
+product returns to the catalogue where the user left off. TWO sub-tasks, one
+commit each, **N1 before N2**.
+
+### N1 — Extract the shared product-detail renderer (NO behavior change)
+
+Refactor K3's product page so the detail VIEW (image stack, details column,
+variant selector, add-to-cart `cart:add` dispatch + interim buy-on-shopandson,
+sanitized `descriptionHtml`, and the loading / not-found / no-token states) is
+built by ONE shared client module (DOM-builder pattern, like `createProductCard`)
+consumed by BOTH the `/product/` page (now) and the hero panel (N2).
+
+- New module e.g. `src/lib/product-view.ts`: exports a mount function that renders
+  the detail view + drives its states INTO A PROVIDED CONTAINER — e.g.
+  `mountProductView(container: HTMLElement, handle: string)` (loading → getProduct →
+  render / not-found / unconfigured-fallback). Move product.astro's render logic
+  (renderProduct, gallery, panel, renderVariantSelector, makeButtonOrLink,
+  renderMessage, renderStorefrontFallback) into it verbatim. Keep the same class
+  names + markup so CSS is unchanged.
+- NO page-specific assumptions: the module must NOT rely on document-level scroll
+  or on being the whole page — it renders into the given container, which owns its
+  scroll context. `/product/` keeps its own header (← back + cart icon) OUTSIDE the
+  container and just calls the module.
+- `product.astro` becomes a thin consumer: header chrome + a container + one
+  `mountProductView(container, handle)` call.
+
+**Done when:** build+check green; `/product/?handle=…` behaves + renders
+PIXEL-IDENTICAL to today (all states); the module has no page-specific assumptions
+(renders into a provided container with its own scroll context).
+
+### N2 — The product stage inside the hero
+
+Clicking a catalogue card no longer navigates — the listings row phases out
+(existing exit animation) and the product view slides in on the same page; the
+menu + about block stay put.
+
+- **STAGE:** add `"product"` to the stage machinery (`PanelStage`, `getStagePanel`,
+  `getStageClass` → `is-product`, `openProduct(handle)`). It is the ONLY stage
+  entered FROM catalog, not from the menu. On open: keep the catalogue panel's DOM
+  ALIVE (hide + aria-hidden — do NOT re-render it) and SAVE `{collection, rowIndex}`.
+  Product panel = same bounds discipline as the catalogue (right-of-menu), × top-
+  right; content via the N1 module `mountProductView(panelContainer, handle)`
+  (loading while it fetches; not-found per N1).
+- **CLOSE = BACK TO CATALOGUE:** × or Esc restores the SAVED catalogue — same
+  collection, same rowIndex, re-measured — reverse animation (product exits the way
+  it came, catalogue re-enters). If the mirrored animation fights the existing
+  keyframes, matching the standard stage transition is acceptable — FLAG it, operator
+  judges feel. The catalogue's OWN × still exits to the bare hero. Opening any menu
+  section / other stage while a product is open closes BOTH layers cleanly.
+- **CARD CLICKS — progressive enhancement, EXACTLY this:** cards KEEP their
+  `/product/?handle=…` hrefs. Intercept PLAIN LEFT-CLICKS only (no cmd/ctrl/shift/
+  middle-click — those still open the standalone page in a new tab) → `preventDefault`
+  → open the stage.
+- **URL SYNC (implement + test each of the four paths):**
+  1. Open via card click → `history.pushState` `?product=<handle>` onto the homepage
+     URL (base-path aware).
+  2. Close via ×/Esc → if WE pushed that state, call `history.back()` and let the
+     popstate handler do the actual close (never pushState a "closed" entry — no
+     history littering).
+  3. Browser back/forward → popstate handler opens/closes the stage to match,
+     including restoring the catalogue on back.
+  4. Direct load of the homepage WITH `?product=<handle>` → after hydration, open the
+     product stage directly (no catalogue underneath); closing it then goes to the
+     bare hero and `replaceState` strips the param.
+- **SCROLL:** page stays scroll-locked; the IMAGE STACK is the panel's OWN scroll
+  context (`overflow-y:auto; overscroll-behavior:contain`), details column sticky
+  within the panel. The panel MUST sit OUTSIDE `[data-catalog-viewport]` so the
+  catalogue's wheel-hijack listener never captures its scroll. Mobile: single
+  scrollable panel, images then details, × reachable.
+- **CART:** add-to-cart uses the same `cart:add` → drawer flow (K4). Verify the
+  drawer z-index sits ABOVE the product stage, and Esc priority: if the drawer is
+  open, Esc closes the DRAWER, not the product.
+- The `/product/` page keeps working for direct links, new tabs, shares.
+
+**Done when:** build+check green; catalogue → product → × returns to the same
+collection at the same row; browser back does the same; refresh mid-product reopens
+that product; cmd-click opens the standalone page; add-to-cart from the panel through
+Shopify checkout works; all other stages + menu interactions close the product layer
+cleanly; mobile sane.
+
+---
+
 ### Phase K + L + M risks / review focus (Claude checks these on every diff)
 
 - **Row pager regression (K2):** measured offsets must survive resize, re-render,
@@ -1142,6 +1228,7 @@ scrolling down reveals it; CLOTHES stays anchored at the top.
 
 ## Log (Phase K — Codex appends newest at top)
 
+- 2026-07-02 — Phase N1: extract shared product-detail renderer (pure refactor, no behavior change) — e70e5ae — build:green check:green (Claude re-ran: 0/0/6, 4 pages) — NEW src/lib/product-view.ts (253 lines) exports mountProductView(container, handle): sets container "loading" → guards no-handle/!isStorefrontConfigured (renderStorefrontFallback → shopandson.com/products/<handle>) → getProduct → not-found ("this piece is no longer listed") or renderProduct. ALL of product.astro's render logic moved VERBATIM (gallery .product-detail__gallery, panel .product-detail__panel, renderVariantSelector, makeButtonOrLink incl. window.__cartReady interim buy-on-shopandson + cart:add CustomEvent, renderMessage, renderStorefrontFallback, variant resolution) — same class names/markup/data-attrs → pixel-identical, global.css untouched. Renders ONLY into the provided container (no document-scroll reliance) → reusable by N2's hero panel. product.astro (254 lines removed) now thin: <Base bare> shell + header (← back + cart button/badge unchanged) + [data-product-state] container + one mountProductView(state, handle) call. HeroVideo/global.css untouched. Reviewed clean by Claude (mountProductView flow + moved logic + product.astro thinness). committed @ e70e5ae — pushed to origin/dev. N2 next.
 - 2026-07-02 — Phase K5: freshness ops — nightly rebuild + PUBLIC_ token into the Pages deploy build — (deploy.yml; committed with brief) — CLAUDE-AUTHORED (the documented homepage-only scope EXCEPTION; the dispatch script hard-fences Codex to homepage/, and deploy.yml is at repo-root .github/workflows/). Changes: (1) added `schedule: - cron: "0 8 * * *"` (daily ~08:00 UTC ≈ 4am ET) alongside push[main]/workflow_dispatch — redeploys main as-is to keep the build-time products.json snapshot fresh (runtime Storefront layer already revalidates; this keeps the instant-paint snapshot + no-token fallback from rotting). (2) added `env:` to the "Build site" step passing PUBLIC_SHOPIFY_STORE_DOMAIN + PUBLIC_SHOPIFY_STOREFRONT_API_TOKEN from `${{ vars.* }}` (repo Actions Variables, NOT Secrets — public token) so Astro inlines them into the deployed client bundle → the live site gets catalogue/cart/menu features. Unset (forks/PRs) → K1 quiet degradation → build stays green. Operator confirmed + Claude verified the two Actions Variables exist by name (gh variable list). YAML validated (js-yaml: triggers [push, workflow_dispatch, schedule], cron ok); local build green (workflow change doesn't affect local build). deploy.yml effect lands when Wave 2 merges to main. Reviewed by Claude (self). committed with brief — pushed to origin/dev.
 - 2026-07-02 — Phase K7: availability sort (in-stock first, sold-out last) in every catalogue — 93694bf — build:green check:green (Claude re-ran: 0/0/6) — HeroVideo.astro renderCatalogRows only (the SINGLE render-prep point both snapshot paint + live refresh call): `const sorted = [...products].sort((a,b)=>Number(a.available===false)-Number(b.available===false))` then build rows from `sorted`. Stable partition on a COPY (no mutation) → available-first, sold-out-last, preserving Shopify collection order within each group (Array.sort is stable). Because it's the one render point, snapshot and post-refresh order agree (no reshuffle flicker); the SWR diff (unsorted) still just detects change. No chrome/headers between groups (dimmed cards + sold-out chips show the split); pager re-measures rebuilt rows (K2). Reviewed clean by Claude. committed @ 93694bf — pushed to origin/dev.
 - 2026-07-02 — Phase K6: live hero nav menus mirror Shopify admin — 3dc8053 — build:green check:green (Claude re-ran: 0/0/6). NEW src/lib/menu.ts: getLiveHeroMenu() → getMenu("main-menu") (K1), maps the 3 top items to {categories, designers, objects} entry lists (label uppercased, collection from collectionHandle); categories = clothing.items minus shop-all/clothing-1; returns null on empty/missing item (→ content.ts fallback). HeroVideo.astro: collectionButtons array → getCollectionButtons() re-query (works on reconciled DOM); [data-shop-all] catalogue-open switched from per-button binding to a SINGLE delegated listener on .hero__menu (survives node replacement); hydrateLiveMenu() on load reconciles 3 leaf lists — CLOTHES>CATEGORIES + CLOTHES>DESIGNERS nested <ul> (rebuilt as hero__menu-link--bullet), OBJECTS panel leaves after SHOP ALL (rebuilt as --dash) — each with an entriesMatch equality guard (skip if collection+label identical), rebuilding buttons with identical data-shop-all/data-collection/data-collection-label markup + active state; section/subgroup is-open + [data-menu-subgroup] toggles + section headers untouched (only leaf lists swap → open state preserved); SHOP ALL parents (clothing-1/house-1) kept. No token / fetch fail / missing item → no-op, content.ts stands. content.ts UNTOUCHED (fallback). Reviewed clean by Claude (menu.ts + full reconcile/delegation read; getMenu('main-menu') live-verified returns 3 items). committed @ 3dc8053 — pushed to origin/dev. ⚠️ OPERATOR FLAG: OBJECTS now mirrors the LIVE nav = 4 BRANDS (binu binu, danny d's mud shop, mark patrick harrington, shino takeda) + SHOP ALL(house-1), REPLACING the homepage's LIVING/KITCHEN/LIBRARY/SEATING categories on load — the live shopandson.com objects dropdown is brand-based (verified: only main-menu exists; its objects item = those 4 brands). Want categories back → add them to the live Shopify "objects" menu in admin (K6 follows admin) OR say and I'll exempt OBJECTS. CLOTHES CATEGORIES also gains "sale" (clothing-sale). — RESOLVED 2026-07-02: operator ACCEPTED Option A (OBJECTS = the 4 live brands, as shipped; no change).
