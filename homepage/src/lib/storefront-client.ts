@@ -102,6 +102,13 @@ export interface CollectionDetail {
   products: CatalogProduct[];
 }
 
+export interface ShopPolicy {
+  title: string;
+  body: string;
+}
+
+export type ShopPolicyLookup = Record<string, ShopPolicy>;
+
 function normalizeDomain(domain: string | undefined): string | undefined {
   const trimmed = domain?.trim();
   if (!trimmed) return undefined;
@@ -437,4 +444,70 @@ export async function getProduct(handle: string): Promise<ProductDetail | null> 
   } catch {
     return null;
   }
+}
+
+const POLICIES_QUERY = /* GraphQL */ `
+  query Policies {
+    shop {
+      refundPolicy {
+        title
+        handle
+        body
+      }
+      privacyPolicy {
+        title
+        handle
+        body
+      }
+      termsOfService {
+        title
+        handle
+        body
+      }
+    }
+  }
+`;
+
+interface StorefrontPolicyRaw {
+  title: string;
+  handle: string;
+  body: string;
+}
+
+interface PoliciesQueryData {
+  shop: {
+    refundPolicy: StorefrontPolicyRaw | null;
+    privacyPolicy: StorefrontPolicyRaw | null;
+    termsOfService: StorefrontPolicyRaw | null;
+  } | null;
+}
+
+let policiesPromise: Promise<ShopPolicyLookup | null> | undefined;
+
+async function fetchPolicies(): Promise<ShopPolicyLookup | null> {
+  try {
+    const data = await storefrontFetch<PoliciesQueryData>(POLICIES_QUERY);
+    const shop = data?.shop;
+    if (!shop) return null;
+
+    const policies: ShopPolicyLookup = {};
+    [shop.refundPolicy, shop.privacyPolicy, shop.termsOfService].forEach((policy) => {
+      if (!policy?.handle) return;
+      policies[policy.handle] = {
+        title: policy.title,
+        body: policy.body,
+      };
+    });
+
+    return policies;
+  } catch {
+    return null;
+  }
+}
+
+export async function getPolicies(): Promise<ShopPolicyLookup | null> {
+  if (!isStorefrontConfigured) return null;
+
+  policiesPromise ??= fetchPolicies();
+  return policiesPromise;
 }
