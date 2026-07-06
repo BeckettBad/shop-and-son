@@ -267,8 +267,10 @@ position; mobile unchanged.
 
 **PHASE K2 STATUS: ALL 5 COMMITTED ON DEV (2026-07-06) — ready for operator verify. NOT pushed.**
 
-**Log addendum (C4–C5; build:green check:green each):**
-- K2-C5 — 937aa24 — desktop cart nudge: `.hero__cart` top:4vh→calc(8vh - 4px), right:2vw→3.1vw; measured bag-SVG top == CLOTHES header top (72px==72px @1440×900), visibly out of the corner. Mobile untouched.
+**Log addendum (C4–C6 + C5b; build:green check:green each):**
+- K2-C6 — d0e7afd — universal product-text crop fix — product-view.ts bindPanelOverflowHint (scroll+resize+ResizeObserver, cleanup on unmount) toggles `is-more-below`; global.css: panel gets a soft bottom mask fade ONLY while more content is below (clears at scroll end — verified: trouser fades on load, clears at end; vase never fades); title line-height .98→1.12 (italic serif box safety); panel bottom padding → clamp(44px,7vh,88px). Applies to stage + standalone (shared classes).
+- K2-C5b — 9321f2b — operator-directed one-liner (Claude edited directly per instruction): cart → top:5vh right:2.25vw — measured EXACTLY matching the product-page × position (top 45px / right-gap 32px at 1440×900). Supersedes C5's parallel-line placement.
+- K2-C5 — 937aa24 — desktop cart nudge (superseded by C5b): top:4vh→calc(8vh-4px), right:2vw→3.1vw.
 - K2-C4 — a8b8e99 — desktop product views fixed + uniform carousel cap: shared CSS vars (--product-carousel-top-offset 8vh stage / 68px standalone; --product-carousel-bottom-clearance clamp(18px,2.4vh,27px)) cap carousel+viewport max-height for BOTH .hero__product stage and standalone; stage overflow:hidden (no scroll), details panel internal overflow-y:auto, × repositioned absolute top:5vh right:2.25vw (stays clear — cart is hidden on is-product per N2 rule). Verified 1440×900: tall product (4000×6000) image top==CLOTHES top (72==72), bottom margin 60px, no crop, stage doesn't scroll, × visible, details scroll internally; socks reference product top 72/margin 111 — unchanged small-image behavior. Uses max-height (no upscaling of small images).
 
 **Log (newest first; every commit build:green check:green):**
