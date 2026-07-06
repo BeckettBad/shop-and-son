@@ -172,6 +172,77 @@ Operator fine-tunes on dev.
 **After C8:** stop; report 8 hashes + verify results to operator. No push, no
 PR until an explicit "ship" (and PR #9 must merge first).
 
+## PHASE SRCH — product search (PROPOSED 2026-07-06 — awaiting operator approval; do NOT start)
+
+Proposal drafted + interactive mock published to the operator. Concept: a quiet
+lowercase-mono `search` word left of the bag → slide-out underlined input
+(terminal-flavored) → instant suggestions (local snapshot index) merged with
+Shopify Storefront `predictiveSearch` (published-only guaranteed by the
+Headless channel) → suggestion click = existing product stage (PERF prefetch);
+enter = a `?search=` results stage reusing the catalogue panel/renderer.
+Plan: SRCH-C1 trigger+input · C2 local suggestions · C3 predictive merge ·
+C4 results stage. Desktop first; mobile placement joins the mobile round.
+Awaiting Ben's three taste picks: word-vs-icon trigger, text-only-vs-thumbnail
+rows, empty-query behavior.
+
+## PHASE PERF — image/product loading speed (operator-approved, 2026-07-06)
+
+> Diagnosis (measured): product-open is a SERIAL waterfall — click → Storefront
+> getProduct roundtrip → only then image requests → CDN download. Warm-network
+> total 255ms; cold/slow networks stretch each leg serially to the operator's
+> observed 2–3s. No preconnect to cdn.shopify.com or the API host; carousel
+> first image not reusing the card's cached image. Scope: homepage/ only, on
+> dev, one focused commit each, build+check green each, NO push (operator
+> verifies on dev). Functionality unchanged across the board.
+
+**PERF-C1 — preconnect.** src/layouts/Base.astro head: add
+`<link rel="preconnect" href="https://cdn.shopify.com" crossorigin>` and a
+preconnect to the Storefront API host (the store domain used by
+storefront-client — check PUBLIC_SHOPIFY_STORE_DOMAIN usage; hardcode the
+public https://shopandson.com host as the site does elsewhere). Leave the
+existing font preconnects alone. Done when: both links render in built HTML.
+
+**PERF-C2 — intent prefetch + carousel cache-seed.**
+(a) In HeroVideo.astro: on catalog card `pointerenter` AND `touchstart`/
+`pointerdown` (passive), prefetch the product: call a cached-promise
+`prefetchProduct(handle)` (add a Map<handle,Promise> cache around getProduct
+in storefront-client or product-view — openProduct/mountProductView must
+CONSUME the same cache so a click after hover does zero extra fetches; cache
+entries evict on failure so errors retry).
+(b) Cache-seed: when opening the product stage from a card, pass the card
+img's CURRENT currentSrc/src to the product view (e.g. via openProduct arg →
+mountProductView option); the carousel's FIRST slide renders that exact URL
+immediately (browser cache hit = instant paint) and upgrades in place to the
+1100/srcset version once loaded (keep aspect vars correct; no layout jump;
+alt/dimensions from live data when it lands). Standalone /product/ direct
+loads (no card context) behave exactly as today.
+Done when: hover→click on a card fires exactly ONE getProduct request
+(observed in network), and the first slide paints from cache immediately.
+
+**PERF-C3 — adjacent-slide preload + cheap big grids.**
+(a) product-view.ts carousel: when slide N becomes active, ensure slide N+1
+(and N-1) images start loading (they are lazy now) — flip their loading to
+eager / create Image() preloads for the sized URL; arrows should feel instant.
+(b) global.css: `content-visibility:auto` + a sane `contain-intrinsic-size`
+on `.product-card` so SHOP ALL (~250 cards) skips render work off-screen —
+verify scroll restore (J2-C4 scrollTop) still lands correctly with it (if it
+fights scroll restore, scope it out and say so).
+Done when: build+check green; arrow to slide 2 shows no visible load gap on
+throttled network; SHOP ALL scrolls smoothly; scroll-restore still exact.
+
+**After C3:** re-run the waterfall measurement, report before/after numbers.
+NOT pushed until operator ship.
+
+**PHASE PERF STATUS: ALL 3 COMMITTED ON DEV (2026-07-06) — ready for operator verify. NOT pushed.**
+
+**Log (build:green check:green each):**
+- PERF-C3 — 9bc9bb6 — carousel neighbor preload (N±1 eager + Image() warmers, cleanup set) + `.product-card{content-visibility:auto; contain-intrinsic-size:0 420px}`; verified slide-2 complete before arrowing on a 3-image product; J2 scrollTop restore re-verified EXACT (1200→1200) with content-visibility active.
+- PERF-C2 — 198b0ed — intent prefetch: card pointerenter/pointerdown/touchstart → prefetchProduct(handle) (shared promise cache in storefront-client, consumed by mountProductView; evicts on failure) + carousel first-slide cache-seed from the clicked card's currentSrc (upgrades in place; standalone direct loads unchanged). Verified: hover→click = 0 graphql after click, first image rendered 21ms.
+- PERF-C1 — ce3da15 — preconnect cdn.shopify.com + shopandson.com in Base head (both render in built HTML).
+
+**Measured result:** product-open first-image render 255ms (warm baseline) → **21ms after hover-prefetch with zero network requests at click**; cold clicks paint the card's cached image instantly while live data lands behind. Arrow taps instant (neighbor preloaded).
+
+
 ## PHASE K2 — design-tuning pass on J2 (operator voice-memo, 2026-07-06)
 
 > Named K2 because Phase K (commerce core) shipped 2026-07-02. Scope:
@@ -265,7 +336,7 @@ position; mobile unchanged.
 
 ---
 
-**PHASE K2 STATUS: ALL 5 COMMITTED ON DEV (2026-07-06) — ready for operator verify. NOT pushed.**
+**PHASE K2 STATUS: SHIPPED — operator ordered "push all changes to main" 2026-07-06; PR #9 merged @ 43ee927 carrying Wave Mobile (MOB-1–7) + Phase J2 (8 commits) + Phase K2 (8 commits). Pages deploy run 28822275396 green; live site verified updated (hero__menu-break present, last-modified 20:50Z). Next: operator's mobile revision round.**
 
 **Log addendum (C4–C6 + C5b; build:green check:green each):**
 - K2-C7 — 7714b3c — italic left-edge glyph shear (operator report: the g in "green tea incense") — the scrolling details panel clipped left-overhanging italic strokes at its padding box (title left == panel left, paddingLeft 0). Fix: glyph gutter padding-left:clamp(8px,0.6vw,14px) on both stage + standalone panels (desktop). Verified before/after on ?product=green-tea-incense; demo artifact published for operator.
@@ -281,7 +352,7 @@ position; mobile unchanged.
 
 ---
 
-**PHASE J2 STATUS: ALL 8 COMMITTED ON DEV (2026-07-06) — ready for operator verify. NOT pushed.**
+**PHASE J2 STATUS: SHIPPED via PR #9 @ 43ee927 (2026-07-06) — see K2 status note.**
 
 **Log (newest first; every commit build:green check:green):**
 - J2-C8 — b142a32 — panel title aligned to menu header line — global.css one-liner: `.hero__catalog-title{margin-top:clamp(20px,3vh,32px)}` (desktop block); measured delta 0px at 1440; REWORKED from Codex's first attempt (menu-header `top:-3vh` caused OBJECTS+ to overprint DESIGNERS+ — reverted). No other element moved.

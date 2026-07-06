@@ -16,6 +16,19 @@ declare global {
 const homeUrl = import.meta.env.BASE_URL.replace(/\/$/, "") + "/";
 const shopifyProductUrl = (handle: string) =>
   `https://shopandson.com/products/${encodeURIComponent(handle)}`;
+const activeCarouselPreloads = new Set<HTMLImageElement>();
+
+export interface ProductImageSeed {
+  url: string;
+  alt?: string;
+  width?: number;
+  height?: number;
+  aspect?: number;
+}
+
+export interface MountProductViewOptions {
+  seedImage?: ProductImageSeed;
+}
 
 const setText = (element: HTMLElement, value: string) => {
   element.textContent = value;
@@ -158,7 +171,120 @@ const renderVariantSelector = (
   return selector;
 };
 
-const renderProductGallery = (product: ProductDetail) => {
+const getSeedImageUrl = (seedImage: ProductImageSeed | undefined) => {
+  const url = seedImage?.url.trim();
+  return url || undefined;
+};
+
+const setGalleryAspect = (
+  gallery: HTMLElement,
+  image:
+    | {
+        width?: number | null;
+        height?: number | null;
+        aspect?: number;
+      }
+    | undefined,
+) => {
+  if (image?.width && image.height) {
+    gallery.style.setProperty("--product-carousel-aspect", `${image.width} / ${image.height}`);
+    return;
+  }
+
+  if (image?.aspect && Number.isFinite(image.aspect) && image.aspect > 0) {
+    gallery.style.setProperty("--product-carousel-aspect", String(image.aspect));
+  }
+};
+
+const upgradeSeededImage = (image: HTMLImageElement, productImage: ProductDetail["images"][number]) => {
+  const loader = new Image();
+  loader.decoding = "async";
+  if (productImage.srcset) {
+    loader.srcset = productImage.srcset;
+    loader.sizes = "(max-width: 760px) 54vw, 55vw";
+  }
+  loader.onload = () => {
+    if (!image.isConnected) return;
+
+    image.src = productImage.url;
+    if (productImage.srcset) {
+      image.srcset = productImage.srcset;
+      image.sizes = "(max-width: 760px) 54vw, 55vw";
+    }
+  };
+  loader.src = productImage.url;
+};
+
+const preloadCarouselImage = (image: HTMLImageElement | null | undefined) => {
+  if (!image || image.dataset.carouselPreloaded === "true") return;
+
+  image.dataset.carouselPreloaded = "true";
+  image.loading = "eager";
+
+  const loader = new Image();
+  loader.decoding = "async";
+  activeCarouselPreloads.add(loader);
+  const releaseLoader = () => activeCarouselPreloads.delete(loader);
+  loader.onload = releaseLoader;
+  loader.onerror = releaseLoader;
+
+  const srcset = image.getAttribute("srcset");
+  const sizes = image.getAttribute("sizes");
+  if (srcset) {
+    loader.srcset = srcset;
+    if (sizes) loader.sizes = sizes;
+  }
+
+  loader.src = image.currentSrc || image.src;
+};
+
+const renderSeededProduct = (container: HTMLElement, seedImage: ProductImageSeed) => {
+  const seedUrl = getSeedImageUrl(seedImage);
+  if (!seedUrl) return;
+
+  const gallery = document.createElement("section");
+  gallery.className = "product-detail__gallery";
+  gallery.setAttribute("aria-label", "product images");
+  setGalleryAspect(gallery, seedImage);
+
+  const carousel = document.createElement("div");
+  carousel.className = "product-detail__carousel";
+
+  const viewport = document.createElement("div");
+  viewport.className = "product-detail__carousel-viewport";
+
+  const track = document.createElement("div");
+  track.className = "product-detail__carousel-track";
+
+  const slide = document.createElement("div");
+  slide.className = "product-detail__carousel-slide is-active";
+  slide.setAttribute("aria-hidden", "false");
+
+  const image = document.createElement("img");
+  image.className = "product-detail__image";
+  image.src = seedUrl;
+  image.alt = seedImage.alt ?? "";
+  image.decoding = "async";
+  image.loading = "eager";
+  image.fetchPriority = "high";
+  if (seedImage.width) image.width = seedImage.width;
+  if (seedImage.height) image.height = seedImage.height;
+
+  const detail = document.createElement("section");
+  detail.className = "product-detail__panel";
+  detail.textContent = "loading";
+
+  slide.append(image);
+  track.append(slide);
+  viewport.append(track);
+  carousel.append(viewport);
+  gallery.append(carousel);
+
+  container.className = "product-detail__content";
+  container.replaceChildren(gallery, detail);
+};
+
+const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSeed) => {
   const gallery = document.createElement("section");
   gallery.className = "product-detail__gallery";
   gallery.setAttribute("aria-label", "product images");
@@ -179,12 +305,13 @@ const renderProductGallery = (product: ProductDetail) => {
   let touchStartY: number | undefined;
 
   product.images.forEach((productImage, index) => {
+    const seedUrl = index === 0 ? getSeedImageUrl(seedImage) : undefined;
     const slide = document.createElement("div");
     slide.className = "product-detail__carousel-slide";
 
     const image = document.createElement("img");
     image.className = "product-detail__image";
-    image.src = productImage.url;
+    image.src = seedUrl ?? productImage.url;
     image.alt = productImage.altText || product.title;
     image.decoding = "async";
     image.loading = index === 0 ? "eager" : "lazy";
@@ -192,11 +319,14 @@ const renderProductGallery = (product: ProductDetail) => {
     if (productImage.width) image.width = productImage.width;
     if (productImage.height) image.height = productImage.height;
     if (index === 0 && productImage.width && productImage.height) {
-      gallery.style.setProperty("--product-carousel-aspect", `${productImage.width} / ${productImage.height}`);
+      setGalleryAspect(gallery, productImage);
     }
-    if (productImage.srcset) {
+    if (productImage.srcset && !seedUrl) {
       image.srcset = productImage.srcset;
       image.sizes = "(max-width: 760px) 54vw, 55vw";
+    }
+    if (seedUrl) {
+      window.requestAnimationFrame(() => upgradeSeededImage(image, productImage));
     }
 
     slide.append(image);
@@ -224,6 +354,17 @@ const renderProductGallery = (product: ProductDetail) => {
     counter.className = "product-detail__carousel-counter";
     counter.setAttribute("aria-live", "polite");
 
+    const preloadSlideImage = (index: number) => {
+      const image = slides[index]?.querySelector<HTMLImageElement>(".product-detail__image");
+      preloadCarouselImage(image);
+    };
+
+    const preloadAdjacentImages = () => {
+      preloadSlideImage(activeIndex);
+      preloadSlideImage((activeIndex + 1) % imageCount);
+      preloadSlideImage((activeIndex - 1 + imageCount) % imageCount);
+    };
+
     const setActiveImage = (index: number) => {
       activeIndex = (index + imageCount) % imageCount;
       track.style.transform = `translateX(-${activeIndex * 100}%)`;
@@ -234,6 +375,8 @@ const renderProductGallery = (product: ProductDetail) => {
         slide.classList.toggle("is-active", isActive);
         slide.setAttribute("aria-hidden", isActive ? "false" : "true");
       });
+
+      preloadAdjacentImages();
     };
 
     previous.addEventListener("click", () => setActiveImage(activeIndex - 1));
@@ -299,12 +442,12 @@ const bindPanelOverflowHint = (panel: HTMLElement) => {
   window.requestAnimationFrame(updateMoreBelow);
 };
 
-const renderProduct = (container: HTMLElement, product: ProductDetail) => {
+const renderProduct = (container: HTMLElement, product: ProductDetail, options: MountProductViewOptions = {}) => {
   const selectedValues = new Map<string, string>();
   const initialVariant = product.variants.find((variant) => variant.availableForSale) ?? product.variants[0];
   setValuesFromVariant(selectedValues, initialVariant);
 
-  const gallery = renderProductGallery(product);
+  const gallery = renderProductGallery(product, options.seedImage);
 
   const detail = document.createElement("section");
   detail.className = "product-detail__panel";
@@ -350,7 +493,7 @@ const renderProduct = (container: HTMLElement, product: ProductDetail) => {
   bindPanelOverflowHint(detail);
 };
 
-export function mountProductView(container: HTMLElement, handle: string): void {
+export function mountProductView(container: HTMLElement, handle: string, options: MountProductViewOptions = {}): void {
   const init = async () => {
     container.className = "product-detail__state";
     container.textContent = "loading";
@@ -365,13 +508,17 @@ export function mountProductView(container: HTMLElement, handle: string): void {
       return;
     }
 
+    if (options.seedImage) {
+      renderSeededProduct(container, options.seedImage);
+    }
+
     const product = await getProduct(handle);
     if (!product) {
       renderMessage(container, "this piece is no longer listed");
       return;
     }
 
-    renderProduct(container, product);
+    renderProduct(container, product, options);
   };
 
   void init();
