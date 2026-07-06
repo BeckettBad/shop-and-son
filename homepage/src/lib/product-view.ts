@@ -16,6 +16,7 @@ declare global {
 const homeUrl = import.meta.env.BASE_URL.replace(/\/$/, "") + "/";
 const shopifyProductUrl = (handle: string) =>
   `https://shopandson.com/products/${encodeURIComponent(handle)}`;
+const activeCarouselPreloads = new Set<HTMLImageElement>();
 
 export interface ProductImageSeed {
   url: string;
@@ -214,6 +215,29 @@ const upgradeSeededImage = (image: HTMLImageElement, productImage: ProductDetail
   loader.src = productImage.url;
 };
 
+const preloadCarouselImage = (image: HTMLImageElement | null | undefined) => {
+  if (!image || image.dataset.carouselPreloaded === "true") return;
+
+  image.dataset.carouselPreloaded = "true";
+  image.loading = "eager";
+
+  const loader = new Image();
+  loader.decoding = "async";
+  activeCarouselPreloads.add(loader);
+  const releaseLoader = () => activeCarouselPreloads.delete(loader);
+  loader.onload = releaseLoader;
+  loader.onerror = releaseLoader;
+
+  const srcset = image.getAttribute("srcset");
+  const sizes = image.getAttribute("sizes");
+  if (srcset) {
+    loader.srcset = srcset;
+    if (sizes) loader.sizes = sizes;
+  }
+
+  loader.src = image.currentSrc || image.src;
+};
+
 const renderSeededProduct = (container: HTMLElement, seedImage: ProductImageSeed) => {
   const seedUrl = getSeedImageUrl(seedImage);
   if (!seedUrl) return;
@@ -330,6 +354,17 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
     counter.className = "product-detail__carousel-counter";
     counter.setAttribute("aria-live", "polite");
 
+    const preloadSlideImage = (index: number) => {
+      const image = slides[index]?.querySelector<HTMLImageElement>(".product-detail__image");
+      preloadCarouselImage(image);
+    };
+
+    const preloadAdjacentImages = () => {
+      preloadSlideImage(activeIndex);
+      preloadSlideImage((activeIndex + 1) % imageCount);
+      preloadSlideImage((activeIndex - 1 + imageCount) % imageCount);
+    };
+
     const setActiveImage = (index: number) => {
       activeIndex = (index + imageCount) % imageCount;
       track.style.transform = `translateX(-${activeIndex * 100}%)`;
@@ -340,6 +375,8 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
         slide.classList.toggle("is-active", isActive);
         slide.setAttribute("aria-hidden", isActive ? "false" : "true");
       });
+
+      preloadAdjacentImages();
     };
 
     previous.addEventListener("click", () => setActiveImage(activeIndex - 1));
