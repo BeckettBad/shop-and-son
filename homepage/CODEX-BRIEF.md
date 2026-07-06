@@ -73,7 +73,118 @@ diff against that sub-task's **Done when** + the risks list before the next
 dispatch. Before each dispatch, Claude updates the line below so Codex has ONE
 target; everything else in this file is context, not instruction.
 
-> **ACTIVE SUB-TASK: (none — SHIPPING. Operator (2026-07-06): revert the last revision (MOB-8 paper takeover, 6062af5 → reverted @ 450ed69) and publish the pre-MOB-8 state — WAVE MOBILE MOB-1→7 as phone-verified + re-scout-passed @ f554b4a — to main. Deploy PR opened; operator merges. NOTE: the MOB-8 revert also took back the 14px headers + cart-badge clip fix (they were in the same commit) — both are trivial standalone re-adds if wanted in the next round. Operator will continue with more mobile revisions after this ships. Security wave queued.)**
+> **ACTIVE SUB-TASK: PHASE J2 (operator voice-memo pass, 2026-07-06) — 8 ordered commits, one dispatch each, Claude reviews each diff before the next. Full spec in the "PHASE J2" section below. Named J2 because "Phase J" (footer scroll gate) already shipped 2026-07-01. Do NOT push / NO PR until operator says "ship" — and PR #9 (Wave Mobile) is still OPEN: it must be merged by the operator BEFORE J2 is pushed, or it would quietly carry J2. Status: ready for Codex (Commit 1).**
+
+---
+
+## PHASE J2 — menu / catalogue / product / legal / alignment (operator voice-memo)
+
+Scope every commit: `homepage/` only, on `dev`, never merge. ONE focused commit
+each, `npm run build` AND `npx astro check` green after every one. The operator's
+spec below is adapted to the CURRENT code (H/I/K/L/M/N + Wave Mobile shipped —
+old line numbers are void; find current rules by the class names).
+Deferred — do NOT implement: DJ-as-white-stencil, pre-order 5-week dropdown
+structure, "what's playing now".
+
+**J2-C1 — menu text styling (headers/markers/hover).** global.css only.
+(a) Opening a section must NOT enlarge its header: remove/equalize the desktop
+`@media(min-width:761px) .hero__menu-section.is-open > .hero__menu-header{font-size:clamp(20px,2vw,30px)}`
+so open = closed size (base header stays `clamp(16px,1.6vw,21px)`); KEEP the
+neon-green active color. All sections.
+(b) Swap the CLOTHES open-state sub-menu sizes in the min-width:761px block:
+`.hero__menu-section.is-open .hero__menu-item--group > .hero__menu-subheader`
+(currently `clamp(10px,.95vw,13px)`) takes the LARGER
+`clamp(14px,1.3vw,18px)`, and the open-state nested/leaf link rule (currently
+`clamp(14px,1.3vw,18px)`) takes the SMALLER `clamp(10px,.95vw,13px)` — a
+straight swap of the two values. (Mobile 12px/10.5px rules untouched.)
+(c) Remove `.hero__menu-link--dash::before{content:"- "}` and
+`.hero__menu-link--bullet::before{content:"o "}` entirely; KEEP
+`.hero__menu-nested` indent (mobile `gap:0.4em` flex rule can stay — harmless).
+(d) In the `@media(hover:hover)` block: menu hovers (`.hero__menu-header`,
+`.hero__menu-subheader`, `a.hero__menu-link`, `.hero__menu-link[data-shop-all]`)
+lose `text-decoration:underline` — hover = green only. Leave `.is-active`
+underline and non-menu hovers (cart/product-card/closes) alone.
+
+**J2-C2 — drawer open animation.** `.hero__menu-panel` opens with a subtle
+downward slide/drawer reveal (~.3–.4s ease) instead of the display:none→block
+snap — e.g. grid-template-rows 0fr→1fr or max-height+transform technique; must
+work with the existing display toggle & JS untouched; closing may snap (only
+HOW it opens changes). `prefers-reduced-motion`: no animation. Both desktop and
+mobile panels. global.css (+ HeroVideo.astro ONLY if a class hook is missing).
+
+**J2-C3 — SHOP ALL into the CATEGORIES drawer.** content.ts: remove the
+top-level CLOTHES item `{ label:"SHOP ALL", collection:"clothing-1", … }` and
+insert it as the FIRST child of the CATEGORIES group (above JACKETS /
+OUTERWEAR), same collection/label. **CRITICAL adaptation:** `src/lib/menu.ts`
+(K6 hydration) rebuilds CATEGORIES children from the live Shopify nav (it
+excludes "shop all" from those children — see CLOTHING_SHOP_ALL_HANDLE) — it
+must now PREPEND the SHOP ALL leaf as the first CATEGORIES child after
+hydration so the move survives live menus. OBJECTS' flat SHOP ALL unchanged.
+
+**J2-C4 — catalogue: continuous smooth scroll + smaller cards.** Replace the
+measured row-pager: `.hero__catalog-viewport` becomes a normal
+`overflow-y:auto` smooth-scroll container; products render as a flowing
+responsive grid (desktop can flatten rows like mobile's `display:contents` or
+render flat); DELETE the `--catalog-row-offset` translateY on
+`.hero__catalog-track`, and in HeroVideo.astro remove the pager JS
+(`setRowIndex`, `pageRows`, the wheel/touch hijack handlers, row transition
+plumbing). **Adapt N2's product return-point:** it currently saves/restores
+`rowIndex` — save/restore the viewport `scrollTop` instead (card→product→×
+must land back at the same scroll position; direct-load/popstate paths too).
+Cards get a bit SMALLER than today (ease back part of H4): e.g. 4-up desktop
+rows or reduced card width — images keep their native aspect (current
+`--card-aspect` + cover ≈ uncropped; ensure nothing is cut off). Keep the SWR
+live-refresh + sold-out + in-site links intact. Mobile keeps its smooth-scroll
+grid (unify onto the new mechanism where possible).
+
+**J2-C5 — product page image carousel.** product-view.ts `renderProduct`:
+replace the stacked `.product-detail__gallery` column with a one-at-a-time
+CAROUSEL — left/right arrow buttons, touch swipe on mobile, small index
+counter (e.g. "2 / 5") or dots; all images reachable; first image
+eager/fetchpriority high as now, others lazy. Matching CSS in global.css
+(paper/ink/mono language, M1 neon hover on arrows). Works in BOTH the in-hero
+product stage and standalone /product/ (shared renderer) and with MOB-6's
+mobile two-column layout (carousel = the left column on mobile).
+
+**J2-C6 — stack policy links vertically.** The Refund/Privacy/Terms links in
+`.hero-info__legal` (HeroVideo.astro hero-info block — NOTE: Footer.astro was
+DELETED in L1; there is no footer) stack one per line (drop the `·`
+separators), links/targets unchanged. Check nothing else renders that link
+group (policies.astro is the standalone page — leave it). Mobile: the
+bottom-centered about block simply grows 3 lines — verify it still clears the
+stage art sensibly.
+
+**J2-C7 — hide PRE-ORDER for launch.** content.ts: remove the `preorder:true`
+section from `heroMenu`. Pre-order page/iframe/component/route stay intact —
+menu unlink only. Verify: desktop menu shows 4 sections; mobile rows become
+3 + 1 (& FAM centered alone on row 2 — acceptable); no JS errors from absent
+`[data-preorder]` section (guards exist — confirm); preorder stage code dormant.
+
+**J2-C8 — even parallel headers (STRICT).** Align the right panel title's top
+line (`.hero__catalog-title` header row — and the product stage title if it
+uses a separate rule) with the left menu headers' first line so the two
+columns read even — nudge the panel title DOWN to the menu's line (or menu to
+meet it, whichever reads even). Touch ONLY the menu-section headers' and panel
+title's text position (margin/padding/top on those text elements). Do NOT move
+the video/stencil/DJ/grid/cart/close/about block; no global margin changes.
+Operator fine-tunes on dev.
+
+**After C8:** stop; report 8 hashes + verify results to operator. No push, no
+PR until an explicit "ship" (and PR #9 must merge first).
+
+**PHASE J2 STATUS: ALL 8 COMMITTED ON DEV (2026-07-06) — ready for operator verify. NOT pushed.**
+
+**Log (newest first; every commit build:green check:green):**
+- J2-C8 — b142a32 — panel title aligned to menu header line — global.css one-liner: `.hero__catalog-title{margin-top:clamp(20px,3vh,32px)}` (desktop block); measured delta 0px at 1440; REWORKED from Codex's first attempt (menu-header `top:-3vh` caused OBJECTS+ to overprint DESIGNERS+ — reverted). No other element moved.
+- J2-C7 — fc78b1a — PRE-ORDER removed from heroMenu (content.ts, 5-line deletion); page/iframe/route intact; 4 sections render; mobile rows 3+1; no JS errors from absent [data-preorder].
+- J2-C6 — 33469aa — policy links stacked vertically in .hero-info__legal (`<br/>` for `&middot;`); Footer.astro N/A (deleted in L1).
+- J2-C5 — 37c724e — product gallery → one-at-a-time carousel (product-view.ts + CSS): arrows (neon hover), touch swipe, "n / m" counter (aria-live), first eager/rest lazy; verified on /product/ desktop (counter 1/2→2/2) + mobile (MOB-6 two-col intact); applies to hero product stage too (shared renderer).
+- J2-C4 — ddf26c9 — catalogue continuous smooth scroll: pager JS (setRowIndex/pageRows/wheel+touch hijack) deleted (~99 lines), track = flat 4-col grid (cards smaller per operator), viewport overflow-y:auto smooth; N2 return-point rowIndex→scrollTop (instant post-layout restore — AMENDED: CSS scroll-behavior:smooth was animating/truncating the programmatic restore); verified: wheel scrolls (1200px), card→product→× restores scrollTop 1200→1200; mobile same container; SWR/sold-out/links intact.
+- J2-C3 — d1cbdf0 — CLOTHES SHOP ALL moved to first CATEGORIES child (content.ts) + menu.ts hydration PREPENDS it post-live-rebuild (uses live clothing parent handle); OBJECTS SHOP ALL untouched; verified in dist.
+- J2-C2 — c805c46 — drawer reveal via @keyframes heroPanelReveal (opacity/translate/clip-path .36s ease) on `.is-open .hero__menu-panel`; display:none↔block mechanics UNCHANGED (REWORKED: first attempt's always-in-flow max-height panel added closed-state padding height on desktop + width:max-content inflated mobile closed sections breaking the 2-row tabs — reverted to keyframe-on-display-flip, closed geometry verified byte-equal); reduced-motion: none.
+- J2-C1 — 023d231 — no header blow-up on open (desktop is-open font rule removed; green kept); CLOTHES open-state size swap: subheaders → clamp(14px,1.3vw,18px), NESTED links → clamp(10px,.95vw,13px) (AMENDED: first pass also shrank direct leaves = OBJECTS list; split the shared rule — direct leaves keep the larger size, CLOTHES-only per operator); `- `/`o ` ::before markers deleted (indent kept); menu hovers green-only (underline removed; .is-active underline kept).
+
+---
 >
 > **STANDING RULE (operator, 2026-07-06): the desktop site must NOT change during Wave Mobile — every revision scoped inside ≤760px. Mobile should EMULATE the original desktop experience, condensed and clean — no overlays, no visual distortion.**
 >
