@@ -73,7 +73,7 @@ diff against that sub-task's **Done when** + the risks list before the next
 dispatch. Before each dispatch, Claude updates the line below so Codex has ONE
 target; everything else in this file is context, not instruction.
 
-> **ACTIVE SUB-TASK: WAVE MOBILE — MOB-5 (polish: film controls + tap targets), then MOB-6 (mobile product page: image-left / text-right). MOB-1/2/3 are committed on dev + verified by the operator ON PHONE (2026-07-06). MOB-7 (long-menu-list treatment) awaits the operator's design pick. Status: ready for Codex.**
+> **ACTIVE SUB-TASK: (none — WAVE MOBILE MOB-1 → MOB-7 committed on dev; operator phone-verified ALL of them (2026-07-06). FULL RE-SCOUT PASSED 2026-07-06 @ f554b4a: real-tap buy flow end-to-end (browse→product→add→drawer→qty→checkout btn), every stage, 0px horizontal overflow at 390+360, desktop unchanged @1440. AT THE SHIP GATE pending: (a) operator's pick on the MENU-OVERLAY proposal — A "paper takeover" (solid paper layer behind expanded menu + lowercase-mono list type, RECOMMENDED) / B paper card behind panel only / C full live-drawer clone — see the re-scout artifact report; (b) micro-nit: cart count badge half-clipped at corner (one-liner, rides with the winner); (c) then explicit "ship wave mobile" → dev→main PR. Security wave queued after.)**
 >
 > **STANDING RULE (operator, 2026-07-06): the desktop site must NOT change during Wave Mobile — every revision scoped inside ≤760px. Mobile should EMULATE the original desktop experience, condensed and clean — no overlays, no visual distortion.**
 >
