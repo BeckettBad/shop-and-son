@@ -1048,6 +1048,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
         prepareIncoming();
         void previousPanel?.offsetWidth;
         activatePanel(nextStage);
+        hero.scrollLeft = 0;
+        hero.scrollTop = 0;
         if (nextStage === "preorder") resizePreorderFrame();
         activeStage = nextStage;
         if (nextStage === "music") {
@@ -1071,6 +1073,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     prepareIncoming();
     activatePanel(nextStage);
+    hero.scrollLeft = 0;
+    hero.scrollTop = 0;
     if (nextStage === "preorder") resizePreorderFrame();
     activeStage = nextStage;
 
