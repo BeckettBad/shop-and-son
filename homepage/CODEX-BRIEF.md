@@ -259,6 +259,8 @@ C4 results stage. Desktop first; mobile placement joins the mobile round.
 Awaiting Ben's three taste picks: word-vs-icon trigger, text-only-vs-thumbnail
 rows, empty-query behavior.
 
+**CAROUSEL-CONTROLS (one-off, operator-directed 2026-07-06) — a0ca7ec — universal control placement — build:green check:green.** product-view.ts + global.css: frame now derives its aspect (and width, via min(galleryWidth, maxHeight×aspect)) from the ACTIVE slide's image — frame edge == image edge for any asset; arrows inset 16px from the image edges at mid-height, counter 12px in the image's bottom-right; controls not rendered at all when images.length < 2 (incl. seed/loading path); Phase-K viewport-fit intact. VERIFIED matrix: portrait 512×768 + landscape 512×342 both insets 16/16 + counter 12,12 + arrowMidY 0; cross-ratio arrowing holds 16; single-image ufo-tumbler renders zero controls; mobile landscape inset 16; no page scroll. Not pushed.
+
 **PHASE SRCH STATUS: ALL 4 COMMITTED ON DEV (2026-07-06) — ready for operator verify. NOT pushed. (PERF shipped separately via PR #10 @ 56650bc before SRCH began.)**
 
 **Log (build:green check:green each):**
