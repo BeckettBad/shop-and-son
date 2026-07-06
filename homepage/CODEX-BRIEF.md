@@ -73,7 +73,7 @@ diff against that sub-task's **Done when** + the risks list before the next
 dispatch. Before each dispatch, Claude updates the line below so Codex has ONE
 target; everything else in this file is context, not instruction.
 
-> **ACTIVE SUB-TASK: (none — WAVE MOBILE MOB-1 → MOB-7 committed on dev; operator phone-verified ALL of them (2026-07-06). FULL RE-SCOUT PASSED 2026-07-06 @ f554b4a: real-tap buy flow end-to-end (browse→product→add→drawer→qty→checkout btn), every stage, 0px horizontal overflow at 390+360, desktop unchanged @1440. AT THE SHIP GATE pending: (a) operator's pick on the MENU-OVERLAY proposal — A "paper takeover" (solid paper layer behind expanded menu + lowercase-mono list type, RECOMMENDED) / B paper card behind panel only / C full live-drawer clone — see the re-scout artifact report; (b) micro-nit: cart count badge half-clipped at corner (one-liner, rides with the winner); (c) then explicit "ship wave mobile" → dev→main PR. Security wave queued after.)**
+> **ACTIVE SUB-TASK: WAVE MOBILE — MOB-8 (operator picked Proposal A, 2026-07-06: paper-takeover menu + bigger mobile menu type + cart-badge clip fix; full spec below). MOB-1→7 phone-verified; re-scout passed @ f554b4a. After MOB-8: operator phone-verify → "ship wave mobile" → dev→main PR. Status: ready for Codex.**
 >
 > **STANDING RULE (operator, 2026-07-06): the desktop site must NOT change during Wave Mobile — every revision scoped inside ≤760px. Mobile should EMULATE the original desktop experience, condensed and clean — no overlays, no visual distortion.**
 >
@@ -337,6 +337,68 @@ only — desktop single-column nested lists unchanged.
 **Done when:** build + check green; at 390 AND 360: CLOTHES → DESIGNERS shows
 two balanced columns (sequential halves, all 32 visible, no scroll, no
 overflow-x); CATEGORIES same treatment; OBJECTS panel unchanged; desktop
+unchanged.
+
+### MOB-8 — mobile menu: PAPER TAKEOVER + bigger type + badge fix (Proposal A)
+
+**Status:** committed @ 6062af5 — ready for operator phone verify (LAST item before ship gate)
+
+**Log:**
+- 2026-07-06 — MOB-8: paper takeover + lowercase-mono 12px lists + 14px headers + badge fix — 6062af5 — build:green check:green — global.css only, all ≤760px. Takeover: `.hero-video::after` fixed inset:0 z2 bg var(--paper), opacity-fade .25s (reduced-motion: none), driven by the non-stage `:has()` selector — video/stencil fully hidden behind solid paper while CLOTHES/OBJECTS open; music/fam/preorder stages untouched (verified: DJ stage visible with MUSIC open). Type: headers 12.5→14px (gap .88→.7rem — closed 2-row structure verified intact at 390+360, cart clear), panel links + subheaders → var(--mono) lowercase 12px (markers, 2-col designers, 36px taps all kept). Hairline under tab row while takeover active (FLAG: operator judges on phone). Badge: .hero__cart-count top:3px right:3px — fully visible ("1" verified). 0px overflow both widths. Desktop untouched. Reviewed clean by Claude + headless-verified. Not pushed. FLAG (pre-existing, unchanged): an open section's wide panel still reflows the tab rows (MUSIC drops to its own line while its playlist panel is open).
+**Task:** operator picked Proposal A (2026-07-06). Three parts, ONE focused
+commit. Build + check green. **Scope:** `homepage/` only; every rule ≤760px —
+desktop byte-identical.
+
+**Files:** `src/styles/global.css` (goal: CSS-only; `HeroVideo.astro` only if
+a hook is genuinely missing).
+
+**(1) Paper takeover.** On ≤760px, when a NON-stage menu section is open
+(same selector family as MOB-1/2:
+`.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])`),
+a **solid paper layer covers the full viewport BEHIND the menu** so the video,
+house stencil, and shadows disappear — the menu reads on calm ground like the
+live shopandson.com drawer:
+- Implement as a pseudo-element (e.g. `.hero-video:has(<selector>)::after`)
+  with `position:fixed; inset:0;` background = the hero's cream paper tone
+  (match the site's paper — check the existing `--paper`/background values;
+  NOT stark white), z-index ABOVE the video/stencil/panels (panels are z2 and
+  already hidden by MOB-2 when this state is active) and BELOW `.hero__overlay`
+  (z3) and `.hero__cart` (z5).
+- Fade in/out with a ~.25s opacity transition; `prefers-reduced-motion` → no
+  transition. Closing the last section returns the video hero.
+- Do NOT touch the music/fam/preorder header-open states — their stages must
+  stay visible behind their small panels.
+- Add a subtle hairline (`1px solid` low-alpha ink) separating the tab-row
+  block from the expanded panel while the takeover is active — like the live
+  drawer's rules. (FLAG it in the log — operator judges the hairline on
+  phone; easy to remove.)
+
+**(2) List typography — lowercase mono, BIGGER (operator: mobile type is too
+hard to access; increase sizes).** While keeping the section headers in the
+uppercase Helvetica +/− voice:
+- `.hero__menu-header` (CLOTHES/OBJECTS/MUSIC/& FAM/PRE-ORDER): 12.5px →
+  **target 14px** (absolute floor 13.5px). Both rows MUST still fit 390 AND
+  360 with zero horizontal overflow and clear daylight to the cart bag glyph —
+  tune `column-gap`/row max-width as needed; verify visually at 360.
+- Panel/leaf links (`.hero__menu-link`, incl. nested) + subheaders
+  (`.hero__menu-subheader`): switch to the site's mono stack (same family as
+  `.hero-info` — check the var/font used there) with
+  `text-transform:lowercase`, sized **12px** (up from 10.5px), keeping the
+  `- ` / `o ` ::before markers, the MOB-7 two columns (widen the panel cap if
+  12px mono needs it, still no overflow), the 36px tap rows, and the MOB-2
+  state behavior. `- SHOP ALL` and subheaders (categories/designers) render
+  lowercase mono too — matching the live drawer's voice.
+
+**(3) Cart badge clip fix.** `.hero__cart-count` currently renders half-clipped
+at the viewport corner on mobile. Keep it fully visible: anchor it INSIDE the
+40px cart box's top-right (small mono count, may overlap the bag glyph corner),
+respecting `env(safe-area-inset-top)`. Mobile only.
+
+**Done when:** build + check green; at 390 AND 360: opening CLOTHES/OBJECTS
+fades in solid paper (no video/stencil visible anywhere behind the menu),
+designers list reads lowercase mono 12px in two columns, headers ≥13.5px with
+zero overflow and clear cart, closing returns the video hero; MUSIC/& FAM/
+PRE-ORDER stages unaffected; badge fully visible with items in cart; desktop
 unchanged.
 
 ### Exit gate (unchanged)
