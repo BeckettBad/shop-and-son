@@ -801,6 +801,8 @@ body{
   }
   .hero__stencil{
     height:min(74vh,88vw); max-width:88vw;
+    opacity:1; visibility:visible;
+    transition:transform .55s ease-in-out,opacity .25s ease,visibility 0s;
   }
   .hero__film{
     top:clamp(78px,11vh,104px); right:0; bottom:0; left:0;
@@ -989,11 +991,17 @@ body{
     opacity:0; visibility:hidden; pointer-events:none;
     transition:opacity .18s ease,visibility 0s linear .18s;
   }
+  .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__stencil{
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition:transform .55s ease-in-out,opacity .25s ease,visibility 0s linear .25s;
+  }
 }
 @media(max-width:420px){
   .hero__catalog-track{grid-template-columns:1fr}
 }
 @media(max-width:760px) and (prefers-reduced-motion:reduce){
+  .hero__stencil,
+  .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__stencil,
   .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__catalog,
   .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__product,
   .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__preorder,
