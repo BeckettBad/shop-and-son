@@ -105,95 +105,98 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   <nav class="hero__overlay" aria-label="Site sections">
     <ul class="hero__menu">
       {
-        heroMenu.map((section) => (
-          <li
-            class="hero__menu-section"
-            data-hero-dropdown
-            data-preorder={section.preorder ? "true" : undefined}
-            data-fam={section.fam ? "true" : undefined}
-            data-music={section.music ? "true" : undefined}
-          >
-            <button type="button" class="hero__menu-header" aria-expanded="false">
-              {section.label} <span class="hero__menu-toggle">+</span>
-            </button>
-            {!section.preorder && !section.fam && (
-              <ul class="hero__menu-panel">
-                {
-                  section.items.map((item) => (
-                    <li class={`hero__menu-item${item.children && item.children.length > 0 ? " hero__menu-item--group" : ""}`}>
-                      {item.collection ? (
-                        <button
-                          type="button"
-                          class="hero__menu-link hero__menu-link--dash"
-                          data-shop-all
-                          data-collection={item.collection}
-                          data-collection-label={item.collectionLabel ?? item.label}
-                          aria-pressed="false"
-                        >
-                          {item.label}{item.suffix ?? ""}
-                        </button>
-                      ) : item.href ? (
-                        <a
-                          class="hero__menu-link hero__menu-link--dash"
-                          href={item.href}
-                          target={isExternalHref(item.href) ? "_blank" : undefined}
-                          rel={isExternalHref(item.href) ? "noopener" : undefined}
-                        >
-                          {item.label}{item.suffix ?? ""}
-                        </a>
-                      ) : item.children && item.children.length > 0 ? (
-                        <button
-                          type="button"
-                          class="hero__menu-subheader"
-                          aria-expanded="false"
-                          data-menu-subgroup
-                        >
-                          {item.label}{item.suffix ?? ""} <span class="hero__menu-subtoggle">+</span>
-                        </button>
-                      ) : (
-                        <span class="hero__menu-link hero__menu-link--dash">
-                          {item.label}{item.suffix ?? ""}
-                        </span>
-                      )}
-                      {item.children && item.children.length > 0 && (
-                        <ul class="hero__menu-nested">
-                          {
-                            item.children.map((child) => (
-                              <li>
-                                {child.collection ? (
-                                  <button
-                                    type="button"
-                                    class="hero__menu-link hero__menu-link--bullet"
-                                    data-shop-all
-                                    data-collection={child.collection}
-                                    data-collection-label={child.collectionLabel ?? child.label}
-                                    aria-pressed="false"
-                                  >
-                                    {child.label}
-                                  </button>
-                                ) : child.href ? (
-                                  <a
-                                    class="hero__menu-link hero__menu-link--bullet"
-                                    href={child.href}
-                                    target={isExternalHref(child.href) ? "_blank" : undefined}
-                                    rel={isExternalHref(child.href) ? "noopener" : undefined}
-                                  >
-                                    {child.label}
-                                  </a>
-                                ) : (
-                                  <span class="hero__menu-link hero__menu-link--bullet">{child.label}</span>
-                                )}
-                              </li>
-                            ))
-                          }
-                        </ul>
-                      )}
-                    </li>
-                  ))
-                }
-              </ul>
-            )}
-          </li>
+        heroMenu.map((section, index) => (
+          <>
+            <li
+              class="hero__menu-section"
+              data-hero-dropdown
+              data-preorder={section.preorder ? "true" : undefined}
+              data-fam={section.fam ? "true" : undefined}
+              data-music={section.music ? "true" : undefined}
+            >
+              <button type="button" class="hero__menu-header" aria-expanded="false">
+                {section.label} <span class="hero__menu-toggle">+</span>
+              </button>
+              {!section.preorder && !section.fam && (
+                <ul class="hero__menu-panel">
+                  {
+                    section.items.map((item) => (
+                      <li class={`hero__menu-item${item.children && item.children.length > 0 ? " hero__menu-item--group" : ""}`}>
+                        {item.collection ? (
+                          <button
+                            type="button"
+                            class="hero__menu-link hero__menu-link--dash"
+                            data-shop-all
+                            data-collection={item.collection}
+                            data-collection-label={item.collectionLabel ?? item.label}
+                            aria-pressed="false"
+                          >
+                            {item.label}{item.suffix ?? ""}
+                          </button>
+                        ) : item.href ? (
+                          <a
+                            class="hero__menu-link hero__menu-link--dash"
+                            href={item.href}
+                            target={isExternalHref(item.href) ? "_blank" : undefined}
+                            rel={isExternalHref(item.href) ? "noopener" : undefined}
+                          >
+                            {item.label}{item.suffix ?? ""}
+                          </a>
+                        ) : item.children && item.children.length > 0 ? (
+                          <button
+                            type="button"
+                            class="hero__menu-subheader"
+                            aria-expanded="false"
+                            data-menu-subgroup
+                          >
+                            {item.label}{item.suffix ?? ""} <span class="hero__menu-subtoggle">+</span>
+                          </button>
+                        ) : (
+                          <span class="hero__menu-link hero__menu-link--dash">
+                            {item.label}{item.suffix ?? ""}
+                          </span>
+                        )}
+                        {item.children && item.children.length > 0 && (
+                          <ul class="hero__menu-nested">
+                            {
+                              item.children.map((child) => (
+                                <li>
+                                  {child.collection ? (
+                                    <button
+                                      type="button"
+                                      class="hero__menu-link hero__menu-link--bullet"
+                                      data-shop-all
+                                      data-collection={child.collection}
+                                      data-collection-label={child.collectionLabel ?? child.label}
+                                      aria-pressed="false"
+                                    >
+                                      {child.label}
+                                    </button>
+                                  ) : child.href ? (
+                                    <a
+                                      class="hero__menu-link hero__menu-link--bullet"
+                                      href={child.href}
+                                      target={isExternalHref(child.href) ? "_blank" : undefined}
+                                      rel={isExternalHref(child.href) ? "noopener" : undefined}
+                                    >
+                                      {child.label}
+                                    </a>
+                                  ) : (
+                                    <span class="hero__menu-link hero__menu-link--bullet">{child.label}</span>
+                                  )}
+                                </li>
+                              ))
+                            }
+                          </ul>
+                        )}
+                      </li>
+                    ))
+                  }
+                </ul>
+              )}
+            </li>
+            {index === 2 && <li class="hero__menu-break" aria-hidden="true"></li>}
+          </>
         ))
       }
     </ul>
