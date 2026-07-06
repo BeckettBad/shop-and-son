@@ -276,6 +276,29 @@ const renderProductGallery = (product: ProductDetail) => {
   return gallery;
 };
 
+const bindPanelOverflowHint = (panel: HTMLElement) => {
+  const updateMoreBelow = () => {
+    panel.classList.toggle("is-more-below", panel.scrollTop + panel.clientHeight < panel.scrollHeight - 4);
+  };
+
+  panel.addEventListener("scroll", updateMoreBelow, { passive: true });
+  window.addEventListener("resize", updateMoreBelow, { passive: true });
+
+  const resizeObserver = new ResizeObserver(updateMoreBelow);
+  resizeObserver.observe(panel);
+
+  const cleanupObserver = new MutationObserver(() => {
+    if (document.body.contains(panel)) return;
+    window.removeEventListener("resize", updateMoreBelow);
+    resizeObserver.disconnect();
+    cleanupObserver.disconnect();
+  });
+  cleanupObserver.observe(document.body, { childList: true, subtree: true });
+
+  updateMoreBelow();
+  window.requestAnimationFrame(updateMoreBelow);
+};
+
 const renderProduct = (container: HTMLElement, product: ProductDetail) => {
   const selectedValues = new Map<string, string>();
   const initialVariant = product.variants.find((variant) => variant.availableForSale) ?? product.variants[0];
@@ -324,6 +347,7 @@ const renderProduct = (container: HTMLElement, product: ProductDetail) => {
 
   container.className = "product-detail__content";
   container.replaceChildren(gallery, detail);
+  bindPanelOverflowHint(detail);
 };
 
 export function mountProductView(container: HTMLElement, handle: string): void {
