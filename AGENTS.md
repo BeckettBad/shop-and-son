@@ -1,5 +1,11 @@
 # &son — agent / AI context
 
+> **The studio layer:** this repo is the flagship build inside a larger business —
+> the retail consultancy Beckett is building with Ben (the owner of this shop).
+> The business layer lives at `~/Desktop/Studio/` (STATE.md = live business
+> ledger, AGENTS.md = the canonical file map for the whole machine). Read it when
+> a task concerns the business rather than this site.
+
 High-end, curated clothing store. The web presence is an **analog, editorial,
 brutalist** custom front-end for the live Shopify store at **shopandson.com**.
 Custom-coded front-end + Shopify checkout (every "buy" goes out to Shopify).
@@ -63,8 +69,8 @@ their written instructions are the spec.
 
 ## Agent pairing & the build loop (Claude orchestrates · Codex codes)
 We run two agents side by side in tmux (`./dev-agents.sh` → Claude on top, Codex
-on the bottom), both opened in `homepage/`. `CLAUDE.md` and `AGENTS.md` are
-identical copies so both agents share these rules. The panes cannot message each
+on the bottom), both opened in `homepage/`. This file is the single source of
+truth; `CLAUDE.md` imports it via `@AGENTS.md`. The panes cannot message each
 other — the **operator relays** between them, and **`homepage/CODEX-BRIEF.md`**
 is the shared hand-off file.
 

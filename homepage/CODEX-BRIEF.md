@@ -73,7 +73,561 @@ diff against that sub-task's **Done when** + the risks list before the next
 dispatch. Before each dispatch, Claude updates the line below so Codex has ONE
 target; everything else in this file is context, not instruction.
 
-> **ACTIVE SUB-TASK: (none — PHASE N COMPLETE: N1 e70e5ae + N2 e8aaa43 on origin/dev, reviewed + built green. WAVE 2 + PHASE N now at the SHIP GATE: awaiting operator's full dev eyeball (cart end-to-end, product STAGE incl. card→product→× returns to same row, browser back, refresh-mid-product, cmd-click opens standalone page, add-to-cart→checkout, menu/stage interactions close product cleanly, K7 sort, live menus, policies, mobile) → then an EXPLICIT "ship wave 2". Ship = dev→main PR carrying Wave 2 + Phase N (K1/Wave 3 already on main). Deferred: "now playing in store" idea (needs Ben's OK).)**
+> **ACTIVE SUB-TASK: PHASE J2 (operator voice-memo pass, 2026-07-06) — 8 ordered commits, one dispatch each, Claude reviews each diff before the next. Full spec in the "PHASE J2" section below. Named J2 because "Phase J" (footer scroll gate) already shipped 2026-07-01. Do NOT push / NO PR until operator says "ship" — and PR #9 (Wave Mobile) is still OPEN: it must be merged by the operator BEFORE J2 is pushed, or it would quietly carry J2. Status: ready for Codex (Commit 1).**
+
+---
+
+## PHASE J2 — menu / catalogue / product / legal / alignment (operator voice-memo)
+
+Scope every commit: `homepage/` only, on `dev`, never merge. ONE focused commit
+each, `npm run build` AND `npx astro check` green after every one. The operator's
+spec below is adapted to the CURRENT code (H/I/K/L/M/N + Wave Mobile shipped —
+old line numbers are void; find current rules by the class names).
+Deferred — do NOT implement: DJ-as-white-stencil, pre-order 5-week dropdown
+structure, "what's playing now".
+
+**J2-C1 — menu text styling (headers/markers/hover).** global.css only.
+(a) Opening a section must NOT enlarge its header: remove/equalize the desktop
+`@media(min-width:761px) .hero__menu-section.is-open > .hero__menu-header{font-size:clamp(20px,2vw,30px)}`
+so open = closed size (base header stays `clamp(16px,1.6vw,21px)`); KEEP the
+neon-green active color. All sections.
+(b) Swap the CLOTHES open-state sub-menu sizes in the min-width:761px block:
+`.hero__menu-section.is-open .hero__menu-item--group > .hero__menu-subheader`
+(currently `clamp(10px,.95vw,13px)`) takes the LARGER
+`clamp(14px,1.3vw,18px)`, and the open-state nested/leaf link rule (currently
+`clamp(14px,1.3vw,18px)`) takes the SMALLER `clamp(10px,.95vw,13px)` — a
+straight swap of the two values. (Mobile 12px/10.5px rules untouched.)
+(c) Remove `.hero__menu-link--dash::before{content:"- "}` and
+`.hero__menu-link--bullet::before{content:"o "}` entirely; KEEP
+`.hero__menu-nested` indent (mobile `gap:0.4em` flex rule can stay — harmless).
+(d) In the `@media(hover:hover)` block: menu hovers (`.hero__menu-header`,
+`.hero__menu-subheader`, `a.hero__menu-link`, `.hero__menu-link[data-shop-all]`)
+lose `text-decoration:underline` — hover = green only. Leave `.is-active`
+underline and non-menu hovers (cart/product-card/closes) alone.
+
+**J2-C2 — drawer open animation.** `.hero__menu-panel` opens with a subtle
+downward slide/drawer reveal (~.3–.4s ease) instead of the display:none→block
+snap — e.g. grid-template-rows 0fr→1fr or max-height+transform technique; must
+work with the existing display toggle & JS untouched; closing may snap (only
+HOW it opens changes). `prefers-reduced-motion`: no animation. Both desktop and
+mobile panels. global.css (+ HeroVideo.astro ONLY if a class hook is missing).
+
+**J2-C3 — SHOP ALL into the CATEGORIES drawer.** content.ts: remove the
+top-level CLOTHES item `{ label:"SHOP ALL", collection:"clothing-1", … }` and
+insert it as the FIRST child of the CATEGORIES group (above JACKETS /
+OUTERWEAR), same collection/label. **CRITICAL adaptation:** `src/lib/menu.ts`
+(K6 hydration) rebuilds CATEGORIES children from the live Shopify nav (it
+excludes "shop all" from those children — see CLOTHING_SHOP_ALL_HANDLE) — it
+must now PREPEND the SHOP ALL leaf as the first CATEGORIES child after
+hydration so the move survives live menus. OBJECTS' flat SHOP ALL unchanged.
+
+**J2-C4 — catalogue: continuous smooth scroll + smaller cards.** Replace the
+measured row-pager: `.hero__catalog-viewport` becomes a normal
+`overflow-y:auto` smooth-scroll container; products render as a flowing
+responsive grid (desktop can flatten rows like mobile's `display:contents` or
+render flat); DELETE the `--catalog-row-offset` translateY on
+`.hero__catalog-track`, and in HeroVideo.astro remove the pager JS
+(`setRowIndex`, `pageRows`, the wheel/touch hijack handlers, row transition
+plumbing). **Adapt N2's product return-point:** it currently saves/restores
+`rowIndex` — save/restore the viewport `scrollTop` instead (card→product→×
+must land back at the same scroll position; direct-load/popstate paths too).
+Cards get a bit SMALLER than today (ease back part of H4): e.g. 4-up desktop
+rows or reduced card width — images keep their native aspect (current
+`--card-aspect` + cover ≈ uncropped; ensure nothing is cut off). Keep the SWR
+live-refresh + sold-out + in-site links intact. Mobile keeps its smooth-scroll
+grid (unify onto the new mechanism where possible).
+
+**J2-C5 — product page image carousel.** product-view.ts `renderProduct`:
+replace the stacked `.product-detail__gallery` column with a one-at-a-time
+CAROUSEL — left/right arrow buttons, touch swipe on mobile, small index
+counter (e.g. "2 / 5") or dots; all images reachable; first image
+eager/fetchpriority high as now, others lazy. Matching CSS in global.css
+(paper/ink/mono language, M1 neon hover on arrows). Works in BOTH the in-hero
+product stage and standalone /product/ (shared renderer) and with MOB-6's
+mobile two-column layout (carousel = the left column on mobile).
+
+**J2-C6 — stack policy links vertically.** The Refund/Privacy/Terms links in
+`.hero-info__legal` (HeroVideo.astro hero-info block — NOTE: Footer.astro was
+DELETED in L1; there is no footer) stack one per line (drop the `·`
+separators), links/targets unchanged. Check nothing else renders that link
+group (policies.astro is the standalone page — leave it). Mobile: the
+bottom-centered about block simply grows 3 lines — verify it still clears the
+stage art sensibly.
+
+**J2-C7 — hide PRE-ORDER for launch.** content.ts: remove the `preorder:true`
+section from `heroMenu`. Pre-order page/iframe/component/route stay intact —
+menu unlink only. Verify: desktop menu shows 4 sections; mobile rows become
+3 + 1 (& FAM centered alone on row 2 — acceptable); no JS errors from absent
+`[data-preorder]` section (guards exist — confirm); preorder stage code dormant.
+
+**J2-C8 — even parallel headers (STRICT).** Align the right panel title's top
+line (`.hero__catalog-title` header row — and the product stage title if it
+uses a separate rule) with the left menu headers' first line so the two
+columns read even — nudge the panel title DOWN to the menu's line (or menu to
+meet it, whichever reads even). Touch ONLY the menu-section headers' and panel
+title's text position (margin/padding/top on those text elements). Do NOT move
+the video/stencil/DJ/grid/cart/close/about block; no global margin changes.
+Operator fine-tunes on dev.
+
+**After C8:** stop; report 8 hashes + verify results to operator. No push, no
+PR until an explicit "ship" (and PR #9 must merge first).
+
+## PHASE K2 — design-tuning pass on J2 (operator voice-memo, 2026-07-06)
+
+> Named K2 because Phase K (commerce core) shipped 2026-07-02. Scope:
+> `homepage/` only, on `dev`, never merge, one focused commit each,
+> build+check green each, NO push/PR until operator "ship".
+
+**K2-C1 — menu link states.** global.css only.
+(a) `.hero__menu-link.is-active{color:var(--neon-green); text-decoration:underline}`
+→ drop the underline; green only. NO underline in ANY state (hover already
+green-only from J2-C1). (b) Nested folder items — desktop open-state rule
+`.hero__menu-section.is-open .hero__menu-nested .hero__menu-link` (currently
+`clamp(10px,.95vw,13px)`) → slightly LARGER (e.g. `clamp(11px,1.05vw,14px)`)
++ slightly more vertical space per entry (line-height or small margin between
+`.hero__menu-nested > li`). Subtle, not a big jump. CATEGORIES + DESIGNERS
+lists both (they share the rule). Mobile 12px rule untouched.
+
+**K2-C2 — drawer animation, slower + sub-folders.** global.css only.
+(a) `heroPanelReveal` .36s → ~.55s with a softer ease (e.g. cubic-bezier ease-out
+family) on `.hero__menu-section.is-open .hero__menu-panel`. (b) Sub-folders:
+`.hero__menu-item--group.is-open .hero__menu-nested` currently snaps
+(display:none→block). Give it the SAME keyframe reveal (animation fires on
+display flip — proven by J2-C2; do NOT switch to an always-in-flow max-height
+box, that broke closed geometry once already). Same duration/easing as (a).
+NOTE for operator: main panels animate OPEN only (close snaps — J2 spec);
+sub-folders will match. Reduced-motion: none on both levels.
+
+**K2-C3 — standalone product page fits one screen, no page scroll.** Scope
+STRICTLY to the standalone page (`.product-detail` rules NOT under
+`.hero__product`, + `src/pages/product.astro` for a page-level hook if needed)
+— the in-hero product stage and the MOB-6 mobile layout are phone-verified and
+must NOT change. Desktop (min-width:761px):
+- Page does not scroll (one-screen view; e.g. lock overflow on the page root
+  via a product.astro class — do NOT touch the global `html.landing` rules).
+- Cap the carousel so image + arrows + counter fit within the viewport with a
+  small bottom margin: gallery/media max-height ≈ calc(100vh - top bar - small
+  margin), image scales DOWN (no crop), carousel sits slightly higher.
+- Details column (vendor/title/price/variants/add/description): if taller than
+  the viewport, ONLY that column scrolls internally (overflow-y:auto,
+  scrollbar hidden per site convention). FLAG for operator — he may prefer
+  shrinking the description instead.
+- Catalogue/multi-product views keep their J2 continuous scroll. Mobile
+  standalone page unchanged (keeps current scroll).
+
+**After C3:** stop; report 3 hashes + verify results. No push/PR until "ship".
+
+### K2-C4 — product view: fixed in place + uniform carousel sizing + bottom margin (DESKTOP ONLY)
+
+**Status:** ready for Codex
+Operator (2026-07-06, with reference screenshot = the IN-HERO product stage,
+socks product, "perfect layout"): all product views fixed in place (no
+scrolling), carousel bottom NEVER touches the page bottom — subtle margin —
+and sizing made uniform. Desktop only (min-width:761px); mobile later.
+
+- **In-hero product stage (`.hero__product`, the operator's screenshot):**
+  desktop: the panel becomes FIXED (no internal page-like scroll): gallery
+  column capped so the carousel (image + arrows + counter) ends with a subtle
+  bottom margin (~2-3vh) above the viewport bottom; if the DETAILS column
+  overflows, ONLY it scrolls internally (mirror K2-C3's standalone approach).
+  Keep the × close, stage transitions, and add-to-cart untouched.
+- **Uniform sizing:** cap the carousel media height with ONE shared rule for
+  both stage and standalone — target: top stays parallel to the CLOTHES
+  header line (current alignment), bottom = 100vh minus that top offset minus
+  a ~2-3vh margin. TALL images scale DOWN (object-fit:contain, no crop, no
+  upscaling of small images — use max-height, NOT fixed height); SMALL images
+  stay exactly as-is (operator: only listings that would touch the bottom
+  change). It's acceptable if a very tall image's top-parallel breaks slightly
+  — prefer keeping the parallel top and shrinking.
+- **Standalone `/product/`:** K2-C3 already fits it; align its cap values with
+  the shared rule so stage + standalone read uniformly.
+
+**Done when:** build+check green; at 1440×900 AND 1280×800: socks-like
+products unchanged; tall-portrait products (e.g. 50-50-belted-trouser) show
+the full image with bottom margin ≥ ~15px, top parallel to CLOTHES, no crop,
+no page/stage scroll; details column scrolls internally when long; mobile +
+hero catalog untouched.
+
+### K2-C5 — cart icon: lower-left nudge to the parallel line (DESKTOP ONLY)
+
+**Status:** queued — dispatch after C4 review
+Operator: the desktop bag icon sits too far into the corner, disconnected
+from the parallel rhythm. Move it slightly LOWER and slightly LEFT so the TOP
+of the bag glyph is approximately parallel with the CLOTHES header's top line
+(not pixel-perfect). Desktop `.hero__cart` rule only (currently ~top:4vh
+right:2vw) — MEASURE the menu header's rendered top and set the bag top to
+match it (≈8vh at 900h — verify live), right offset slightly increased.
+Mobile cart untouched. Nothing else moves.
+
+**Done when:** build+check green; at 1440×900 the bag glyph's top edge is
+within ~6px of the CLOTHES header's top; visibly left of the previous corner
+position; mobile unchanged.
+
+---
+
+**PHASE K2 STATUS: ALL 5 COMMITTED ON DEV (2026-07-06) — ready for operator verify. NOT pushed.**
+
+**Log addendum (C4–C6 + C5b; build:green check:green each):**
+- K2-C7 — 7714b3c — italic left-edge glyph shear (operator report: the g in "green tea incense") — the scrolling details panel clipped left-overhanging italic strokes at its padding box (title left == panel left, paddingLeft 0). Fix: glyph gutter padding-left:clamp(8px,0.6vw,14px) on both stage + standalone panels (desktop). Verified before/after on ?product=green-tea-incense; demo artifact published for operator.
+- K2-C6 — d0e7afd — universal product-text crop fix — product-view.ts bindPanelOverflowHint (scroll+resize+ResizeObserver, cleanup on unmount) toggles `is-more-below`; global.css: panel gets a soft bottom mask fade ONLY while more content is below (clears at scroll end — verified: trouser fades on load, clears at end; vase never fades); title line-height .98→1.12 (italic serif box safety); panel bottom padding → clamp(44px,7vh,88px). Applies to stage + standalone (shared classes).
+- K2-C5b — 9321f2b — operator-directed one-liner (Claude edited directly per instruction): cart → top:5vh right:2.25vw — measured EXACTLY matching the product-page × position (top 45px / right-gap 32px at 1440×900). Supersedes C5's parallel-line placement.
+- K2-C5 — 937aa24 — desktop cart nudge (superseded by C5b): top:4vh→calc(8vh-4px), right:2vw→3.1vw.
+- K2-C4 — a8b8e99 — desktop product views fixed + uniform carousel cap: shared CSS vars (--product-carousel-top-offset 8vh stage / 68px standalone; --product-carousel-bottom-clearance clamp(18px,2.4vh,27px)) cap carousel+viewport max-height for BOTH .hero__product stage and standalone; stage overflow:hidden (no scroll), details panel internal overflow-y:auto, × repositioned absolute top:5vh right:2.25vw (stays clear — cart is hidden on is-product per N2 rule). Verified 1440×900: tall product (4000×6000) image top==CLOTHES top (72==72), bottom margin 60px, no crop, stage doesn't scroll, × visible, details scroll internally; socks reference product top 72/margin 111 — unchanged small-image behavior. Uses max-height (no upscaling of small images).
+
+**Log (newest first; every commit build:green check:green):**
+- K2-C3 — 88c4f5e — standalone product page one-screen fit — product.astro adds `product-detail--standalone` class; global.css min-width:761px block scoped ENTIRELY to it (hero__product stage + mobile untouched, html.landing untouched): page 100dvh flex column overflow:hidden (no page scroll), carousel/viewport capped calc(100dvh-88px), details panel overflow-y:auto internal scroll. Verified at 1440×900 with a 4000×6000 portrait product (50-50-belted-trouser): pageScrolls:false, image fully on-screen (bottom 870/900 = small bottom margin), object-fit:contain (no crop — letterboxed on transparent), counter+arrows visible, panel scrolls internally. FLAG for operator: wordy products scroll the details column internally — say if you'd rather shrink the description.
+- K2-C2 — dbb56cf — drawer reveal .36s→.55s cubic-bezier(.16,1,.3,1) on main panels AND the same keyframe now on sub-folder `.hero__menu-nested` reveals (fires on display flip; no in-flow box — the J2 lesson); reduced-motion: none on both. NOTE: both levels animate OPEN only; close still snaps (matches J2 spec) — flag if two-way close animation is wanted.
+- K2-C1 — fe0aa10 — `.is-active` underline dropped (green is the only affordance in every state); nested folder links clamp(10px,.95vw,13px)→clamp(11px,1.05vw,14px), line-height 1.22→1.28, +.14em per-item margin (desktop open-state rule only; mobile untouched).
+
+---
+
+**PHASE J2 STATUS: ALL 8 COMMITTED ON DEV (2026-07-06) — ready for operator verify. NOT pushed.**
+
+**Log (newest first; every commit build:green check:green):**
+- J2-C8 — b142a32 — panel title aligned to menu header line — global.css one-liner: `.hero__catalog-title{margin-top:clamp(20px,3vh,32px)}` (desktop block); measured delta 0px at 1440; REWORKED from Codex's first attempt (menu-header `top:-3vh` caused OBJECTS+ to overprint DESIGNERS+ — reverted). No other element moved.
+- J2-C7 — fc78b1a — PRE-ORDER removed from heroMenu (content.ts, 5-line deletion); page/iframe/route intact; 4 sections render; mobile rows 3+1; no JS errors from absent [data-preorder].
+- J2-C6 — 33469aa — policy links stacked vertically in .hero-info__legal (`<br/>` for `&middot;`); Footer.astro N/A (deleted in L1).
+- J2-C5 — 37c724e — product gallery → one-at-a-time carousel (product-view.ts + CSS): arrows (neon hover), touch swipe, "n / m" counter (aria-live), first eager/rest lazy; verified on /product/ desktop (counter 1/2→2/2) + mobile (MOB-6 two-col intact); applies to hero product stage too (shared renderer).
+- J2-C4 — ddf26c9 — catalogue continuous smooth scroll: pager JS (setRowIndex/pageRows/wheel+touch hijack) deleted (~99 lines), track = flat 4-col grid (cards smaller per operator), viewport overflow-y:auto smooth; N2 return-point rowIndex→scrollTop (instant post-layout restore — AMENDED: CSS scroll-behavior:smooth was animating/truncating the programmatic restore); verified: wheel scrolls (1200px), card→product→× restores scrollTop 1200→1200; mobile same container; SWR/sold-out/links intact.
+- J2-C3 — d1cbdf0 — CLOTHES SHOP ALL moved to first CATEGORIES child (content.ts) + menu.ts hydration PREPENDS it post-live-rebuild (uses live clothing parent handle); OBJECTS SHOP ALL untouched; verified in dist.
+- J2-C2 — c805c46 — drawer reveal via @keyframes heroPanelReveal (opacity/translate/clip-path .36s ease) on `.is-open .hero__menu-panel`; display:none↔block mechanics UNCHANGED (REWORKED: first attempt's always-in-flow max-height panel added closed-state padding height on desktop + width:max-content inflated mobile closed sections breaking the 2-row tabs — reverted to keyframe-on-display-flip, closed geometry verified byte-equal); reduced-motion: none.
+- J2-C1 — 023d231 — no header blow-up on open (desktop is-open font rule removed; green kept); CLOTHES open-state size swap: subheaders → clamp(14px,1.3vw,18px), NESTED links → clamp(10px,.95vw,13px) (AMENDED: first pass also shrank direct leaves = OBJECTS list; split the shared rule — direct leaves keep the larger size, CLOTHES-only per operator); `- `/`o ` ::before markers deleted (indent kept); menu hovers green-only (underline removed; .is-active underline kept).
+
+---
+>
+> **STANDING RULE (operator, 2026-07-06): the desktop site must NOT change during Wave Mobile — every revision scoped inside ≤760px. Mobile should EMULATE the original desktop experience, condensed and clean — no overlays, no visual distortion.**
+>
+> (Prior state, for the record: Wave 2 + Phase N SHIPPED to main via PR #8 on 2026-07-02 — the ship gate was passed. A 2026-07-06 mobile scout found the published mobile experience has structural overlap bugs; WAVE MOBILE fixes them before official publish. Deferred: "now playing in store" idea (needs Ben's OK). Operator has further small site-wide design tweaks queued — briefs to come later, one at a time.)
+
+---
+
+## WAVE MOBILE — mobile revision pass (2026-07-06 scout: 9 findings, P0–P2)
+
+Scout findings (screenshots with the operator): the mobile menu overlay spans the
+full viewport at z-index 3 above the stage panels (z-index 2) — it eats taps on
+products/add-to-cart and prints menu + about text over product content. Plus tab-row
+collisions (cart icon), PRE-ORDER cut off / horizontal page shift, film × styling.
+Sub-tasks will be dispatched ONE at a time; MOB-1 is first (operator-directed).
+
+### MOB-1 — mobile: about block drops to bottom-center under the stage art
+
+**Status:** committed @ 751a960 — ready for operator verify (on-phone via
+`http://192.168.50.200:4321/shop-and-son/`, dev server running with `--host`)
+
+**Log:**
+- 2026-07-06 — MOB-1: mobile about block fixed bottom-center under stage art — 751a960 — build:green check:green — global.css only, ≤760px blocks only, desktop untouched. `.hero-info` → position:fixed bottom-center (bottom:max(3.5vh,safe-area), translateX(-50%), centered text, z:3 < drawer's 80); hidden (opacity/visibility/pointer-events + .18s fade, reduced-motion:none) on .is-catalog/.is-product/.is-preorder/.is-film AND any open menu section that isn't data-music/fam/preorder. Reviewed clean by Claude + headless-verified at 390×844: landing/MUSIC/& FAM show it centered under the art; catalogue + open CLOTHES hide it. FLAG for operator: (a) film stage currently hides it — one-selector flip if you want it under the film frame; (b) block hides even when CLOTHES is open collapsed (3 rows), not just fully expanded — reads clean, flag if unwanted. Not pushed.
+**Task:** on the MOBILE sheet only (≤760px), `.hero-info` (address + contact +
+legal links) leaves the menu-column flow and docks **bottom-center of the
+viewport**, so it sits subtly BELOW the centered stage art (house stencil on
+landing, DJ booth on MUSIC, & FAM tattoo block). It is HIDDEN on product
+listings. ONE focused commit. `npm run build` **and** `npx astro check` green.
+**Scope:** `homepage/` only. **Desktop (>760px) byte-identical — do not touch
+the desktop rules.**
+
+**Files:** `src/styles/global.css` (primary; the ≤760px media block).
+`src/components/blocks/HeroVideo.astro` ONLY if a state hook is genuinely
+missing (prefer pure CSS via the existing `.is-*` stage classes / `:has()`).
+
+- **Placement (≤760px):** take `.hero-info` out of the `.hero__overlay` flow:
+  `position:fixed; left:50%; transform:translateX(-50%); bottom:max(3.5vh, env(safe-area-inset-bottom)); text-align:center; width:max-content; max-width:88vw; z-index:3`.
+  Keep the existing mono lowercase style, sizes, and the `.hero-info__legal`
+  line — content unchanged, just re-anchored + centered. Links stay tappable
+  (`pointer-events:auto` on links as now). Must stay BELOW the cart drawer
+  (z 80/81) — z:3 is fine.
+- **Show it on (≤760px):** bare landing (house stencil), `.is-music` (DJ booth),
+  `.is-fam` (tattoo block). These are the three "animated block" states — the
+  block reads as a caption under the art.
+- **Hide it on (≤760px):** `.is-catalog`, `.is-product`, `.is-preorder` (product
+  listings / shop iframe — operator explicitly excludes these), `.is-film`
+  (video is the focus — FLAG: operator may want it under the film frame instead;
+  keep it a one-selector flip), and **while a CLOTHES or OBJECTS menu list is
+  expanded** — i.e. any `.hero__menu-section.is-open` that is NOT
+  `[data-music]`/`[data-fam]`/`[data-preorder]` — so the fixed block never
+  overlaps the tall scrolling lists. Hide = `opacity:0; visibility:hidden;
+  pointer-events:none` with a short `.18s` opacity transition (respect
+  `prefers-reduced-motion`: no transition).
+- **No layout side-effects:** removing `.hero-info` from the overlay flow must
+  not change the tab row or panel offsets; `margin-top:auto` etc. can stay on
+  desktop — override only inside the ≤760px block.
+
+**Done when:** build + check green; at 390×844: landing shows address/contact
+centered below the house stencil; MUSIC and & FAM same; catalogue/product/
+pre-order/film show NO about block; expanding CLOTHES/OBJECTS hides it;
+closing back to bare hero brings it back; desktop rendering unchanged.
+
+### MOB-2 — mobile: stage/menu exclusivity — STATE-PRESERVING (P0 root fix)
+
+**Status:** committed @ c6259d5 — ready for operator verify
+
+**Log:**
+- 2026-07-06 — MOB-2: stage/menu exclusivity, state-preserving — c6259d5 — build:green check:green — HeroVideo.astro + global.css. JS: mobileQuery(≤760px); [data-shop-all] leaf → openCatalog + setMenuSectionState(null) on mobile only; plain-section header click skips closeStage() on mobile (stage survives hidden under menu — desktop closeStage unchanged). CSS ≤760px: non-stage open section (`:not([data-music/fam/preorder])`) hides .hero__catalog/__product/__preorder/__film/__fam/__dj via opacity/visibility/pointer-events + .18s fade (reduced-motion: none) — state/DOM untouched. Reviewed clean by Claude + headless REAL-TAP verified at 390 AND 360: card tap opens product, ADD TO CART opens drawer (full CART drawer w/ qty + CHECKOUT), menu-over-product hides then restores the SAME product on collapse. Not pushed.
+**Task:** on ≤760px only, an expanded CLOTHES/OBJECTS menu list and a visible
+stage panel never coexist — but the stage's STATE IS NEVER DESTROYED by the
+menu. Operator's UX decision (2026-07-06): an accidental menu tap must cost the
+user nothing — close the menu and you're exactly where you were; only choosing
+a NEW destination replaces the old one. ONE focused commit. Build + check green.
+**Scope:** `homepage/` only. **Desktop (>760px) byte-identical.**
+
+**Files:** `src/components/blocks/HeroVideo.astro` (client script),
+`src/styles/global.css` (≤760px rules).
+
+- **JS — opening a stage collapses the menu (mobile only):** add
+  `const mobileQuery = window.matchMedia("(max-width: 760px)")`. When a stage is
+  opened from a menu LEAF — the `[data-shop-all]` collection buttons (catalog) —
+  after the stage transition is initiated, if `mobileQuery.matches` call
+  `setMenuSectionState(null)` so the expanded list collapses and the overlay
+  shrinks to the tab rows. Do NOT do this for the header-opened stages
+  (MUSIC / & FAM / PRE-ORDER) — their section staying open (`–`) IS the design.
+  Do not change any desktop code path.
+- **CSS — opening the menu hides (not kills) the stage (mobile only):** when a
+  NON-stage section is open —
+  `.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])`
+  — hide every stage panel visually, preserving all state/DOM:
+  `.hero__catalog, .hero__product, .hero__preorder, .hero__film, .hero__fam`
+  and the music stage panel (use its real class — check the component) →
+  `opacity:0; visibility:hidden; pointer-events:none`, `.18s` fade,
+  `prefers-reduced-motion` → no transition. Do NOT touch `activeStage`, do NOT
+  unmount/re-render anything, do NOT change close/× logic. Collapsing the
+  section back must reveal the stage exactly as it was (same catalogue row,
+  same product, video still paused where it was).
+- **Tap landing:** with all sections collapsed, the overlay's box (height:auto)
+  must not cover the stage area — audit the ≤760px overlay rules for anything
+  forcing full-viewport height and remove it if found. Product cards, ADD TO
+  CART, and the panel × buttons must receive real taps.
+
+**Done when:** build + check green; at 390×844: open catalogue → menu list
+auto-collapses, cards tappable → card opens product → ADD TO CART opens the
+cart drawer (real tap, not JS dispatch); with product open, tapping CLOTHES
+hides the product, collapsing CLOTHES brings the same product back; MUSIC /
+& FAM / PRE-ORDER header flows unchanged; desktop unchanged.
+
+### MOB-3 — mobile: stacked two-row menu + cart always visible
+
+**Status:** committed @ 445d522 — ready for operator verify
+
+**Log:**
+- 2026-07-06 — MOB-3: stacked two-row mobile menu + cart always visible — 445d522 — build:green check:green — HeroVideo.astro + global.css. Markup: `<li class="hero__menu-break" aria-hidden>` after 3rd section (display:none desktop / flex-basis:100% mobile) → row 1 CLOTHES+/OBJECTS+/MUSIC+, row 2 centered & FAM+/PRE-ORDER+. Overlay overflow-x auto→hidden + menu width:max-content→wrap/center/max-width:calc(100%-48px) — horizontal scroll GONE (preorder shift verified dead: scrollX 0, docW==winW at both widths → old MOB-4 resolved, no separate task needed). Header font 14→12.5px, panel links 11→10.5px wrap-enabled. Cart: z5 + forced visible on is-catalog/product/preorder/film/fam (mobile only; desktop hide rules untouched); badge renders. Reviewed clean by Claude + headless-verified 390+360: two centered rows, PRE-ORDER visible, bag clear in all states, panels push row 2 down. Not pushed. FLAG for operator: row 2 re-centers under an open row-1 panel (drops below accordingly per your spec) — check the feel; and panel lists are now center-ish under centered headers — flag if you want them left-aligned within their column.
+**Task:** on ≤760px, replace the single sideways-scrolling tab strip with a
+STACKED, CENTERED, two-row header (operator's design, 2026-07-06):
+row 1 `CLOTHES +  OBJECTS +  MUSIC +`, row 2 centered beneath
+`& FAM +  PRE-ORDER +`. Section panels open in flow BELOW their header, pushing
+what's beneath down (no overlap). The cart bag is visible and tappable AT ALL
+TIMES on mobile. ONE focused commit. Build + check green.
+**Scope:** `homepage/` only. **Desktop (>760px) byte-identical.**
+
+**Files:** `src/styles/global.css` (primary),
+`src/components/blocks/HeroVideo.astro` (only if a row-break element is the
+cleanest wrap mechanism).
+
+- **Rows:** ≤760px `.hero__menu` becomes centered wrapped rows
+  (`display:flex; flex-wrap:wrap; justify-content:center;` tuned row/column
+  gaps). Force the break after MUSIC (3rd section): cleanest is a static
+  `<li class="hero__menu-break" aria-hidden="true">` after the 3rd section
+  (`display:none` desktop, `flex-basis:100%; height:0` mobile) — or a pure-CSS
+  mechanism if genuinely reliable. Section order comes from `content.ts`
+  (clothes, objects, music, fam, preorder) — do not reorder data.
+- **Kill horizontal scrolling entirely** on the mobile overlay: remove the
+  `overflow-x:auto` / `width:max-content; min-width:100%` strip behavior and
+  `white-space:nowrap` where it forces overflow. Both rows must fit 360px wide
+  with zero sideways scroll — trim tab font (14px → down to ~12.5px if needed)
+  and gaps to make it true. THIS ALSO must eliminate the old "page shifts left
+  with a white band when opening PRE-ORDER" bug (old MOB-4) — verify it's gone.
+- **Cart always visible (mobile):** on ≤760px REMOVE/override the stage
+  cart-hide rules (`.is-catalog`/`.is-preorder`/`.is-product` etc. hiding
+  `.hero__cart`) — operator wants the bag accessible at all times. Keep it
+  pinned top-right (`top:max(3vh,safe-area) right:4vw`, z above panels, below
+  drawer 80/81). Reserve it space: the menu rows get enough right padding (or
+  max-width) that no tab ever sits under the bag at 390px AND 360px. Check it
+  clears each panel's × close button (they sit lower — confirm visually).
+  Desktop cart-hide behavior UNCHANGED.
+- **Panels in flow:** opening a row-1 section pushes row 2 (and everything
+  below) down — natural document flow, no absolute overlay of the rows. The
+  MOB-1 fixed about block + MOB-2 hide rules keep working unchanged.
+
+**Done when:** build + check green; at 390 AND 360 wide: two centered rows
+exactly as specified, PRE-ORDER visible with no sideways scroll anywhere, bag
+never overlapped in any state (landing, each section open, each stage open),
+opening CLOTHES pushes & FAM/PRE-ORDER down; stages all open/close normally;
+desktop unchanged.
+
+### MOB-5 — mobile polish: film stage controls + tap targets
+
+**Status:** committed @ 6738a1d — ready for operator verify
+
+**Log:**
+- 2026-07-06 — MOB-5: film controls unboxed + centered, tap-target pass — 6738a1d — build:green check:green — global.css only, all ≤760px. Film: frame flex-centered (top clamp 78-104px), ×/sound-toggle/playback → transparent bg, white ink + dark text/drop-shadow (legible over video), 40px tap boxes; menu links/subheaders min-height 36px flex; catalog/product/preorder × → 40px; cart 32→40px box (22px glyph). About block stays hidden on film per default. Reviewed clean by Claude + headless-verified at 390. Desktop untouched. Not pushed. NOTE: 36px tap rows make the expanded DESIGNERS list even taller — MOB-7 (operator picking treatment) addresses the list itself.
+**Task:** two contained mobile polish fixes. ONE focused commit. Build + check
+green. **Scope:** `homepage/` only; ALL rules inside ≤760px — desktop
+byte-identical.
+
+**Files:** `src/styles/global.css` (expect CSS-only; touch
+`HeroVideo.astro` only if a class is genuinely missing).
+
+- **Film stage controls (≤760px):** the × close (`[data-film-close]`) and the
+  sound toggle currently render as opaque paper-colored boxes sitting ON the
+  video — clunky in the condensed window. Mobile override: strip the box
+  (`background:transparent; border:none`), render glyph/text directly over the
+  video in white with a subtle dark drop-shadow/text-shadow for legibility
+  (matches the site's minimal ink language). Keep the lowercase mono for the
+  sound label. Give both a ≥40px effective tap box (padding — visual size can
+  stay small). Also VERTICALLY CENTER the film frame in the stage area below
+  the tab rows (it currently floats low with dead space above) — flex
+  centering on the ≤760px `.hero__film`, transforms/animations untouched.
+  About block stays HIDDEN on film (operator default — MOB-1 flag stands).
+- **Tap-target pass (≤760px):** without changing the visual type scale:
+  `.hero__menu-link`, `.hero__menu-subheader` → min-height ~36px effective tap
+  (line-height/padding, text can stay 10.5px); every panel × close
+  (`[data-catalog-close]`, `[data-product-close]`, `[data-preorder-close]`,
+  `[data-film-close]`) → ≥40px tap box; `.hero__cart` tap box 32→40px (icon
+  glyph stays 22px). Verify nothing shifts layout (padding inward, not margin
+  outward).
+
+**Done when:** build + check green; at 390: film stage centered with clean
+un-boxed controls that are still legible over bright video; all listed
+controls have the enlarged tap boxes; desktop unchanged.
+
+### MOB-6 — mobile product page: images LEFT, text RIGHT (emulate desktop)
+
+**Status:** committed @ 549834a — ready for operator verify
+
+**Log:**
+- 2026-07-06 — MOB-6: mobile product two-column (images left 54% / detail right / desc full-width below) — 549834a — build:green check:green — global.css only, ≤760px. `.product-detail__content` float-left gallery (54%, CSS vars for gutter/edge), vendor/title/price/control margin-tracked into the right column, serif title clamp(20px,7.2vw,30px), variants/add wrap-enabled, desc clear:both full-width; same rules cover `.hero__product` stage overrides so in-hero stage + standalone /product/ match. Reviewed clean by Claude + headless-verified 390+360 (stage AND standalone): images left, SUB SUN/title/$/ADD TO CART right, desc below. Desktop product view verified unchanged at 1440 (landing/catalog/product screenshots). Not pushed.
+**Task:** operator (2026-07-06): the mobile product view must read like the
+original website — images on the left, text on the right — instead of the
+current single stacked column. Applies to BOTH the in-hero product stage and
+the standalone `/product/` page (they share the `.product-detail*` CSS — keep
+them consistent). ONE focused commit. Build + check green. **Scope:**
+`homepage/` only; ≤760px only — the desktop 55/45 grid is the reference and
+must not change.
+
+**Files:** `src/styles/global.css` (goal: CSS-only re-grid of the existing
+`.product-detail*` structure; consult `src/pages/product.astro` +
+`src/lib/product-view.ts` for the real class names — do not restructure their
+markup).
+
+- **Layout (≤760px):** the product content becomes a two-column grid echoing
+  the desktop split, condensed: **gallery LEFT ~54%** (images stacked, scroll
+  with the page, full-bleed within their column), **detail panel RIGHT ~46%**
+  (vendor → serif title → price → variant selector → add-to-cart), with the
+  **description spanning FULL WIDTH below** both columns (at ~46% of a phone
+  the description would be unreadably narrow — full-width below keeps it
+  clean; flag for operator if he'd rather have it in-column).
+- Scale the serif title down for the narrow column
+  (`clamp()` — it currently renders huge on mobile), tighten variant buttons
+  to fit the column (wrap allowed), keep the M1 neon hover/active language.
+- The in-hero product stage (`.hero__product` overrides) inherits the same
+  two-column read; its own scroll context/close behavior untouched.
+- Sticky behavior on mobile: keep it simple — both columns flow (no sticky) to
+  avoid iOS jank inside the stage panel; standalone page may keep sticky only
+  if it verifiably doesn't fight the narrow viewport.
+
+**Done when:** build + check green; at 390 AND 360: product opens with images
+left / text right, description full-width below; add-to-cart still fires the
+drawer; the standalone `/product/?handle=` page matches; desktop product view
+pixel-identical.
+
+### MOB-7 — mobile: nested menu lists in TWO columns (operator picked)
+
+**Status:** committed @ 06f8182 + review-fix f554b4a — ready for operator verify
+
+**Log:**
+- 2026-07-06 — MOB-7 review-fix: mobile menu markers glued (OANCELLM) — f554b4a — build:green check:green — the MOB-5 `display:flex` on .hero__menu-link collapsed the trailing space of the `::before` markers (`"- "` / `"o "`); fixed with `gap:0.4em` inside the ≤760px rule only. Desktop markers untouched. Verified: "O ANCELLM" / "- SHOP ALL" spaced correctly.
+- 2026-07-06 — MOB-7: nested menu lists in two columns — 06f8182 — build:green check:green — global.css only, ≤760px: .hero__menu-nested columns:2 (sequential halves per operator's approved preview) + column-gap:18px + break-inside:avoid on li; panel cap 260→min(88vw,340px). Verified 390+360: two balanced columns, all 32 designers visible, zero horizontal overflow; OBJECTS panel single-column unchanged; desktop unchanged. FLAG for operator: with the wide DESIGNERS panel open, the tab rows reflow — CLOTHES centers on top and the other four tabs drop BELOW the open panel (reads as a focus state; say if you want the two rows pinned instead). Not pushed.
+**Task:** operator picked (2026-07-06): the expanded nested lists (DESIGNERS —
+32 names — and CATEGORIES) render in **two compact columns** on mobile — all
+names visible at once, NO internal scrolling, halving the wall-of-text height.
+ONE focused commit. Build + check green. **Scope:** `homepage/` only; ≤760px
+only — desktop single-column nested lists unchanged.
+
+**Files:** `src/styles/global.css` only.
+
+- **≤760px `.hero__menu-nested`:** `columns:2` (CSS multi-column — fills the
+  FIRST half of the alphabet down the left column, second half down the right,
+  matching the operator's approved preview; do NOT use grid auto-flow row,
+  which would pair a/b across) with `column-gap` ~16-20px and
+  `break-inside:avoid` on the `<li>`s so a name never splits across columns.
+- **Give it room:** the parent `.hero__menu-panel` mobile cap
+  (`max-width:min(84vw,260px)`) is too narrow for two columns — widen the cap
+  for panels/nested lists as needed (up to ~88vw) so both columns fit 360px
+  without horizontal overflow. Names keep `overflow-wrap:anywhere` and the
+  MOB-5 36px tap rows.
+- Direct panel items that are NOT nested (e.g. OBJECTS' short brand list,
+  `- SHOP ALL`) stay single column.
+
+**Done when:** build + check green; at 390 AND 360: CLOTHES → DESIGNERS shows
+two balanced columns (sequential halves, all 32 visible, no scroll, no
+overflow-x); CATEGORIES same treatment; OBJECTS panel unchanged; desktop
+unchanged.
+
+### MOB-8 — mobile menu: PAPER TAKEOVER + bigger type + badge fix (Proposal A)
+
+**Status:** committed @ 6062af5 — ready for operator phone verify (LAST item before ship gate)
+
+**Log:**
+- 2026-07-06 — MOB-8: paper takeover + lowercase-mono 12px lists + 14px headers + badge fix — 6062af5 — build:green check:green — global.css only, all ≤760px. Takeover: `.hero-video::after` fixed inset:0 z2 bg var(--paper), opacity-fade .25s (reduced-motion: none), driven by the non-stage `:has()` selector — video/stencil fully hidden behind solid paper while CLOTHES/OBJECTS open; music/fam/preorder stages untouched (verified: DJ stage visible with MUSIC open). Type: headers 12.5→14px (gap .88→.7rem — closed 2-row structure verified intact at 390+360, cart clear), panel links + subheaders → var(--mono) lowercase 12px (markers, 2-col designers, 36px taps all kept). Hairline under tab row while takeover active (FLAG: operator judges on phone). Badge: .hero__cart-count top:3px right:3px — fully visible ("1" verified). 0px overflow both widths. Desktop untouched. Reviewed clean by Claude + headless-verified. Not pushed. FLAG (pre-existing, unchanged): an open section's wide panel still reflows the tab rows (MUSIC drops to its own line while its playlist panel is open).
+**Task:** operator picked Proposal A (2026-07-06). Three parts, ONE focused
+commit. Build + check green. **Scope:** `homepage/` only; every rule ≤760px —
+desktop byte-identical.
+
+**Files:** `src/styles/global.css` (goal: CSS-only; `HeroVideo.astro` only if
+a hook is genuinely missing).
+
+**(1) Paper takeover.** On ≤760px, when a NON-stage menu section is open
+(same selector family as MOB-1/2:
+`.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])`),
+a **solid paper layer covers the full viewport BEHIND the menu** so the video,
+house stencil, and shadows disappear — the menu reads on calm ground like the
+live shopandson.com drawer:
+- Implement as a pseudo-element (e.g. `.hero-video:has(<selector>)::after`)
+  with `position:fixed; inset:0;` background = the hero's cream paper tone
+  (match the site's paper — check the existing `--paper`/background values;
+  NOT stark white), z-index ABOVE the video/stencil/panels (panels are z2 and
+  already hidden by MOB-2 when this state is active) and BELOW `.hero__overlay`
+  (z3) and `.hero__cart` (z5).
+- Fade in/out with a ~.25s opacity transition; `prefers-reduced-motion` → no
+  transition. Closing the last section returns the video hero.
+- Do NOT touch the music/fam/preorder header-open states — their stages must
+  stay visible behind their small panels.
+- Add a subtle hairline (`1px solid` low-alpha ink) separating the tab-row
+  block from the expanded panel while the takeover is active — like the live
+  drawer's rules. (FLAG it in the log — operator judges the hairline on
+  phone; easy to remove.)
+
+**(2) List typography — lowercase mono, BIGGER (operator: mobile type is too
+hard to access; increase sizes).** While keeping the section headers in the
+uppercase Helvetica +/− voice:
+- `.hero__menu-header` (CLOTHES/OBJECTS/MUSIC/& FAM/PRE-ORDER): 12.5px →
+  **target 14px** (absolute floor 13.5px). Both rows MUST still fit 390 AND
+  360 with zero horizontal overflow and clear daylight to the cart bag glyph —
+  tune `column-gap`/row max-width as needed; verify visually at 360.
+- Panel/leaf links (`.hero__menu-link`, incl. nested) + subheaders
+  (`.hero__menu-subheader`): switch to the site's mono stack (same family as
+  `.hero-info` — check the var/font used there) with
+  `text-transform:lowercase`, sized **12px** (up from 10.5px), keeping the
+  `- ` / `o ` ::before markers, the MOB-7 two columns (widen the panel cap if
+  12px mono needs it, still no overflow), the 36px tap rows, and the MOB-2
+  state behavior. `- SHOP ALL` and subheaders (categories/designers) render
+  lowercase mono too — matching the live drawer's voice.
+
+**(3) Cart badge clip fix.** `.hero__cart-count` currently renders half-clipped
+at the viewport corner on mobile. Keep it fully visible: anchor it INSIDE the
+40px cart box's top-right (small mono count, may overlap the bag glyph corner),
+respecting `env(safe-area-inset-top)`. Mobile only.
+
+**Done when:** build + check green; at 390 AND 360: opening CLOTHES/OBJECTS
+fades in solid paper (no video/stencil visible anywhere behind the menu),
+designers list reads lowercase mono 12px in two columns, headers ≥13.5px with
+zero overflow and clear cart, closing returns the video hero; MUSIC/& FAM/
+PRE-ORDER stages unaffected; badge fully visible with items in cart; desktop
+unchanged.
+
+### Exit gate (unchanged)
+
+Re-scout + operator verify on real iPhone (browse → product → add to cart →
+drawer → checkout hand-off; every stage; pre-order on live build) → explicit
+**"ship wave mobile"**.
+
+---
 
 Recommended order (three waves, operator verifies on `dev` after each wave and
 ships dev → main per wave, not one giant merge):

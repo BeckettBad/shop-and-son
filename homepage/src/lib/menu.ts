@@ -19,6 +19,11 @@ const CLOTHING_SHOP_ALL_HANDLE = "clothing-1";
 
 const normalizeLabel = (label: string) => label.trim().replace(/\s+/g, " ").toLowerCase();
 const displayLabel = (label: string) => label.trim().replace(/\s+/g, " ").toLocaleUpperCase("en-US");
+const clothingShopAllEntry = (collectionHandle: string): LiveHeroMenuEntry => ({
+  label: "SHOP ALL",
+  collection: collectionHandle,
+  collectionLabel: "CLOTHES — SHOP ALL",
+});
 
 const findMenuItem = (items: StorefrontMenuItem[], label: string, collectionHandle?: string) =>
   items.find((item) => {
@@ -56,10 +61,13 @@ export async function getLiveHeroMenu(): Promise<LiveHeroMenu | null> {
   // CLOTHES/CATEGORIES, main-menu designers children hydrate CLOTHES/DESIGNERS,
   // and main-menu objects children hydrate OBJECTS leaves; the parent collection
   // handles remain the SHOP ALL entries (clothing-1 and house-1).
-  const categories = toCollectionEntries(clothing.items).filter((entry) => {
+  const categoryEntries = toCollectionEntries(clothing.items).filter((entry) => {
     const label = normalizeLabel(entry.label);
     return entry.collection !== CLOTHING_SHOP_ALL_HANDLE && label !== "shop all";
   });
+  const categories = clothing.collectionHandle
+    ? [clothingShopAllEntry(clothing.collectionHandle), ...categoryEntries]
+    : categoryEntries;
 
   return {
     categories,
