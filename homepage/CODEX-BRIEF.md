@@ -172,7 +172,81 @@ Operator fine-tunes on dev.
 **After C8:** stop; report 8 hashes + verify results to operator. No push, no
 PR until an explicit "ship" (and PR #9 must merge first).
 
-## PHASE SRCH — product search (PROPOSED 2026-07-06 — awaiting operator approval; do NOT start)
+## PHASE SRCH — product search (APPROVED 2026-07-06 — operator's REVISED picks: thin MAGNIFIER GLYPH trigger matching the bag's line weight · suggestion rows WITH small thumbnails · empty query shows nothing. Everything must match the site's style/taste and be implemented efficiently + thoroughly.)
+
+Scope: homepage/ only, on dev (PERF shipped to main via PR #10 first), one
+focused commit per sub-task, build+check green each, NO push until ship.
+Desktop-first: hide the whole feature ≤760px (mobile placement joins the
+mobile round). Design tokens: lowercase mono utility voice, green-only
+affordance (no underline states beyond the input rule), menu-drawer easing.
+
+**SRCH-C1 — trigger + slide-out input.** HeroVideo.astro + global.css.
+Markup inside .hero-video next to the cart: `<div class="hero__search"
+data-search>` with `<button class="hero__search-toggle" data-search-toggle
+type="button" aria-label="search">…magnifier svg…</button>` — the trigger is
+a THIN MAGNIFIER GLYPH, not a word: inline SVG viewBox 0 0 20 20, circle +
+angled handle, `stroke="currentColor" fill="none" stroke-width:~1.5` sized
+~20-22px so its optical line weight matches the bag icon beside it
+(the bag is the 20×20 icon-bag path — eyeball-match the weight); ink color,
+green on hover/open like the bag's hover — and `<input class="hero__search-input"
+data-search-input type="text" placeholder="search…" aria-label="search
+products" autocomplete="off">`. Position: absolute, same top as the cart
+(top:5vh), right: calc(2.25vw + 56px) so it sits LEFT of the bag with a
+clean gap; z-index 5. Behavior: toggle click → `.is-open` on .hero__search →
+input slides out leftward width 0→~190px (.3s, the menu-drawer cubic-bezier),
+focus; toggle turns green while open; Esc closes+clears; click-away with
+empty input closes; `/` keypress opens+focuses (ONLY when no input/textarea
+is focused and the cart drawer is closed). Styling: toggle 12px lowercase
+mono ink→green hover; input bare with 1px bottom border ink, 12px mono
+lowercase, muted placeholder. VISIBILITY: mirror the cart's stage show/hide
+rules exactly (hidden on is-catalog/is-preorder/is-product desktop states,
+same transition); display:none ≤760px. Reduced-motion: no slide animation.
+No data wiring yet. Done when: corner reads `[magnifier]  [bag]` with matched
+line weights, opens/closes per above, all stage/menu behavior untouched.
+
+**SRCH-C2 — instant local suggestions.** HeroVideo.astro (+ a small module if
+cleaner). Build one in-memory index at init from the catalogue data the page
+already carries (the build-time snapshot products used by the catalogue —
+flatten across collections, dedupe by handle; fields: handle/title/vendor/
+price/image). On input (every keystroke, no debounce): lowercase substring
+match over title+vendor; up to 6 rows in `<div class="hero__search-suggest">`
+below the input, right-aligned, width ~340px: row = SMALL THUMBNAIL at left
+(40×40, the product's snapshot image via getSizedShopifyImageUrl at a small
+width (~120) if available — object-fit:cover, no border-radius, 1px ink
+border matching the site's card language; loading=lazy decoding=async) then
+title (ellipsized) + `vendor · $price` muted meta; hover green on the title; ArrowUp/Down walk rows
+(aria-activedescendant or .is-active class), Enter opens the active row,
+click opens the row: → the EXISTING product stage via the same openProduct
+path (pushState ?product=…), and fire prefetchProduct(handle) on row
+pointerenter (PERF cache). Empty input → no rows (approved). Esc clears rows
+then closes. Done when: typing "sock"/"vase" shows instant rows with zero
+network; row click lands in the product stage; keyboard path works.
+
+**SRCH-C3 — Storefront predictive merge.** storefront-client.ts: add
+`predictiveSearch(query)` using the same GraphQL client (Storefront
+`predictiveSearch` query, products only, first 8; fields handle/title/vendor/
+price range/featured image; map through the existing mapper conventions +
+getSizedShopifyImageUrl). In the search UI: debounce 250ms after local rows
+render; merge results deduped by handle (local first, predictive appended up
+to the 6-row cap... if a predictive hit ranks an exact-title match, fine to
+just dedupe+append — keep it simple); ANY api failure = silent local-only
+(no error UI — the site's degradation pattern). Done when: a query matching a
+product NOT in the snapshot (verify live) appears after ~250ms; api blocked
+→ local rows unaffected.
+
+**SRCH-C4 — results stage + deep link.** Enter on a free query (no active
+row) or a final `all results for "q" →` row opens a SEARCH results stage:
+reuse the catalogue panel + renderer (renderCatalogRows/header machinery)
+with title `SEARCH — "q" (n)`; data = local index filter merged with a
+Storefront full `search` (or predictiveSearch first 24) deduped by handle;
+sold-out/prefetch/in-site links come free. URL sync `?search=q` mirroring the
+?product pattern (pushState, popstate, direct-load opens the stage,
+strip-on-close); × closes to bare hero; opening it closes other stages the
+standard way; menu-over-stage hides it state-preserved (MOB-2 selector family
+— add the stage class to those lists). Done when: enter shows the grid with
+count, deep link works cold, back button behaves, menu interplay clean.
+
+
 
 Proposal drafted + interactive mock published to the operator. Concept: a quiet
 lowercase-mono `search` word left of the bag → slide-out underlined input
@@ -184,6 +258,15 @@ Plan: SRCH-C1 trigger+input · C2 local suggestions · C3 predictive merge ·
 C4 results stage. Desktop first; mobile placement joins the mobile round.
 Awaiting Ben's three taste picks: word-vs-icon trigger, text-only-vs-thumbnail
 rows, empty-query behavior.
+
+**PHASE SRCH STATUS: ALL 4 COMMITTED ON DEV (2026-07-06) — ready for operator verify. NOT pushed. (PERF shipped separately via PR #10 @ 56650bc before SRCH began.)**
+
+**Log (build:green check:green each):**
+- SRCH-C4 — 1eea848 — results stage `is-search` reusing catalogue panel/renderer; title `SEARCH — "q" (n)`; ?search= URL sync (pushState/popstate/direct-load/strip-on-close). Verified: enter → 39-card grid for "linen"; cold deep-link ?search=vase → 17 cards.
+- SRCH-C3 — df90a7a — Storefront predictiveSearch (first 8, mapped + sized images) debounced 250ms, deduped by handle after local rows; silent local-only on failure. Verified: 0 graphql before debounce, fires after.
+- SRCH-C2 — cd9acbc — instant local suggestions from the flattened snapshot index: 6 rows + all-results row, 40px bordered thumbnails, keyboard nav (arrows/enter), row click → product stage, prefetchProduct on row hover, empty = nothing.
+- SRCH-C1 — de23a16 (amended from 0dd0339 per operator's revised pick) — thin magnifier glyph (20×20 stroke 1.5 currentColor, weight-matched to icon-bag), green hover/open; slide-out underlined input (.3s), Esc / click-away / `/` shortcut; mirrors cart stage-visibility; display:none ≤760px (mobile round places it).
+- Operator's final picks: magnifier glyph · thumbnail rows · empty shows nothing.
 
 ## PHASE PERF — image/product loading speed (operator-approved, 2026-07-06)
 
