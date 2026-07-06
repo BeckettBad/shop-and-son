@@ -172,6 +172,60 @@ Operator fine-tunes on dev.
 **After C8:** stop; report 8 hashes + verify results to operator. No push, no
 PR until an explicit "ship" (and PR #9 must merge first).
 
+## PHASE K2 — design-tuning pass on J2 (operator voice-memo, 2026-07-06)
+
+> Named K2 because Phase K (commerce core) shipped 2026-07-02. Scope:
+> `homepage/` only, on `dev`, never merge, one focused commit each,
+> build+check green each, NO push/PR until operator "ship".
+
+**K2-C1 — menu link states.** global.css only.
+(a) `.hero__menu-link.is-active{color:var(--neon-green); text-decoration:underline}`
+→ drop the underline; green only. NO underline in ANY state (hover already
+green-only from J2-C1). (b) Nested folder items — desktop open-state rule
+`.hero__menu-section.is-open .hero__menu-nested .hero__menu-link` (currently
+`clamp(10px,.95vw,13px)`) → slightly LARGER (e.g. `clamp(11px,1.05vw,14px)`)
++ slightly more vertical space per entry (line-height or small margin between
+`.hero__menu-nested > li`). Subtle, not a big jump. CATEGORIES + DESIGNERS
+lists both (they share the rule). Mobile 12px rule untouched.
+
+**K2-C2 — drawer animation, slower + sub-folders.** global.css only.
+(a) `heroPanelReveal` .36s → ~.55s with a softer ease (e.g. cubic-bezier ease-out
+family) on `.hero__menu-section.is-open .hero__menu-panel`. (b) Sub-folders:
+`.hero__menu-item--group.is-open .hero__menu-nested` currently snaps
+(display:none→block). Give it the SAME keyframe reveal (animation fires on
+display flip — proven by J2-C2; do NOT switch to an always-in-flow max-height
+box, that broke closed geometry once already). Same duration/easing as (a).
+NOTE for operator: main panels animate OPEN only (close snaps — J2 spec);
+sub-folders will match. Reduced-motion: none on both levels.
+
+**K2-C3 — standalone product page fits one screen, no page scroll.** Scope
+STRICTLY to the standalone page (`.product-detail` rules NOT under
+`.hero__product`, + `src/pages/product.astro` for a page-level hook if needed)
+— the in-hero product stage and the MOB-6 mobile layout are phone-verified and
+must NOT change. Desktop (min-width:761px):
+- Page does not scroll (one-screen view; e.g. lock overflow on the page root
+  via a product.astro class — do NOT touch the global `html.landing` rules).
+- Cap the carousel so image + arrows + counter fit within the viewport with a
+  small bottom margin: gallery/media max-height ≈ calc(100vh - top bar - small
+  margin), image scales DOWN (no crop), carousel sits slightly higher.
+- Details column (vendor/title/price/variants/add/description): if taller than
+  the viewport, ONLY that column scrolls internally (overflow-y:auto,
+  scrollbar hidden per site convention). FLAG for operator — he may prefer
+  shrinking the description instead.
+- Catalogue/multi-product views keep their J2 continuous scroll. Mobile
+  standalone page unchanged (keeps current scroll).
+
+**After C3:** stop; report 3 hashes + verify results. No push/PR until "ship".
+
+**PHASE K2 STATUS: ALL 3 COMMITTED ON DEV (2026-07-06) — ready for operator verify. NOT pushed.**
+
+**Log (newest first; every commit build:green check:green):**
+- K2-C3 — 88c4f5e — standalone product page one-screen fit — product.astro adds `product-detail--standalone` class; global.css min-width:761px block scoped ENTIRELY to it (hero__product stage + mobile untouched, html.landing untouched): page 100dvh flex column overflow:hidden (no page scroll), carousel/viewport capped calc(100dvh-88px), details panel overflow-y:auto internal scroll. Verified at 1440×900 with a 4000×6000 portrait product (50-50-belted-trouser): pageScrolls:false, image fully on-screen (bottom 870/900 = small bottom margin), object-fit:contain (no crop — letterboxed on transparent), counter+arrows visible, panel scrolls internally. FLAG for operator: wordy products scroll the details column internally — say if you'd rather shrink the description.
+- K2-C2 — dbb56cf — drawer reveal .36s→.55s cubic-bezier(.16,1,.3,1) on main panels AND the same keyframe now on sub-folder `.hero__menu-nested` reveals (fires on display flip; no in-flow box — the J2 lesson); reduced-motion: none on both. NOTE: both levels animate OPEN only; close still snaps (matches J2 spec) — flag if two-way close animation is wanted.
+- K2-C1 — fe0aa10 — `.is-active` underline dropped (green is the only affordance in every state); nested folder links clamp(10px,.95vw,13px)→clamp(11px,1.05vw,14px), line-height 1.22→1.28, +.14em per-item margin (desktop open-state rule only; mobile untouched).
+
+---
+
 **PHASE J2 STATUS: ALL 8 COMMITTED ON DEV (2026-07-06) — ready for operator verify. NOT pushed.**
 
 **Log (newest first; every commit build:green check:green):**
