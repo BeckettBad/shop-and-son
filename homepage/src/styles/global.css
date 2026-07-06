@@ -693,6 +693,7 @@ body{
     overflow-x:hidden; overflow-y:auto; overscroll-behavior-y:contain;
     -webkit-overflow-scrolling:touch;
   }
+  .hero__catalog-title{margin-top:clamp(20px,3vh,32px)}
   .hero__menu-section{margin-bottom:.72em}
   .hero__menu-section.is-open .hero__menu-panel{
     display:block; padding:.65em 0 0;
