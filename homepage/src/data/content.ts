@@ -129,10 +129,10 @@ export const heroMenu: HeroMenuSection[] = [
   {
     label: "CLOTHES",
     items: [
-      { label: "SHOP ALL", collection: "clothing-1", collectionLabel: "CLOTHES — SHOP ALL" },
       {
         label: "CATEGORIES",
         children: [
+          { label: "SHOP ALL", collection: "clothing-1", collectionLabel: "CLOTHES — SHOP ALL" },
           { label: "JACKETS / OUTERWEAR", collection: "jackets-outerwear", collectionLabel: "JACKETS / OUTERWEAR" },
           { label: "SHIRTS · BUTTONS / SNAPS", collection: "shirts-with-buttons-snaps", collectionLabel: "SHIRTS · BUTTONS / SNAPS" },
           { label: "KNITWEAR", collection: "knitwear", collectionLabel: "KNITWEAR" },
