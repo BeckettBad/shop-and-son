@@ -73,7 +73,81 @@ diff against that sub-task's **Done when** + the risks list before the next
 dispatch. Before each dispatch, Claude updates the line below so Codex has ONE
 target; everything else in this file is context, not instruction.
 
-> **ACTIVE SUB-TASK: (none — PHASE N COMPLETE: N1 e70e5ae + N2 e8aaa43 on origin/dev, reviewed + built green. WAVE 2 + PHASE N now at the SHIP GATE: awaiting operator's full dev eyeball (cart end-to-end, product STAGE incl. card→product→× returns to same row, browser back, refresh-mid-product, cmd-click opens standalone page, add-to-cart→checkout, menu/stage interactions close product cleanly, K7 sort, live menus, policies, mobile) → then an EXPLICIT "ship wave 2". Ship = dev→main PR carrying Wave 2 + Phase N (K1/Wave 3 already on main). Deferred: "now playing in store" idea (needs Ben's OK).)**
+> **ACTIVE SUB-TASK: WAVE MOBILE — MOB-1 (about block drops to bottom-center on mobile; full spec in the "WAVE MOBILE" section immediately below). Status: ready for Codex.**
+>
+> (Prior state, for the record: Wave 2 + Phase N SHIPPED to main via PR #8 on 2026-07-02 — the ship gate was passed. A 2026-07-06 mobile scout found the published mobile experience has structural overlap bugs; WAVE MOBILE fixes them before official publish. Deferred: "now playing in store" idea (needs Ben's OK). Operator has further small site-wide design tweaks queued — briefs to come later, one at a time.)
+
+---
+
+## WAVE MOBILE — mobile revision pass (2026-07-06 scout: 9 findings, P0–P2)
+
+Scout findings (screenshots with the operator): the mobile menu overlay spans the
+full viewport at z-index 3 above the stage panels (z-index 2) — it eats taps on
+products/add-to-cart and prints menu + about text over product content. Plus tab-row
+collisions (cart icon), PRE-ORDER cut off / horizontal page shift, film × styling.
+Sub-tasks will be dispatched ONE at a time; MOB-1 is first (operator-directed).
+
+### MOB-1 — mobile: about block drops to bottom-center under the stage art
+
+**Status:** committed @ 751a960 — ready for operator verify (on-phone via
+`http://192.168.50.200:4321/shop-and-son/`, dev server running with `--host`)
+
+**Log:**
+- 2026-07-06 — MOB-1: mobile about block fixed bottom-center under stage art — 751a960 — build:green check:green — global.css only, ≤760px blocks only, desktop untouched. `.hero-info` → position:fixed bottom-center (bottom:max(3.5vh,safe-area), translateX(-50%), centered text, z:3 < drawer's 80); hidden (opacity/visibility/pointer-events + .18s fade, reduced-motion:none) on .is-catalog/.is-product/.is-preorder/.is-film AND any open menu section that isn't data-music/fam/preorder. Reviewed clean by Claude + headless-verified at 390×844: landing/MUSIC/& FAM show it centered under the art; catalogue + open CLOTHES hide it. FLAG for operator: (a) film stage currently hides it — one-selector flip if you want it under the film frame; (b) block hides even when CLOTHES is open collapsed (3 rows), not just fully expanded — reads clean, flag if unwanted. Not pushed.
+**Task:** on the MOBILE sheet only (≤760px), `.hero-info` (address + contact +
+legal links) leaves the menu-column flow and docks **bottom-center of the
+viewport**, so it sits subtly BELOW the centered stage art (house stencil on
+landing, DJ booth on MUSIC, & FAM tattoo block). It is HIDDEN on product
+listings. ONE focused commit. `npm run build` **and** `npx astro check` green.
+**Scope:** `homepage/` only. **Desktop (>760px) byte-identical — do not touch
+the desktop rules.**
+
+**Files:** `src/styles/global.css` (primary; the ≤760px media block).
+`src/components/blocks/HeroVideo.astro` ONLY if a state hook is genuinely
+missing (prefer pure CSS via the existing `.is-*` stage classes / `:has()`).
+
+- **Placement (≤760px):** take `.hero-info` out of the `.hero__overlay` flow:
+  `position:fixed; left:50%; transform:translateX(-50%); bottom:max(3.5vh, env(safe-area-inset-bottom)); text-align:center; width:max-content; max-width:88vw; z-index:3`.
+  Keep the existing mono lowercase style, sizes, and the `.hero-info__legal`
+  line — content unchanged, just re-anchored + centered. Links stay tappable
+  (`pointer-events:auto` on links as now). Must stay BELOW the cart drawer
+  (z 80/81) — z:3 is fine.
+- **Show it on (≤760px):** bare landing (house stencil), `.is-music` (DJ booth),
+  `.is-fam` (tattoo block). These are the three "animated block" states — the
+  block reads as a caption under the art.
+- **Hide it on (≤760px):** `.is-catalog`, `.is-product`, `.is-preorder` (product
+  listings / shop iframe — operator explicitly excludes these), `.is-film`
+  (video is the focus — FLAG: operator may want it under the film frame instead;
+  keep it a one-selector flip), and **while a CLOTHES or OBJECTS menu list is
+  expanded** — i.e. any `.hero__menu-section.is-open` that is NOT
+  `[data-music]`/`[data-fam]`/`[data-preorder]` — so the fixed block never
+  overlaps the tall scrolling lists. Hide = `opacity:0; visibility:hidden;
+  pointer-events:none` with a short `.18s` opacity transition (respect
+  `prefers-reduced-motion`: no transition).
+- **No layout side-effects:** removing `.hero-info` from the overlay flow must
+  not change the tab row or panel offsets; `margin-top:auto` etc. can stay on
+  desktop — override only inside the ≤760px block.
+
+**Done when:** build + check green; at 390×844: landing shows address/contact
+centered below the house stencil; MUSIC and & FAM same; catalogue/product/
+pre-order/film show NO about block; expanding CLOTHES/OBJECTS hides it;
+closing back to bare hero brings it back; desktop rendering unchanged.
+
+### MOB-2 … MOB-5 — queued (do NOT start)
+
+- **MOB-2 — stage/menu exclusivity + z-order (the P0 root fix):** on ≤760px an
+  open stage panel and an open menu list are mutually exclusive; panels above the
+  overlay. Kills the tap-interception + text-over-product bugs.
+- **MOB-3 — tab row + cart slot:** reserve the cart icon a real slot; make
+  PRE-ORDER reachable/discoverable (operator picks wrap vs. scroll cue).
+- **MOB-4 — pre-order horizontal shift fix:** contain the tab-strip's horizontal
+  scroll; page must never displace sideways.
+- **MOB-5 — polish:** film × styling + frame centering; tap-target/type-size pass.
+- Exit gate: re-scout + operator verify on real iPhone (browse → product → add
+  to cart → drawer → checkout hand-off; every stage; pre-order on live build) →
+  explicit **"ship wave mobile"**.
+
+---
 
 Recommended order (three waves, operator verifies on `dev` after each wave and
 ships dev → main per wave, not one giant merge):
