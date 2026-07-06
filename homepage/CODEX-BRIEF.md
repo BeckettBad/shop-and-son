@@ -306,13 +306,38 @@ left / text right, description full-width below; add-to-cart still fires the
 drawer; the standalone `/product/?handle=` page matches; desktop product view
 pixel-identical.
 
-### MOB-7 — long menu lists (DESIGNERS) — awaiting operator design pick
+### MOB-7 — mobile: nested menu lists in TWO columns (operator picked)
 
-Operator flagged (2026-07-06): expanded DESIGNERS (32 designers) is visually
-overwhelming on mobile — a wall of static text. Claude to present treatment
-options (two-column compact grid / capped-height internal scroll with edge
-fade / sub-clustering); operator picks; then this becomes the active brief.
-Do NOT start.
+**Status:** committed @ 06f8182 + review-fix f554b4a — ready for operator verify
+
+**Log:**
+- 2026-07-06 — MOB-7 review-fix: mobile menu markers glued (OANCELLM) — f554b4a — build:green check:green — the MOB-5 `display:flex` on .hero__menu-link collapsed the trailing space of the `::before` markers (`"- "` / `"o "`); fixed with `gap:0.4em` inside the ≤760px rule only. Desktop markers untouched. Verified: "O ANCELLM" / "- SHOP ALL" spaced correctly.
+- 2026-07-06 — MOB-7: nested menu lists in two columns — 06f8182 — build:green check:green — global.css only, ≤760px: .hero__menu-nested columns:2 (sequential halves per operator's approved preview) + column-gap:18px + break-inside:avoid on li; panel cap 260→min(88vw,340px). Verified 390+360: two balanced columns, all 32 designers visible, zero horizontal overflow; OBJECTS panel single-column unchanged; desktop unchanged. FLAG for operator: with the wide DESIGNERS panel open, the tab rows reflow — CLOTHES centers on top and the other four tabs drop BELOW the open panel (reads as a focus state; say if you want the two rows pinned instead). Not pushed.
+**Task:** operator picked (2026-07-06): the expanded nested lists (DESIGNERS —
+32 names — and CATEGORIES) render in **two compact columns** on mobile — all
+names visible at once, NO internal scrolling, halving the wall-of-text height.
+ONE focused commit. Build + check green. **Scope:** `homepage/` only; ≤760px
+only — desktop single-column nested lists unchanged.
+
+**Files:** `src/styles/global.css` only.
+
+- **≤760px `.hero__menu-nested`:** `columns:2` (CSS multi-column — fills the
+  FIRST half of the alphabet down the left column, second half down the right,
+  matching the operator's approved preview; do NOT use grid auto-flow row,
+  which would pair a/b across) with `column-gap` ~16-20px and
+  `break-inside:avoid` on the `<li>`s so a name never splits across columns.
+- **Give it room:** the parent `.hero__menu-panel` mobile cap
+  (`max-width:min(84vw,260px)`) is too narrow for two columns — widen the cap
+  for panels/nested lists as needed (up to ~88vw) so both columns fit 360px
+  without horizontal overflow. Names keep `overflow-wrap:anywhere` and the
+  MOB-5 36px tap rows.
+- Direct panel items that are NOT nested (e.g. OBJECTS' short brand list,
+  `- SHOP ALL`) stay single column.
+
+**Done when:** build + check green; at 390 AND 360: CLOTHES → DESIGNERS shows
+two balanced columns (sequential halves, all 32 visible, no scroll, no
+overflow-x); CATEGORIES same treatment; OBJECTS panel unchanged; desktop
+unchanged.
 
 ### Exit gate (unchanged)
 
