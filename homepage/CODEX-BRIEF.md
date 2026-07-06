@@ -217,7 +217,59 @@ must NOT change. Desktop (min-width:761px):
 
 **After C3:** stop; report 3 hashes + verify results. No push/PR until "ship".
 
-**PHASE K2 STATUS: ALL 3 COMMITTED ON DEV (2026-07-06) — ready for operator verify. NOT pushed.**
+### K2-C4 — product view: fixed in place + uniform carousel sizing + bottom margin (DESKTOP ONLY)
+
+**Status:** ready for Codex
+Operator (2026-07-06, with reference screenshot = the IN-HERO product stage,
+socks product, "perfect layout"): all product views fixed in place (no
+scrolling), carousel bottom NEVER touches the page bottom — subtle margin —
+and sizing made uniform. Desktop only (min-width:761px); mobile later.
+
+- **In-hero product stage (`.hero__product`, the operator's screenshot):**
+  desktop: the panel becomes FIXED (no internal page-like scroll): gallery
+  column capped so the carousel (image + arrows + counter) ends with a subtle
+  bottom margin (~2-3vh) above the viewport bottom; if the DETAILS column
+  overflows, ONLY it scrolls internally (mirror K2-C3's standalone approach).
+  Keep the × close, stage transitions, and add-to-cart untouched.
+- **Uniform sizing:** cap the carousel media height with ONE shared rule for
+  both stage and standalone — target: top stays parallel to the CLOTHES
+  header line (current alignment), bottom = 100vh minus that top offset minus
+  a ~2-3vh margin. TALL images scale DOWN (object-fit:contain, no crop, no
+  upscaling of small images — use max-height, NOT fixed height); SMALL images
+  stay exactly as-is (operator: only listings that would touch the bottom
+  change). It's acceptable if a very tall image's top-parallel breaks slightly
+  — prefer keeping the parallel top and shrinking.
+- **Standalone `/product/`:** K2-C3 already fits it; align its cap values with
+  the shared rule so stage + standalone read uniformly.
+
+**Done when:** build+check green; at 1440×900 AND 1280×800: socks-like
+products unchanged; tall-portrait products (e.g. 50-50-belted-trouser) show
+the full image with bottom margin ≥ ~15px, top parallel to CLOTHES, no crop,
+no page/stage scroll; details column scrolls internally when long; mobile +
+hero catalog untouched.
+
+### K2-C5 — cart icon: lower-left nudge to the parallel line (DESKTOP ONLY)
+
+**Status:** queued — dispatch after C4 review
+Operator: the desktop bag icon sits too far into the corner, disconnected
+from the parallel rhythm. Move it slightly LOWER and slightly LEFT so the TOP
+of the bag glyph is approximately parallel with the CLOTHES header's top line
+(not pixel-perfect). Desktop `.hero__cart` rule only (currently ~top:4vh
+right:2vw) — MEASURE the menu header's rendered top and set the bag top to
+match it (≈8vh at 900h — verify live), right offset slightly increased.
+Mobile cart untouched. Nothing else moves.
+
+**Done when:** build+check green; at 1440×900 the bag glyph's top edge is
+within ~6px of the CLOTHES header's top; visibly left of the previous corner
+position; mobile unchanged.
+
+---
+
+**PHASE K2 STATUS: ALL 5 COMMITTED ON DEV (2026-07-06) — ready for operator verify. NOT pushed.**
+
+**Log addendum (C4–C5; build:green check:green each):**
+- K2-C5 — 937aa24 — desktop cart nudge: `.hero__cart` top:4vh→calc(8vh - 4px), right:2vw→3.1vw; measured bag-SVG top == CLOTHES header top (72px==72px @1440×900), visibly out of the corner. Mobile untouched.
+- K2-C4 — a8b8e99 — desktop product views fixed + uniform carousel cap: shared CSS vars (--product-carousel-top-offset 8vh stage / 68px standalone; --product-carousel-bottom-clearance clamp(18px,2.4vh,27px)) cap carousel+viewport max-height for BOTH .hero__product stage and standalone; stage overflow:hidden (no scroll), details panel internal overflow-y:auto, × repositioned absolute top:5vh right:2.25vw (stays clear — cart is hidden on is-product per N2 rule). Verified 1440×900: tall product (4000×6000) image top==CLOTHES top (72==72), bottom margin 60px, no crop, stage doesn't scroll, × visible, details scroll internally; socks reference product top 72/margin 111 — unchanged small-image behavior. Uses max-height (no upscaling of small images).
 
 **Log (newest first; every commit build:green check:green):**
 - K2-C3 — 88c4f5e — standalone product page one-screen fit — product.astro adds `product-detail--standalone` class; global.css min-width:761px block scoped ENTIRELY to it (hero__product stage + mobile untouched, html.landing untouched): page 100dvh flex column overflow:hidden (no page scroll), carousel/viewport capped calc(100dvh-88px), details panel overflow-y:auto internal scroll. Verified at 1440×900 with a 4000×6000 portrait product (50-50-belted-trouser): pageScrolls:false, image fully on-screen (bottom 870/900 = small bottom margin), object-fit:contain (no crop — letterboxed on transparent), counter+arrows visible, panel scrolls internally. FLAG for operator: wordy products scroll the details column internally — say if you'd rather shrink the description.
