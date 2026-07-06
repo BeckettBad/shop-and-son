@@ -172,6 +172,19 @@ Operator fine-tunes on dev.
 **After C8:** stop; report 8 hashes + verify results to operator. No push, no
 PR until an explicit "ship" (and PR #9 must merge first).
 
+## PHASE SRCH — product search (PROPOSED 2026-07-06 — awaiting operator approval; do NOT start)
+
+Proposal drafted + interactive mock published to the operator. Concept: a quiet
+lowercase-mono `search` word left of the bag → slide-out underlined input
+(terminal-flavored) → instant suggestions (local snapshot index) merged with
+Shopify Storefront `predictiveSearch` (published-only guaranteed by the
+Headless channel) → suggestion click = existing product stage (PERF prefetch);
+enter = a `?search=` results stage reusing the catalogue panel/renderer.
+Plan: SRCH-C1 trigger+input · C2 local suggestions · C3 predictive merge ·
+C4 results stage. Desktop first; mobile placement joins the mobile round.
+Awaiting Ben's three taste picks: word-vs-icon trigger, text-only-vs-thumbnail
+rows, empty-query behavior.
+
 ## PHASE PERF — image/product loading speed (operator-approved, 2026-07-06)
 
 > Diagnosis (measured): product-open is a SERIAL waterfall — click → Storefront
