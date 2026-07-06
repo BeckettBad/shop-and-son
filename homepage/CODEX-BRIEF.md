@@ -261,6 +261,26 @@ rows, empty-query behavior.
 
 **CAROUSEL-CONTROLS (one-off, operator-directed 2026-07-06) — a0ca7ec — universal control placement — build:green check:green.** product-view.ts + global.css: frame now derives its aspect (and width, via min(galleryWidth, maxHeight×aspect)) from the ACTIVE slide's image — frame edge == image edge for any asset; arrows inset 16px from the image edges at mid-height, counter 12px in the image's bottom-right; controls not rendered at all when images.length < 2 (incl. seed/loading path); Phase-K viewport-fit intact. VERIFIED matrix: portrait 512×768 + landscape 512×342 both insets 16/16 + counter 12,12 + arrowMidY 0; cross-ratio arrowing holds 16; single-image ufo-tumbler renders zero controls; mobile landscape inset 16; no page scroll. Not pushed.
 
+## PHASE N2 — animated cart+search icon pair (operator 2026-07-06; logged N2 — Phase N shipped Jul 2). QUEUED — dispatch ONLY after M2-C3/C4 land (same files).
+
+Intent (operator; judgment granted on structure/selectors/timing/distances):
+the cart and search icons read as ONE coordinated pair, top-right, ALWAYS
+visible at rest in every state (this RETIRES the desktop cart-hide rules on
+is-catalog/is-search/is-product/is-preorder — the × keeps the extreme corner
+on panel stages, the pair sits gracefully beside/clear of it). Whenever a
+panel stage fills the page (catalog/search/product/preorder) the pair
+animates as a flourish IN SYNC with the .55s stage transitions: search
+settles in from the ×/close area, cart follows into place beside it
+(staggered ~60-90ms); reversing on stage exit. FIXED decisions: desktop pair
+is horizontal, CART LEFT, SEARCH RIGHT (search nearest the corner — note
+this SWAPS the current desktop order); mobile pair animates vertically (up
+off the top / back down) — mobile stack from M2-C3 stays search-below-cart
+unless vertical choreography reads better flipped (judgment). Function
+unchanged (drawer, live search). prefers-reduced-motion: settle in place
+(opacity), no slide. Feel: the site's existing motion language, not a
+separate effect. ONE commit, build+check green, verify desktop 1440 +
+mobile 380 across landing/catalog/product/music transitions.
+
 ## PHASE M2 — MOBILE-ONLY pass (operator 2026-07-06; logged M2 — Phase M/film shipped Jul 1)
 
 HARD RULE: every change gated to the mobile sheet (~max-width:760px); desktop
