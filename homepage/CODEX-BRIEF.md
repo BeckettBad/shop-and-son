@@ -261,6 +261,61 @@ rows, empty-query behavior.
 
 **CAROUSEL-CONTROLS (one-off, operator-directed 2026-07-06) — a0ca7ec — universal control placement — build:green check:green.** product-view.ts + global.css: frame now derives its aspect (and width, via min(galleryWidth, maxHeight×aspect)) from the ACTIVE slide's image — frame edge == image edge for any asset; arrows inset 16px from the image edges at mid-height, counter 12px in the image's bottom-right; controls not rendered at all when images.length < 2 (incl. seed/loading path); Phase-K viewport-fit intact. VERIFIED matrix: portrait 512×768 + landscape 512×342 both insets 16/16 + counter 12,12 + arrowMidY 0; cross-ratio arrowing holds 16; single-image ufo-tumbler renders zero controls; mobile landscape inset 16; no page scroll. Not pushed.
 
+## PHASE M2 — MOBILE-ONLY pass (operator 2026-07-06; logged M2 — Phase M/film shipped Jul 1)
+
+HARD RULE: every change gated to the mobile sheet (~max-width:760px); desktop
+visually unchanged — verify BOTH after every commit (mobile at ~380px wide,
+desktop at 1440). homepage/ only, dev, one commit each, build+check green.
+NOTE current mobile state: menu is ALREADY centered wrapping rows (Wave
+Mobile); an open section's panel currently renders INSIDE its section box and
+reflows the rows — C1 fixes that. PRE-ORDER is gone (4 headers). Search is
+currently display:none ≤760px — C3 surfaces it.
+
+**M2-C1 — headers cluster on top; open panel full-width below.** Mobile only:
+the four section headers (CLOTHES/OBJECTS/MUSIC/& FAM) form a wrapping row(s)
+pinned at the top of the menu, ALWAYS clustered together; the open section's
+panel renders BELOW the header rows at FULL width. Suggested mechanism (CSS
+only, mobile-gated): `.hero__menu-section{display:contents}` so header+panel
+become direct flex items of the wrapping `.hero__menu`; all
+`.hero__menu-header{order:0}` and `.hero__menu-panel{order:1; flex-basis:100%;
+width:100%; max-width:none}` — headers cluster first, the (single) open panel
+wraps to its own full-width line beneath. Neutralize the mobile
+`.hero__menu-break` (display:none ≤760px) so the 4 headers wrap naturally;
+keep them clear of the top-right icon stack (existing max-width clearance —
+retune if needed). Verify menu handlers (open/close, subgroups, MOB-2
+stage-hide selectors that reference .hero__menu-section.is-open) still work —
+display:contents changes layout only, not the DOM. Desktop untouched.
+
+**M2-C2 — hide the stencil under an expanded menu (mobile).** ≤760px: when a
+NON-stage section is open (`:has(.hero__menu-section.is-open:not([data-music
+="true"]):not([data-fam="true"]))` family — same pattern as the existing
+mobile hide rules), fade `.hero__stencil` out (opacity/visibility, ~.25s,
+reduced-motion: none) so the expanded shopping menu reads clean; restore on
+collapse/landing. Desktop stencil untouched.
+
+**M2-C3 — mobile search icon below the cart, same machinery.** ≤760px: remove
+`display:none` on `.hero__search`; position the EXISTING magnifier toggle
+(data-search-toggle → toggleSearch — the same live-search build) as a glyph
+directly BELOW the bag at top-right, matching the bag's size/weight (22px
+glyph in a 40px tap box, same color/hover). The input opens leftward from
+that spot (width ~min(200px, 58vw)); the live results stage (is-search →
+catalogue panel) already works on mobile. Ensure: no collision between the
+2-icon stack and the header rows at 380px (retune row clearance/top offsets
+as needed); the mobile stage-hide rules that hide .hero__cart on catalog/
+product/etc must NOT hide search (search stays reachable at all times —
+that's the point); scope chip/status positioning sane on mobile (chip may
+wrap under the input). Flag anything ambiguous for the operator.
+
+**M2-C4 — mobile catalogue grid: 2 columns, larger cards.** ≤760px: the
+catalogue grid stays/becomes 2 columns at ALL phone widths — REMOVE the
+`@media(max-width:420px){.hero__catalog-track{grid-template-columns:1fr}}`
+override so ~380px shows 2-up; tune gap + card type (title ~12px, vendor/
+price ~10.5px) so cards read larger and cleaner; keep the continuous smooth
+scroll + scroll-restore + content-visibility intact. Desktop 4-up untouched.
+
+**After C4:** report 4 hashes + verify results (mobile 380 + desktop-unchanged
+checks per commit). NO push/PR until operator ship.
+
 ### SRCH ROUND 2 (operator 2026-07-06): live full-panel results + always-available scoped search
 Research-informed (Baymard search-within-category study: 94% of sites lack it, avoid unintentional scope-jumping, zero-results must fall back to all-category matches; NN/g Scoped Search: default scope ALL, strong visible scope labeling at box + results, one-click escape to site-wide, unscoped path as the first suggestion; users refine AFTER seeing results). Desktop; mobile still hidden pending the mobile round.
 
