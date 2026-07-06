@@ -1509,6 +1509,7 @@ html.cart-ready .cart-drawer.is-open{transition:transform .55s ease-in-out,visib
     min-height:0; max-height:100%;
     overflow-y:auto; overscroll-behavior:contain;
     -webkit-overflow-scrolling:touch;
+    padding-left:clamp(8px,0.6vw,14px);
     padding-top:clamp(18px,2.6vw,42px);
     padding-bottom:clamp(44px,7vh,88px);
   }
@@ -1551,6 +1552,7 @@ html.cart-ready .cart-drawer.is-open{transition:transform .55s ease-in-out,visib
     min-height:0; max-height:100%;
     overflow-y:auto; overscroll-behavior:contain;
     -webkit-overflow-scrolling:touch;
+    padding-left:clamp(8px,0.6vw,14px);
     padding-top:clamp(18px,2.6vw,42px);
     padding-bottom:clamp(44px,7vh,88px);
   }
