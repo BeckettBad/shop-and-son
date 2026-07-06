@@ -849,9 +849,28 @@ body{
   .product-card__media{flex:none; aspect-ratio:var(--card-aspect, .75)}
   .product-card__title{font-size:11px}
   .product-card__vendor,.product-card__price{font-size:10px}
+  .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__catalog,
+  .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__product,
+  .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__preorder,
+  .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__film,
+  .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__fam,
+  .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__dj{
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition:opacity .18s ease,visibility 0s linear .18s;
+  }
 }
 @media(max-width:420px){
   .hero__catalog-track{grid-template-columns:1fr}
+}
+@media(max-width:760px) and (prefers-reduced-motion:reduce){
+  .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__catalog,
+  .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__product,
+  .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__preorder,
+  .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__film,
+  .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__fam,
+  .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__dj{
+    transition:none;
+  }
 }
 @media(prefers-reduced-motion:reduce){
   .hero-video.is-music.is-settled .dj-cutout-image,

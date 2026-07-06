@@ -314,6 +314,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const heroMenuElement = hero?.querySelector<HTMLElement>(".hero__menu");
   const menuSections = hero ? Array.from(hero.querySelectorAll<HTMLElement>("[data-hero-dropdown]")) : [];
   const subgroupToggles = hero ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-menu-subgroup]")) : [];
+  const mobileQuery = window.matchMedia("(max-width: 760px)");
   const desktopPagerQuery = window.matchMedia("(min-width: 761px)");
   const preorderDesktopWidth = 1160;
   const stageDuration = 550;
@@ -1132,6 +1133,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (!collection) return;
 
     openCatalog(collection, label);
+    if (mobileQuery.matches) {
+      setMenuSectionState(null);
+    }
   });
 
   subgroupToggles.forEach((button) => {
@@ -1274,7 +1278,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       }
 
       setMenuSectionState(isOpen ? section : null);
-      closeStage();
+      if (!mobileQuery.matches) {
+        closeStage();
+      }
     });
   });
 
