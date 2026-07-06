@@ -205,8 +205,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       <p>138 sullivan st,<br />new york, ny 10012</p>
       <p>contact:<br /><a href="mailto:info@shopandson.com">info@shopandson.com</a></p>
       <p class="hero-info__legal">
-        <a href={withBase("/policies/?policy=refund-policy")}>refund policy</a> &middot;
-        <a href={withBase("/policies/?policy=privacy-policy")}>privacy policy</a> &middot;
+        <a href={withBase("/policies/?policy=refund-policy")}>refund policy</a><br />
+        <a href={withBase("/policies/?policy=privacy-policy")}>privacy policy</a><br />
         <a href={withBase("/policies/?policy=terms-of-service")}>terms of service</a>
       </p>
     </div>
