@@ -997,12 +997,12 @@ body{
   }
   .hero__catalog-track{
     display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:12px; height:auto;
+    gap:14px 12px; height:auto;
   }
   .product-card{height:auto}
   .product-card__media{flex:none; aspect-ratio:var(--card-aspect, .75)}
-  .product-card__title{font-size:11px}
-  .product-card__vendor,.product-card__price{font-size:10px}
+  .product-card__title{font-size:12px; line-height:1.22}
+  .product-card__vendor,.product-card__price{font-size:10.5px; line-height:1.28}
   .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__catalog,
   .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__product,
   .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__preorder,
@@ -1016,9 +1016,6 @@ body{
     opacity:0; visibility:hidden; pointer-events:none;
     transition:transform .55s ease-in-out,opacity .25s ease,visibility 0s linear .25s;
   }
-}
-@media(max-width:420px){
-  .hero__catalog-track{grid-template-columns:1fr}
 }
 @media(max-width:760px) and (prefers-reduced-motion:reduce){
   .hero__stencil,
