@@ -882,21 +882,21 @@ body{
     margin:0 auto clamp(30px,5vh,54px);
   }
   .hero__menu-break{
-    display:block; flex:0 0 100%; width:100%; height:0;
+    display:none;
   }
   .hero__menu-section{
-    display:flex; flex-direction:column; align-items:center;
-    flex:0 0 auto; margin-bottom:0;
-    min-width:0; max-width:100%;
+    display:contents;
   }
   .hero__menu-header{
+    order:0;
     font-size:12.5px; line-height:1.12; white-space:nowrap;
     padding:0.15em 0;
     text-align:center;
   }
   .hero__menu-panel{
+    order:1; flex:0 0 100%;
     display:none; position:static;
-    padding:0.45em 0 0; width:max-content; max-width:min(88vw,340px);
+    padding:0.45em 0 0; width:100%; max-width:none;
   }
   .hero__menu-section.is-open .hero__menu-panel{display:block}
   .hero__menu-link{
