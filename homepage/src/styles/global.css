@@ -306,6 +306,13 @@ body{
   display:block; width:21px; height:21px;
 }
 .hero__search.is-open .hero__search-toggle{color:var(--neon-green)}
+.hero__search-scope-chip{
+  display:none; align-items:center; height:20px; margin:0; padding:0 0 1px;
+  border:0; border-bottom:1px solid rgba(0,0,0,.5); border-radius:0; background:transparent;
+  appearance:none; -webkit-appearance:none; color:#000000; cursor:pointer;
+  font:inherit; line-height:1; text-transform:lowercase; white-space:nowrap;
+}
+.hero__search.is-open .hero__search-scope-chip:not([hidden]){display:inline-flex}
 .hero__search-input{
   display:block; width:0; min-width:0; height:20px; margin:0; padding:0;
   border:0; border-bottom:1px solid #000000; border-radius:0; background:transparent;
@@ -579,6 +586,13 @@ body{
   font-family:inherit; font-size:clamp(16px,1.6vw,21px); font-weight:400; line-height:1.1;
   letter-spacing:0; text-transform:uppercase;
 }
+.hero__search-all-row{
+  flex:0 0 auto; align-self:flex-start; margin:clamp(20px,3vh,32px) 0 0 auto; padding:0;
+  border:0; background:transparent; appearance:none; -webkit-appearance:none;
+  color:#000000; cursor:pointer; font-family:"Courier New",Courier,monospace;
+  font-size:12px; line-height:1.2; text-transform:lowercase; white-space:nowrap;
+}
+.hero__search-all-row[hidden]{display:none}
 .hero__catalog-title-text,
 .hero__catalog-description-separator{flex:0 0 auto}
 .hero__catalog-description{
@@ -632,6 +646,15 @@ body{
   display:grid; grid-template-columns:repeat(4,minmax(0,1fr));
   align-items:start;
   gap:clamp(14px,1.45vw,24px);
+}
+.hero__search-message,
+.hero__search-section-heading{
+  grid-column:1 / -1; margin:0; padding:0;
+  color:#000000; font-family:"Courier New",Courier,monospace;
+  font-size:12px; line-height:1.35; text-transform:lowercase;
+}
+.hero__search-section-heading{
+  margin-top:clamp(14px,1.45vw,24px); font-weight:400;
 }
 .product-card{
   display:flex; flex-direction:column; align-self:start; min-width:0; height:auto;
@@ -706,6 +729,10 @@ body{
     color:var(--neon-green); opacity:1; text-decoration:underline; text-underline-offset:3px;
   }
   .hero__search-toggle:hover{
+    color:var(--neon-green);
+  }
+  .hero__search-scope-chip:hover,
+  .hero__search-all-row:hover{
     color:var(--neon-green);
   }
   .hero__preorder-close:hover{

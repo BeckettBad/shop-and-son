@@ -30,6 +30,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
         <path d="M12.5 12.5L17 17" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" />
       </svg>
     </button>
+    <button class="hero__search-scope-chip" data-search-scope-chip type="button" hidden></button>
     <input class="hero__search-input" data-search-input type="text" placeholder="search…" aria-label="search products" autocomplete="off" aria-controls="hero-search-results" />
     <span class="hero__search-status" data-search-status aria-live="polite" aria-atomic="true"></span>
   </div>
@@ -230,6 +231,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
         <span class="hero__catalog-description-separator" data-catalog-description-separator hidden>—</span>
         <span class="hero__catalog-description" data-catalog-description hidden></span>
       </h2>
+      <button type="button" class="hero__search-all-row" data-search-all-row hidden>search all products →</button>
       <button type="button" class="hero__catalog-close" data-catalog-close aria-label="Close catalogue">&times;</button>
     </div>
     <div class="hero__catalog-viewport" data-catalog-viewport id="hero-search-results">
@@ -326,8 +328,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const famPanel = hero?.querySelector<HTMLElement>(".hero__fam");
   const search = hero?.querySelector<HTMLElement>("[data-search]");
   const searchToggle = hero?.querySelector<HTMLButtonElement>("[data-search-toggle]");
+  const searchScopeChip = hero?.querySelector<HTMLButtonElement>("[data-search-scope-chip]");
   const searchInput = hero?.querySelector<HTMLInputElement>("[data-search-input]");
   const searchStatus = hero?.querySelector<HTMLElement>("[data-search-status]");
+  const searchAllRow = hero?.querySelector<HTMLButtonElement>("[data-search-all-row]");
   const catalogDataNode = hero?.querySelector<HTMLScriptElement>("#catalog-data");
   const heroMenuElement = hero?.querySelector<HTMLElement>(".hero__menu");
   const menuSections = hero ? Array.from(hero.querySelectorAll<HTMLElement>("[data-hero-dropdown]")) : [];
@@ -354,7 +358,13 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     stage: "search";
     query: string;
     products: CatalogProduct[];
+    fallbackProducts: CatalogProduct[];
+    scope: SearchScope | null;
     scrollTop: number;
+  }
+  interface SearchScope {
+    collection: string;
+    label: string;
   }
   type SavedStageReturn = SavedCatalogReturn | SavedSearchReturn;
   type SearchSessionReturn =
@@ -375,6 +385,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   let searchPredictiveSequence = 0;
   let activeSearchQuery = "";
   let renderedSearchProducts: CatalogProduct[] = [];
+  let renderedSearchFallbackProducts: CatalogProduct[] = [];
+  let activeSearchScope: SearchScope | null = null;
   let searchStageSequence = 0;
   let searchSessionReturn: SearchSessionReturn | null = null;
   let searchSessionReturnUrl: URL | null = null;
@@ -441,11 +453,13 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   const normalizeSearchText = (value: string) => value.trim().toLocaleLowerCase("en-US");
 
-  const getSearchMatches = (query: string, limit = Number.POSITIVE_INFINITY) => {
+  const getScopeProducts = (scope: SearchScope | null) => (scope ? (catalogData[scope.collection] ?? []) : searchIndex);
+
+  const getSearchMatches = (query: string, limit = Number.POSITIVE_INFINITY, scope: SearchScope | null = null) => {
     const normalizedQuery = normalizeSearchText(query);
     if (!normalizedQuery) return [];
 
-    const matches = searchIndex.filter((product) =>
+    const matches = getScopeProducts(scope).filter((product) =>
       normalizeSearchText(`${product.title} ${product.vendor}`).includes(normalizedQuery),
     );
     return Number.isFinite(limit) ? matches.slice(0, limit) : matches;
@@ -477,7 +491,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     searchPredictiveTimer = undefined;
   };
 
-  const schedulePredictiveSearch = (query: string, localProducts: CatalogProduct[]) => {
+  const getCollectionHandleSet = (collection: string) =>
+    new Set((catalogData[collection] ?? []).map((product) => product.handle).filter(Boolean));
+
+  const schedulePredictiveSearch = (query: string, localProducts: CatalogProduct[], scope: SearchScope | null) => {
     const normalizedQuery = normalizeSearchText(query);
     clearPredictiveSearch();
     if (!normalizedQuery) return;
@@ -495,8 +512,20 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
             activeSearchQuery !== normalizedQuery
           ) return;
 
+          if (scope) {
+            const scopeHandles = getCollectionHandleSet(scope.collection);
+            const predictiveScopedProducts = predictiveProducts.filter((product) => scopeHandles.has(product.handle));
+            const mergedScopedProducts = mergeSearchResults(localProducts, predictiveScopedProducts);
+            const fallbackProducts =
+              mergedScopedProducts.length === 0
+                ? mergeSearchResults(getSearchMatches(query), predictiveProducts)
+                : [];
+            renderSearchGrid(query.trim(), mergedScopedProducts, getCatalogScrollTop(), { scope, fallbackProducts });
+            return;
+          }
+
           const mergedProducts = mergeSearchResults(localProducts, predictiveProducts);
-          renderSearchGrid(query.trim(), mergedProducts, getCatalogScrollTop());
+          renderSearchGrid(query.trim(), mergedProducts, getCatalogScrollTop(), { scope: null });
         })
         .catch(() => {
           // Search degrades to the already-rendered local grid.
@@ -517,11 +546,16 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     return url;
   };
 
-  const getHomepageSearchUrl = (query: string) => {
+  const getHomepageSearchUrl = (query: string, scope: SearchScope | null = null) => {
     const url = new URL(location.href);
     url.pathname = BASE;
     url.searchParams.delete("product");
     url.searchParams.set("search", query.trim());
+    if (scope?.collection) {
+      url.searchParams.set("scope", scope.collection);
+    } else {
+      url.searchParams.delete("scope");
+    }
     url.hash = "";
     return url;
   };
@@ -535,6 +569,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   const getCurrentSearchParam = () => new URL(location.href).searchParams.get("search");
 
+  const getCurrentSearchScopeParam = () => new URL(location.href).searchParams.get("scope");
+
   const stripProductParamFromUrl = () => {
     const url = new URL(location.href);
     if (!url.searchParams.has("product")) return;
@@ -545,9 +581,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   const stripSearchParamFromUrl = () => {
     const url = new URL(location.href);
-    if (!url.searchParams.has("search")) return;
+    if (!url.searchParams.has("search") && !url.searchParams.has("scope")) return;
 
     url.searchParams.delete("search");
+    url.searchParams.delete("scope");
     history.replaceState(null, "", url);
   };
 
@@ -638,6 +675,49 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       button.classList.toggle("is-active", isActive);
       button.setAttribute("aria-pressed", String(isActive));
     });
+  };
+
+  const getCollectionLabel = (collection: string) => {
+    const button = getCollectionButtons().find((entry) => entry.dataset.collection === collection);
+    return (
+      button?.dataset.collectionLabel?.trim() ||
+      button?.textContent?.trim() ||
+      collection.replace(/-/g, " ").toLocaleUpperCase("en-US")
+    );
+  };
+
+  const normalizeScopeLabel = (label: string) =>
+    label.trim().replace(/\s+/g, " ").toLocaleUpperCase("en-US");
+
+  const getSearchScopeFromCurrentContext = (): SearchScope | null => {
+    if (activeStage === "catalog") {
+      const collection = hero?.dataset.activeCollection?.trim() ?? "";
+      if (!collection) return null;
+
+      return {
+        collection,
+        label: normalizeScopeLabel(catalogTitle?.textContent?.trim() || getCollectionLabel(collection)),
+      };
+    }
+
+    if (activeStage === "product" && savedStageReturn?.stage === "catalog" && savedStageReturn.collection) {
+      return {
+        collection: savedStageReturn.collection,
+        label: normalizeScopeLabel(savedStageReturn.label || getCollectionLabel(savedStageReturn.collection)),
+      };
+    }
+
+    return activeSearchScope;
+  };
+
+  const getSearchScopeFromUrl = (): SearchScope | null => {
+    const collection = getCurrentSearchScopeParam()?.trim();
+    if (!collection) return null;
+
+    return {
+      collection,
+      label: normalizeScopeLabel(getCollectionLabel(collection)),
+    };
   };
 
   const getMenuLabel = (value: string | null | undefined) =>
@@ -1047,17 +1127,78 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const renderCatalogGrid = (products: CatalogProduct[], targetScrollTop = 0) => {
     if (!catalogTrack) return;
 
-    const sorted = [...products].sort(
-      (a, b) => Number(a.available === false) - Number(b.available === false),
-    );
-    catalogTrack.replaceChildren(...sorted.map(createProductCard));
+    catalogTrack.replaceChildren(...getSortedProducts(products).map(createProductCard));
     restoreCatalogScroll(targetScrollTop);
   };
 
-  const renderSearchGrid = (query: string, products: CatalogProduct[], targetScrollTop = 0) => {
+  const updateSearchScopeControls = (scope: SearchScope | null) => {
+    activeSearchScope = scope;
+
+    if (scope && searchScopeChip) {
+      searchScopeChip.hidden = false;
+      searchScopeChip.textContent = `in: ${scope.label.toLocaleLowerCase("en-US")} ×`;
+      searchScopeChip.setAttribute("aria-label", `search all products instead of ${scope.label}`);
+    } else if (searchScopeChip) {
+      searchScopeChip.hidden = true;
+      searchScopeChip.textContent = "";
+      searchScopeChip.removeAttribute("aria-label");
+    }
+
+    if (searchAllRow) {
+      searchAllRow.hidden = !scope;
+    }
+  };
+
+  const createSearchMessage = (message: string) => {
+    const element = document.createElement("p");
+    element.className = "hero__search-message";
+    element.textContent = message;
+    return element;
+  };
+
+  const createSearchSectionHeading = (heading: string) => {
+    const element = document.createElement("h3");
+    element.className = "hero__search-section-heading";
+    element.textContent = heading;
+    return element;
+  };
+
+  const getSortedProducts = (products: CatalogProduct[]) =>
+    [...products].sort((a, b) => Number(a.available === false) - Number(b.available === false));
+
+  const renderSearchGrid = (
+    query: string,
+    products: CatalogProduct[],
+    targetScrollTop = 0,
+    options: { scope?: SearchScope | null; fallbackProducts?: CatalogProduct[] } = {},
+  ) => {
+    if (!catalogTrack) return;
+
+    const scope = options.scope ?? null;
+    const fallbackProducts = options.fallbackProducts ?? [];
     renderedSearchProducts = products;
-    renderCatalogHeader(`SEARCH \u2014 "${query}" (${products.length})`);
+    renderedSearchFallbackProducts = fallbackProducts;
+    updateSearchScopeControls(scope);
+    renderCatalogHeader(
+      scope
+        ? `SEARCH IN ${scope.label} \u2014 "${query}" (${products.length})`
+        : `SEARCH \u2014 "${query}" (${products.length})`,
+    );
     searchStatus?.replaceChildren(`${products.length} ${products.length === 1 ? "result" : "results"} for ${query}`);
+
+    if (scope && products.length === 0) {
+      const nodes: HTMLElement[] = [
+        createSearchMessage(`nothing matches "${query}" in ${scope.label.toLocaleLowerCase("en-US")}`),
+      ];
+      if (fallbackProducts.length > 0) {
+        nodes.push(createSearchSectionHeading("more like this \u2014 all products"));
+        nodes.push(...getSortedProducts(fallbackProducts).map(createProductCard));
+      }
+      catalogTrack.replaceChildren(...nodes);
+      restoreCatalogScroll(targetScrollTop);
+      return;
+    }
+
     renderCatalogGrid(products, targetScrollTop);
   };
 
@@ -1069,6 +1210,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
         label: catalogTitle?.textContent?.trim() ?? "",
         scrollTop: getCatalogScrollTop(),
       };
+    }
+
+    if (activeStage === "product" && savedStageReturn?.stage === "catalog") {
+      return savedStageReturn;
     }
 
     if (activeStage === "product" && activeProductHandle) {
@@ -1088,6 +1233,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     searchSessionReturn = captureSearchSessionReturn();
     searchSessionReturnUrl = new URL(location.href);
     searchSessionReturnUrl.searchParams.delete("search");
+    searchSessionReturnUrl.searchParams.delete("scope");
   };
 
   const resetSearchSession = () => {
@@ -1096,9 +1242,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     searchSessionHasHistoryEntry = false;
   };
 
-  const syncLiveSearchUrl = (query: string, replaceOnly = false) => {
-    const url = getHomepageSearchUrl(query);
-    const state = { search: query.trim() };
+  const syncLiveSearchUrl = (query: string, scope: SearchScope | null, replaceOnly = false) => {
+    const url = getHomepageSearchUrl(query, scope);
+    const state = { search: query.trim(), scope: scope?.collection ?? null };
     if (replaceOnly || searchSessionHasHistoryEntry || getCurrentSearchParam()?.trim()) {
       history.replaceState(state, "", url);
       searchSessionHasHistoryEntry = true;
@@ -1122,21 +1268,25 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     query: string,
     initialProducts?: CatalogProduct[],
     targetScrollTop = 0,
-    options: { schedulePredictive?: boolean } = {},
+    options: { schedulePredictive?: boolean; scope?: SearchScope | null; fallbackProducts?: CatalogProduct[] } = {},
   ) => {
     if (!hero || !catalogTitle || !catalogTrack) return;
 
     const trimmedQuery = query.trim();
     const normalizedQuery = normalizeSearchText(trimmedQuery);
+    const scope = options.scope ?? null;
     searchStageSequence += 1;
     activeSearchQuery = normalizedQuery;
     delete hero.dataset.activeCollection;
     setActiveButton(null);
 
-    const localProducts = initialProducts ?? getSearchMatches(trimmedQuery);
-    renderSearchGrid(trimmedQuery, localProducts, targetScrollTop);
+    const localProducts = initialProducts ?? getSearchMatches(trimmedQuery, Number.POSITIVE_INFINITY, scope);
+    const fallbackProducts =
+      options.fallbackProducts ??
+      (scope && localProducts.length === 0 ? getSearchMatches(trimmedQuery) : []);
+    renderSearchGrid(trimmedQuery, localProducts, targetScrollTop, { scope, fallbackProducts });
     if (options.schedulePredictive !== false) {
-      schedulePredictiveSearch(trimmedQuery, localProducts);
+      schedulePredictiveSearch(trimmedQuery, localProducts, scope);
     }
   };
 
@@ -1148,6 +1298,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     restoreSearchSessionUrl();
     activeSearchQuery = "";
     renderedSearchProducts = [];
+    renderedSearchFallbackProducts = [];
+    updateSearchScopeControls(null);
     searchStageSequence += 1;
     searchStatus?.replaceChildren();
     resetSearchSession();
@@ -1192,13 +1344,14 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     search?.classList.add("is-open");
     rememberSearchSessionReturn();
-    syncLiveSearchUrl(query);
-    const localProducts = getSearchMatches(query);
+    const scope = getSearchScopeFromCurrentContext();
+    syncLiveSearchUrl(query, scope);
+    const localProducts = getSearchMatches(query, Number.POSITIVE_INFINITY, scope);
     const requestSequence = ++searchStageSequence;
 
     const renderLiveSearch = () => {
       if (requestSequence !== searchStageSequence) return;
-      renderSearchContent(query, localProducts, 0);
+      renderSearchContent(query, localProducts, 0, { scope });
     };
 
     if (activeStage === "search") {
@@ -1207,6 +1360,18 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     }
 
     transitionToStage("search", renderLiveSearch);
+  };
+
+  const dropSearchScope = () => {
+    if (!searchInput) return;
+
+    const query = searchInput.value.trim();
+    if (!query) return;
+
+    syncLiveSearchUrl(query, null, true);
+    renderSearchContent(query, undefined, 0, { scope: null });
+    search?.classList.add("is-open");
+    window.requestAnimationFrame(() => searchInput.focus());
   };
 
   const getComparableProducts = (products: CatalogProduct[]) =>
@@ -1261,6 +1426,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     activeSearchQuery = "";
     renderedSearchProducts = [];
+    renderedSearchFallbackProducts = [];
+    updateSearchScopeControls(null);
     hero.dataset.activeCollection = collection;
     renderCatalogHeader(label);
     setActiveButton(collection);
@@ -1278,6 +1445,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       };
       if (!hasLiveCatalogChanged(reconciledLiveCollection, snapshotProducts)) return;
 
+      catalogData[collection] = reconciledLiveCollection.products;
       renderCatalogHeader(label, reconciledLiveCollection.description);
       renderCatalogGrid(reconciledLiveCollection.products, refreshScrollTop);
     });
@@ -1285,22 +1453,32 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   function openSearchResults(
     query: string,
-    options: { pushState?: boolean; initialProducts?: CatalogProduct[]; scrollTop?: number } = {},
+    options: {
+      pushState?: boolean;
+      initialProducts?: CatalogProduct[];
+      fallbackProducts?: CatalogProduct[];
+      scrollTop?: number;
+      scope?: SearchScope | null;
+    } = {},
   ) {
     const trimmedQuery = query.trim();
     if (!trimmedQuery || !hero || !catalog || !catalogTitle || !catalogTrack) return;
 
+    const scope = options.scope ?? (options.pushState === false ? getSearchScopeFromUrl() : getSearchScopeFromCurrentContext());
     search?.classList.add("is-open");
     if (searchInput) searchInput.value = trimmedQuery;
     rememberSearchSessionReturn();
     if (options.pushState !== false) {
-      syncLiveSearchUrl(trimmedQuery);
+      syncLiveSearchUrl(trimmedQuery, scope);
     } else {
       searchSessionHasHistoryEntry = true;
     }
     prepareToLeaveProductForStage();
     transitionToStage("search", () => {
-      renderSearchContent(trimmedQuery, options.initialProducts, options.scrollTop ?? 0);
+      renderSearchContent(trimmedQuery, options.initialProducts, options.scrollTop ?? 0, {
+        scope,
+        fallbackProducts: options.fallbackProducts,
+      });
       window.requestAnimationFrame(() => searchInput?.focus());
     });
   }
@@ -1320,6 +1498,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     stripSearchParamFromUrl();
     activeSearchQuery = "";
     renderedSearchProducts = [];
+    renderedSearchFallbackProducts = [];
+    updateSearchScopeControls(null);
     delete hero.dataset.activeCollection;
     setActiveButton(null);
     resetCatalogScroll();
@@ -1333,6 +1513,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     stripSearchParamFromUrl();
     activeSearchQuery = "";
     renderedSearchProducts = [];
+    renderedSearchFallbackProducts = [];
+    updateSearchScopeControls(null);
     delete hero.dataset.activeCollection;
     setActiveButton(null);
     resetCatalogScroll();
@@ -1346,6 +1528,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     stripSearchParamFromUrl();
     activeSearchQuery = "";
     renderedSearchProducts = [];
+    renderedSearchFallbackProducts = [];
+    updateSearchScopeControls(null);
     delete hero.dataset.activeCollection;
     setActiveButton(null);
     resetCatalogScroll();
@@ -1359,6 +1543,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     stripSearchParamFromUrl();
     activeSearchQuery = "";
     renderedSearchProducts = [];
+    renderedSearchFallbackProducts = [];
+    updateSearchScopeControls(null);
     delete hero.dataset.activeCollection;
     setActiveButton(null);
     resetCatalogScroll();
@@ -1386,6 +1572,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
         stage: "search",
         query: searchInput?.value.trim() || activeSearchQuery,
         products: renderedSearchProducts,
+        fallbackProducts: renderedSearchFallbackProducts,
+        scope: activeSearchScope,
         scrollTop: getCatalogScrollTop(),
       };
     } else {
@@ -1411,11 +1599,14 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       });
     } else if (stageReturn?.stage === "search" && stageReturn.query) {
       transitionToStage("search", () => {
-        renderSearchContent(stageReturn.query, stageReturn.products, stageReturn.scrollTop);
+        renderSearchContent(stageReturn.query, stageReturn.products, stageReturn.scrollTop, {
+          scope: stageReturn.scope,
+          fallbackProducts: stageReturn.fallbackProducts,
+        });
       });
     } else if (getCurrentSearchParam()?.trim()) {
       transitionToStage("search", () => {
-        renderSearchContent(getCurrentSearchParam() ?? "");
+        renderSearchContent(getCurrentSearchParam() ?? "", undefined, 0, { scope: getSearchScopeFromUrl() });
       });
     } else {
       closeStage();
@@ -1504,6 +1695,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     delete hero.dataset.activeCollection;
     activeSearchQuery = "";
     renderedSearchProducts = [];
+    renderedSearchFallbackProducts = [];
+    updateSearchScopeControls(null);
     searchStageSequence += 1;
     catalog?.setAttribute("aria-hidden", "true");
     productPanel?.setAttribute("aria-hidden", "true");
@@ -1538,7 +1731,12 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     const searchParam = getCurrentSearchParam();
     if (searchParam?.trim()) {
-      if (activeStage !== "search" || activeSearchQuery !== normalizeSearchText(searchParam)) {
+      const scope = getSearchScopeFromUrl();
+      if (
+        activeStage !== "search" ||
+        activeSearchQuery !== normalizeSearchText(searchParam) ||
+        activeSearchScope?.collection !== scope?.collection
+      ) {
         openSearchResults(searchParam, { pushState: false });
       }
       return;
@@ -1650,6 +1848,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     closeProduct();
   });
   searchToggle?.addEventListener("click", toggleSearch);
+  searchScopeChip?.addEventListener("click", dropSearchScope);
+  searchAllRow?.addEventListener("click", dropSearchScope);
   searchInput?.addEventListener("input", updateLiveSearchFromInput);
   searchInput?.addEventListener("keydown", (event) => {
     if (event.key !== "Enter") return;
