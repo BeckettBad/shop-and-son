@@ -158,14 +158,30 @@ const renderVariantSelector = (
   return selector;
 };
 
-const renderProduct = (container: HTMLElement, product: ProductDetail) => {
-  const selectedValues = new Map<string, string>();
-  const initialVariant = product.variants.find((variant) => variant.availableForSale) ?? product.variants[0];
-  setValuesFromVariant(selectedValues, initialVariant);
-
+const renderProductGallery = (product: ProductDetail) => {
   const gallery = document.createElement("section");
   gallery.className = "product-detail__gallery";
+  gallery.setAttribute("aria-label", "product images");
+
+  const carousel = document.createElement("div");
+  carousel.className = "product-detail__carousel";
+
+  const viewport = document.createElement("div");
+  viewport.className = "product-detail__carousel-viewport";
+
+  const track = document.createElement("div");
+  track.className = "product-detail__carousel-track";
+
+  const slides: HTMLElement[] = [];
+  const imageCount = product.images.length;
+  let activeIndex = 0;
+  let touchStartX: number | undefined;
+  let touchStartY: number | undefined;
+
   product.images.forEach((productImage, index) => {
+    const slide = document.createElement("div");
+    slide.className = "product-detail__carousel-slide";
+
     const image = document.createElement("img");
     image.className = "product-detail__image";
     image.src = productImage.url;
@@ -175,12 +191,97 @@ const renderProduct = (container: HTMLElement, product: ProductDetail) => {
     image.fetchPriority = index === 0 ? "high" : "auto";
     if (productImage.width) image.width = productImage.width;
     if (productImage.height) image.height = productImage.height;
+    if (index === 0 && productImage.width && productImage.height) {
+      gallery.style.setProperty("--product-carousel-aspect", `${productImage.width} / ${productImage.height}`);
+    }
     if (productImage.srcset) {
       image.srcset = productImage.srcset;
-      image.sizes = "(max-width: 760px) 100vw, 55vw";
+      image.sizes = "(max-width: 760px) 54vw, 55vw";
     }
-    gallery.append(image);
+
+    slide.append(image);
+    slides.push(slide);
+    track.append(slide);
   });
+
+  viewport.append(track);
+  carousel.append(viewport);
+
+  if (imageCount > 1) {
+    const previous = document.createElement("button");
+    previous.type = "button";
+    previous.className = "product-detail__carousel-arrow product-detail__carousel-arrow--previous";
+    previous.setAttribute("aria-label", "previous image");
+    previous.textContent = "←";
+
+    const next = document.createElement("button");
+    next.type = "button";
+    next.className = "product-detail__carousel-arrow product-detail__carousel-arrow--next";
+    next.setAttribute("aria-label", "next image");
+    next.textContent = "→";
+
+    const counter = document.createElement("p");
+    counter.className = "product-detail__carousel-counter";
+    counter.setAttribute("aria-live", "polite");
+
+    const setActiveImage = (index: number) => {
+      activeIndex = (index + imageCount) % imageCount;
+      track.style.transform = `translateX(-${activeIndex * 100}%)`;
+      counter.textContent = `${activeIndex + 1} / ${imageCount}`;
+
+      slides.forEach((slide, slideIndex) => {
+        const isActive = slideIndex === activeIndex;
+        slide.classList.toggle("is-active", isActive);
+        slide.setAttribute("aria-hidden", isActive ? "false" : "true");
+      });
+    };
+
+    previous.addEventListener("click", () => setActiveImage(activeIndex - 1));
+    next.addEventListener("click", () => setActiveImage(activeIndex + 1));
+    viewport.addEventListener(
+      "touchstart",
+      (event) => {
+        const touch = event.touches[0];
+        if (!touch) return;
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+      },
+      { passive: true },
+    );
+    viewport.addEventListener(
+      "touchend",
+      (event) => {
+        const touch = event.changedTouches[0];
+        if (!touch || touchStartX === undefined || touchStartY === undefined) return;
+
+        const deltaX = touch.clientX - touchStartX;
+        const deltaY = touch.clientY - touchStartY;
+        touchStartX = undefined;
+        touchStartY = undefined;
+
+        if (Math.abs(deltaX) < 36 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
+        setActiveImage(activeIndex + (deltaX < 0 ? 1 : -1));
+      },
+      { passive: true },
+    );
+
+    carousel.append(previous, next, counter);
+    setActiveImage(0);
+  } else {
+    slides[0]?.classList.add("is-active");
+    slides[0]?.setAttribute("aria-hidden", "false");
+  }
+
+  gallery.append(carousel);
+  return gallery;
+};
+
+const renderProduct = (container: HTMLElement, product: ProductDetail) => {
+  const selectedValues = new Map<string, string>();
+  const initialVariant = product.variants.find((variant) => variant.availableForSale) ?? product.variants[0];
+  setValuesFromVariant(selectedValues, initialVariant);
+
+  const gallery = renderProductGallery(product);
 
   const detail = document.createElement("section");
   detail.className = "product-detail__panel";
