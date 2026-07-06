@@ -270,6 +270,12 @@ Research-informed (Baymard search-within-category study: 94% of sites lack it, a
 
 **SRCH-C7 — matching quality + a11y polish (production-grade).** Local index: case + diacritic folding (NFD strip), rank title word-prefix > title substring > vendor match, stable order; predictive results merge AFTER local ranking, dedupe by handle. Input: autocomplete=off spellcheck=false; combobox-lite a11y (aria-expanded on the search wrapper, aria-controls the panel, aria-live count). No behavior change otherwise.
 
+**SRCH ROUND 2 STATUS: ALL 3 COMMITTED ON DEV (2026-07-06) — verified end-to-end. NOT pushed.**
+- SRCH-C7 — 947b3b0 — diacritic/case folding + prefix>substring>vendor ranking + combobox-lite a11y.
+- SRCH-C6 — 519aa08 — scoped search: SearchScope from active collection/product return-point; title `SEARCH IN <LABEL> — "q" (n)` + chip `in: <label> ×` + `search all products →` row; zero-in-scope → "more like this — all products" fallback grid; ?search=&scope= URL; clear/Esc restores folder exactly.
+- SRCH-C5 — 930f507 — dropdown deleted; typing drives the is-search panel LIVE (instant local + debounced merge), one history entry per session (push-then-replace, session return URL), aria-live count, search always visible on desktop.
+- VERIFIED (1440×900): live "sock"(12)→"socks in black"(2); Esc-with-text clears+closes; CLOTHES-scoped "linen"(34) w/ chip+escape+URL scope; "vase"(0-in-scope) → more-like-this 9 cards; escape→all(9); clear→CLOTHES—SHOP ALL restored; cold deep link ?search=linen&scope=clothing-1 correct.
+
 **PHASE SRCH STATUS: ALL 4 COMMITTED ON DEV (2026-07-06) — ready for operator verify. NOT pushed. (PERF shipped separately via PR #10 @ 56650bc before SRCH began.)**
 
 **Log (build:green check:green each):**
