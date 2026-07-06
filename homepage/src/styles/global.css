@@ -821,7 +821,7 @@ body{
   }
   .hero__menu-panel{
     display:none; position:static;
-    padding:0.45em 0 0; width:max-content; max-width:min(84vw,260px);
+    padding:0.45em 0 0; width:max-content; max-width:min(88vw,340px);
   }
   .hero__menu-section.is-open .hero__menu-panel{display:block}
   .hero__menu-link{
@@ -835,7 +835,15 @@ body{
     font-size:10.5px; line-height:1.35;
     padding:0.3em 0; white-space:normal; overflow-wrap:anywhere;
   }
-  .hero__menu-nested{padding-left:1.4em; margin-top:0.2em}
+  .hero__menu-nested{
+    columns:2; column-gap:18px;
+    padding-left:1.4em; margin-top:0.2em;
+  }
+  .hero__menu-nested > li{
+    break-inside:avoid;
+    page-break-inside:avoid;
+    -webkit-column-break-inside:avoid;
+  }
   .hero__catalog,
   .hero__product,
   .hero__preorder{
