@@ -826,6 +826,7 @@ body{
   .hero__menu-section.is-open .hero__menu-panel{display:block}
   .hero__menu-link{
     display:flex; align-items:center;
+    gap:0.4em;
     min-height:36px;
     font-size:10.5px; font-weight:400; line-height:1.35;
     padding:0.3em 0; white-space:normal; overflow-wrap:anywhere;
