@@ -73,7 +73,7 @@ diff against that sub-task's **Done when** + the risks list before the next
 dispatch. Before each dispatch, Claude updates the line below so Codex has ONE
 target; everything else in this file is context, not instruction.
 
-> **ACTIVE SUB-TASK: WAVE MOBILE — MOB-8 (operator picked Proposal A, 2026-07-06: paper-takeover menu + bigger mobile menu type + cart-badge clip fix; full spec below). MOB-1→7 phone-verified; re-scout passed @ f554b4a. After MOB-8: operator phone-verify → "ship wave mobile" → dev→main PR. Status: ready for Codex.**
+> **ACTIVE SUB-TASK: (none — SHIPPING. Operator (2026-07-06): revert the last revision (MOB-8 paper takeover, 6062af5 → reverted @ 450ed69) and publish the pre-MOB-8 state — WAVE MOBILE MOB-1→7 as phone-verified + re-scout-passed @ f554b4a — to main. Deploy PR opened; operator merges. NOTE: the MOB-8 revert also took back the 14px headers + cart-badge clip fix (they were in the same commit) — both are trivial standalone re-adds if wanted in the next round. Operator will continue with more mobile revisions after this ships. Security wave queued.)**
 >
 > **STANDING RULE (operator, 2026-07-06): the desktop site must NOT change during Wave Mobile — every revision scoped inside ≤760px. Mobile should EMULATE the original desktop experience, condensed and clean — no overlays, no visual distortion.**
 >
