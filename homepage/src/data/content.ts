@@ -209,11 +209,6 @@ export const heroMenu: HeroMenuSection[] = [
     fam: true,
     items: [],
   },
-  {
-    label: "PRE-ORDER",
-    preorder: true,
-    items: [],
-  },
 ];
 
 /** Block 01 — about. The right side renders as a letterpress business card. */
