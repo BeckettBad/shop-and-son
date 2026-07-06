@@ -318,16 +318,12 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const menuSections = hero ? Array.from(hero.querySelectorAll<HTMLElement>("[data-hero-dropdown]")) : [];
   const subgroupToggles = hero ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-menu-subgroup]")) : [];
   const mobileQuery = window.matchMedia("(max-width: 760px)");
-  const desktopPagerQuery = window.matchMedia("(min-width: 761px)");
+  const desktopQuery = window.matchMedia("(min-width: 761px)");
   const preorderDesktopWidth = 1160;
   const stageDuration = 550;
   const fallbackCardAspect = 0.75;
-  let rowIndex = 0;
-  let lastRowIndex = 0;
-  let isPaging = false;
   const liveCollectionCache = new Map<string, Promise<CollectionDetail | null>>();
   let filmHasStarted = false;
-  let pagingFallback: ReturnType<typeof window.setTimeout> | undefined;
   let stencilReturnCleanup: (() => void) | undefined;
   let stageCleanup: ReturnType<typeof window.setTimeout> | undefined;
   type HeroStage = "landing" | "catalog" | "product" | "preorder" | "music" | "film" | "fam";
@@ -335,13 +331,13 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   interface SavedCatalog {
     collection: string;
     label: string;
-    rowIndex: number;
+    scrollTop: number;
   }
 
   let activeStage: HeroStage = "landing";
   let activeProductHandle: string | null = null;
   let savedCatalog: SavedCatalog | null = null;
-  let touchStartY: number | null = null;
+  let catalogScrollRestoreSequence = 0;
 
   const parseCatalogData = (): Record<string, CatalogProduct[]> => {
     try {
@@ -411,33 +407,30 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     }
   };
 
-  const setPagingReady = () => {
-    isPaging = false;
-    if (pagingFallback) {
-      window.clearTimeout(pagingFallback);
-      pagingFallback = undefined;
-    }
+  const getCatalogScrollTop = () => catalogViewport?.scrollTop ?? 0;
+
+  const restoreCatalogScroll = (scrollTop: number) => {
+    if (!catalogViewport) return;
+
+    const targetScrollTop = Math.max(0, scrollTop);
+    const restoreSequence = ++catalogScrollRestoreSequence;
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if (restoreSequence !== catalogScrollRestoreSequence) return;
+
+        catalogViewport.style.scrollBehavior = "auto";
+        catalogViewport.scrollTop = targetScrollTop;
+        window.requestAnimationFrame(() => {
+          if (restoreSequence !== catalogScrollRestoreSequence) return;
+
+          catalogViewport.style.removeProperty("scroll-behavior");
+        });
+      });
+    });
   };
 
-  const setRowIndex = (nextIndex: number) => {
-    if (!catalogTrack) return;
-
-    rowIndex = Math.max(0, Math.min(nextIndex, lastRowIndex));
-    const rows = Array.from(catalogTrack.querySelectorAll<HTMLElement>(".hero__catalog-row"));
-    const row = rows[rowIndex];
-    const offsetTop = row ? row.offsetTop : 0;
-    catalogTrack.style.setProperty("--catalog-row-offset", `${-offsetTop}px`);
-  };
-
-  const pageRows = (direction: number) => {
-    if (!desktopPagerQuery.matches || !catalogTrack || isPaging) return;
-
-    const nextIndex = Math.max(0, Math.min(rowIndex + direction, lastRowIndex));
-    if (nextIndex === rowIndex) return;
-
-    isPaging = true;
-    setRowIndex(nextIndex);
-    pagingFallback = window.setTimeout(setPagingReady, 560);
+  const resetCatalogScroll = () => {
+    restoreCatalogScroll(0);
   };
 
   const setActiveButton = (collection: string | null) => {
@@ -671,7 +664,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const resizePreorderFrame = () => {
     if (!preorderShell || !preorderFrame) return;
 
-    if (!desktopPagerQuery.matches) {
+    if (!desktopQuery.matches) {
       preorderShell.style.removeProperty("--preorder-scale");
       preorderFrame.style.removeProperty("width");
       preorderFrame.style.removeProperty("height");
@@ -790,7 +783,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       image.src = product.image;
       if (product.imageSrcset) {
         image.srcset = product.imageSrcset;
-        image.sizes = "(max-width: 760px) 92vw, 20vw";
+        image.sizes = "(max-width: 420px) 92vw, (max-width: 760px) 46vw, 16vw";
       }
       image.alt = product.title;
       image.loading = "lazy";
@@ -836,26 +829,14 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     catalogDescriptionSeparator.hidden = !trimmedDescription;
   };
 
-  const renderCatalogRows = (products: CatalogProduct[], targetRowIndex: number) => {
+  const renderCatalogGrid = (products: CatalogProduct[], targetScrollTop = 0) => {
     if (!catalogTrack) return;
 
     const sorted = [...products].sort(
       (a, b) => Number(a.available === false) - Number(b.available === false),
     );
-    const rows: HTMLDivElement[] = [];
-    for (let index = 0; index < sorted.length; index += 3) {
-      const row = document.createElement("div");
-      row.className = "hero__catalog-row";
-      for (const product of sorted.slice(index, index + 3)) {
-        row.append(createProductCard(product));
-      }
-      rows.push(row);
-    }
-
-    catalogTrack.replaceChildren(...rows);
-    lastRowIndex = Math.max(0, rows.length - 1);
-    setPagingReady();
-    setRowIndex(Math.min(targetRowIndex, lastRowIndex));
+    catalogTrack.replaceChildren(...sorted.map(createProductCard));
+    restoreCatalogScroll(targetScrollTop);
   };
 
   const getComparableProducts = (products: CatalogProduct[]) =>
@@ -913,11 +894,12 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     setActiveButton(collection);
 
     const snapshotProducts = catalogData[collection] ?? [];
-    renderCatalogRows(snapshotProducts, 0);
+    renderCatalogGrid(snapshotProducts, 0);
 
     void getLiveCollection(collection).then((liveCollection) => {
       if (!liveCollection || hero.dataset.activeCollection !== collection) return;
 
+      const refreshScrollTop = getCatalogScrollTop();
       const reconciledLiveCollection: CollectionDetail = {
         ...liveCollection,
         products: reconcileLiveProducts(liveCollection.products, snapshotProducts),
@@ -925,7 +907,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       if (!hasLiveCatalogChanged(reconciledLiveCollection, snapshotProducts)) return;
 
       renderCatalogHeader(label, reconciledLiveCollection.description);
-      renderCatalogRows(reconciledLiveCollection.products, rowIndex);
+      renderCatalogGrid(reconciledLiveCollection.products, refreshScrollTop);
     });
   };
 
@@ -942,8 +924,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     prepareToLeaveProductForStage();
     delete hero.dataset.activeCollection;
     setActiveButton(null);
-    setPagingReady();
-    setRowIndex(0);
+    resetCatalogScroll();
     transitionToStage("preorder", resizePreorderFrame);
   };
 
@@ -953,8 +934,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     prepareToLeaveProductForStage();
     delete hero.dataset.activeCollection;
     setActiveButton(null);
-    setPagingReady();
-    setRowIndex(0);
+    resetCatalogScroll();
     transitionToStage("music", () => undefined);
   };
 
@@ -964,8 +944,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     prepareToLeaveProductForStage();
     delete hero.dataset.activeCollection;
     setActiveButton(null);
-    setPagingReady();
-    setRowIndex(0);
+    resetCatalogScroll();
     transitionToStage("fam", () => undefined);
   };
 
@@ -975,8 +954,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     prepareToLeaveProductForStage();
     delete hero.dataset.activeCollection;
     setActiveButton(null);
-    setPagingReady();
-    setRowIndex(0);
+    resetCatalogScroll();
     transitionToStage("film", () => undefined);
   };
 
@@ -990,7 +968,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       savedCatalog = {
         collection: hero.dataset.activeCollection ?? "",
         label: catalogTitle?.textContent?.trim() ?? "",
-        rowIndex,
+        scrollTop: getCatalogScrollTop(),
       };
     } else {
       savedCatalog = null;
@@ -1011,7 +989,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
         hero.dataset.activeCollection = catalogReturn.collection;
         if (catalogTitle) catalogTitle.textContent = catalogReturn.label;
         setActiveButton(catalogReturn.collection);
-        setRowIndex(catalogReturn.rowIndex);
+        restoreCatalogScroll(catalogReturn.scrollTop);
       });
     } else {
       closeStage();
@@ -1094,8 +1072,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     filmVideo?.pause();
     resetFilmMute();
     updateFilmPlayback();
-    setPagingReady();
-    setRowIndex(0);
+    resetCatalogScroll();
     returnStencilFromRight();
     delete hero.dataset.activeCollection;
     catalog?.setAttribute("aria-hidden", "true");
@@ -1206,42 +1183,6 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     openProduct(handle);
   });
 
-  catalogViewport?.addEventListener(
-    "wheel",
-    (event) => {
-      if (!desktopPagerQuery.matches) return;
-
-      event.preventDefault();
-      if (Math.abs(event.deltaY) < 8) return;
-
-      pageRows(event.deltaY > 0 ? 1 : -1);
-    },
-    { passive: false },
-  );
-
-  catalogViewport?.addEventListener("touchstart", (event) => {
-    if (!desktopPagerQuery.matches) return;
-
-    touchStartY = event.touches[0]?.clientY ?? null;
-  });
-
-  catalogViewport?.addEventListener("touchend", (event) => {
-    if (!desktopPagerQuery.matches || touchStartY === null) return;
-
-    const touchEndY = event.changedTouches[0]?.clientY ?? touchStartY;
-    const deltaY = touchStartY - touchEndY;
-    touchStartY = null;
-    if (Math.abs(deltaY) < 32) return;
-
-    pageRows(deltaY > 0 ? 1 : -1);
-  });
-
-  catalogTrack?.addEventListener("transitionend", (event) => {
-    if (event.propertyName === "transform") {
-      setPagingReady();
-    }
-  });
-
   window.addEventListener("popstate", syncProductStageFromUrl);
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape" || activeStage !== "product") return;
@@ -1295,7 +1236,6 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     preorderObserver?.observe(preorderShell);
     window.addEventListener("resize", resizePreorderFrame);
   }
-  window.addEventListener("resize", () => setRowIndex(rowIndex));
   void hydrateLiveMenu();
   syncProductStageFromUrl();
 </script>
