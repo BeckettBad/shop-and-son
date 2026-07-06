@@ -23,7 +23,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 // Block 1 — desktop: vertical left menu; mobile: horizontal tabs over fullscreen video.
 ---
 <section class="block hero-video" id="hero">
-  <div class="hero__search" data-search>
+  <div class="hero__search" data-search role="combobox" aria-expanded="false" aria-controls="hero-search-results">
     <button class="hero__search-toggle" data-search-toggle type="button" aria-label="search">
       <svg class="hero__search-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
         <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" fill="none" stroke-width="1.5" />
@@ -31,7 +31,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       </svg>
     </button>
     <button class="hero__search-scope-chip" data-search-scope-chip type="button" hidden></button>
-    <input class="hero__search-input" data-search-input type="text" placeholder="search…" aria-label="search products" autocomplete="off" aria-controls="hero-search-results" />
+    <input class="hero__search-input" data-search-input type="text" placeholder="search…" aria-label="search products" autocomplete="off" spellcheck="false" />
     <span class="hero__search-status" data-search-status aria-live="polite" aria-atomic="true"></span>
   </div>
 
@@ -394,6 +394,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   const isCartOpen = () => document.querySelector(".cart-drawer")?.classList.contains("is-open") ?? false;
 
+  const setSearchResultsExpanded = (isExpanded: boolean) => {
+    search?.setAttribute("aria-expanded", String(isExpanded));
+  };
+
   const openSearch = () => {
     if (!search || !searchInput) return;
 
@@ -408,6 +412,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (!search || !searchInput) return;
 
     search.classList.remove("is-open");
+    setSearchResultsExpanded(false);
     if (clearInput) {
       searchInput.value = "";
     }
@@ -451,7 +456,25 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   });
   const searchIndex = Array.from(searchIndexByHandle.values());
 
-  const normalizeSearchText = (value: string) => value.trim().toLocaleLowerCase("en-US");
+  const normalizeSearchText = (value: string) =>
+    value
+      .trim()
+      .toLocaleLowerCase("en-US")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+  const getTitleWords = (title: string) => normalizeSearchText(title).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+
+  const getSearchMatchRank = (product: CatalogProduct, normalizedQuery: string) => {
+    const normalizedTitle = normalizeSearchText(product.title);
+    const normalizedVendor = normalizeSearchText(product.vendor);
+
+    if (getTitleWords(product.title).some((word) => word.startsWith(normalizedQuery))) return 0;
+    if (normalizedTitle.includes(normalizedQuery)) return 1;
+    if (normalizedVendor.includes(normalizedQuery)) return 2;
+
+    return Number.POSITIVE_INFINITY;
+  };
 
   const getScopeProducts = (scope: SearchScope | null) => (scope ? (catalogData[scope.collection] ?? []) : searchIndex);
 
@@ -459,9 +482,11 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     const normalizedQuery = normalizeSearchText(query);
     if (!normalizedQuery) return [];
 
-    const matches = getScopeProducts(scope).filter((product) =>
-      normalizeSearchText(`${product.title} ${product.vendor}`).includes(normalizedQuery),
-    );
+    const matches = getScopeProducts(scope)
+      .map((product, index) => ({ product, index, rank: getSearchMatchRank(product, normalizedQuery) }))
+      .filter((match) => Number.isFinite(match.rank))
+      .sort((a, b) => a.rank - b.rank || a.index - b.index)
+      .map((match) => match.product);
     return Number.isFinite(limit) ? matches.slice(0, limit) : matches;
   };
 
@@ -473,12 +498,15 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     const seenHandles = new Set<string>();
     const mergedProducts: CatalogProduct[] = [];
 
-    [...localProducts, ...predictiveProducts].forEach((product) => {
+    const appendProduct = (product: CatalogProduct) => {
       if (!product.handle || seenHandles.has(product.handle) || mergedProducts.length >= limit) return;
 
       seenHandles.add(product.handle);
       mergedProducts.push(product);
-    });
+    };
+
+    localProducts.forEach(appendProduct);
+    predictiveProducts.forEach(appendProduct);
 
     return mergedProducts;
   };
@@ -981,11 +1009,13 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const activatePanel = (stage: PanelStage) => {
     hero?.classList.add(getStageClass(stage));
     setPanelHidden(stage, false);
+    if (stage === "search") setSearchResultsExpanded(true);
   };
 
   const deactivatePanel = (stage: PanelStage) => {
     hero?.classList.remove(getStageClass(stage));
     setPanelHidden(stage, true);
+    if (stage === "search") setSearchResultsExpanded(false);
   };
 
   const transitionToStage = (nextStage: PanelStage, prepareIncoming: () => void) => {
@@ -1004,6 +1034,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (previousStage === "film") {
       filmVideo?.pause();
       resetFilmMute();
+    }
+    if (previousStage === "search" && nextStage !== "search") {
+      setSearchResultsExpanded(false);
     }
 
     if (previousStage === nextStage) {
@@ -1300,6 +1333,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     renderedSearchProducts = [];
     renderedSearchFallbackProducts = [];
     updateSearchScopeControls(null);
+    setSearchResultsExpanded(false);
     searchStageSequence += 1;
     searchStatus?.replaceChildren();
     resetSearchSession();
