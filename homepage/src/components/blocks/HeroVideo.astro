@@ -273,8 +273,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
 <script>
   import { getLiveHeroMenu, type LiveHeroMenuEntry } from "../../lib/menu";
-  import { mountProductView } from "../../lib/product-view";
-  import { getCollection, type CollectionDetail } from "../../lib/storefront-client";
+  import { mountProductView, type ProductImageSeed } from "../../lib/product-view";
+  import { getCollection, prefetchProduct, type CollectionDetail } from "../../lib/storefront-client";
 
   interface CatalogProduct {
     handle: string;
@@ -333,6 +333,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     label: string;
     scrollTop: number;
   }
+  interface OpenProductOptions {
+    saveReturnPoint?: boolean;
+    seedImage?: ProductImageSeed;
+  }
 
   let activeStage: HeroStage = "landing";
   let activeProductHandle: string | null = null;
@@ -362,6 +366,11 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     return url;
   };
 
+  const prefetchCatalogProduct = (handle: string) => {
+    if (!handle) return;
+    void prefetchProduct(handle);
+  };
+
   const getCurrentProductParam = () => new URL(location.href).searchParams.get("product");
 
   const stripProductParamFromUrl = () => {
@@ -383,6 +392,26 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const getCardAspect = (imageAspect: number | undefined) => {
     const aspect = Number(imageAspect);
     return Number.isFinite(aspect) && aspect > 0 ? aspect : fallbackCardAspect;
+  };
+
+  const getProductSeedImage = (card: HTMLAnchorElement): ProductImageSeed | undefined => {
+    const image = card.querySelector<HTMLImageElement>(".product-card__media img");
+    const seedUrl = image?.currentSrc || image?.src;
+    if (!image || !seedUrl) return undefined;
+
+    const cardAspect = Number.parseFloat(card.style.getPropertyValue("--card-aspect"));
+    const width = image.naturalWidth || undefined;
+    const height = image.naturalHeight || undefined;
+    const naturalAspect = width && height ? width / height : undefined;
+    const aspect = Number.isFinite(cardAspect) && cardAspect > 0 ? cardAspect : naturalAspect;
+
+    return {
+      url: seedUrl,
+      alt: image.alt,
+      width,
+      height,
+      aspect,
+    };
   };
 
   const getCollectionButtons = () =>
@@ -816,6 +845,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     body.append(title, vendor, price);
     card.append(media, body);
+    card.addEventListener("pointerenter", () => prefetchCatalogProduct(product.handle), { passive: true });
+    card.addEventListener("pointerdown", () => prefetchCatalogProduct(product.handle), { passive: true });
+    card.addEventListener("touchstart", () => prefetchCatalogProduct(product.handle), { passive: true });
     return card;
   };
 
@@ -958,8 +990,11 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     transitionToStage("film", () => undefined);
   };
 
-  const openProduct = (handle: string, saveReturnPoint = true) => {
+  const openProduct = (handle: string, options: OpenProductOptions | boolean = true) => {
     if (!hero || !productPanel || !productView) return;
+
+    const saveReturnPoint = typeof options === "boolean" ? options : options.saveReturnPoint !== false;
+    const seedImage = typeof options === "boolean" ? undefined : options.seedImage;
 
     productView.replaceChildren();
     productView.removeAttribute("class");
@@ -975,7 +1010,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     }
 
     activeProductHandle = handle;
-    transitionToStage("product", () => mountProductView(productView, handle));
+    transitionToStage("product", () => mountProductView(productView, handle, seedImage ? { seedImage } : undefined));
   };
 
   const actualCloseProduct = (stripUrl = false) => {
@@ -1180,7 +1215,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     event.preventDefault();
     history.pushState({ product: handle }, "", getHomepageProductUrl(handle));
-    openProduct(handle);
+    openProduct(handle, { seedImage: getProductSeedImage(link) });
   });
 
   window.addEventListener("popstate", syncProductStageFromUrl);

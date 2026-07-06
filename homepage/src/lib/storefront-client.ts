@@ -416,7 +416,7 @@ interface ProductQueryData {
   } | null;
 }
 
-export async function getProduct(handle: string): Promise<ProductDetail | null> {
+async function fetchProduct(handle: string): Promise<ProductDetail | null> {
   if (!isStorefrontConfigured || !handle) return null;
 
   try {
@@ -445,6 +445,33 @@ export async function getProduct(handle: string): Promise<ProductDetail | null> 
     return null;
   }
 }
+
+const productPromiseCache = new Map<string, Promise<ProductDetail | null>>();
+
+export function getProduct(handle: string): Promise<ProductDetail | null> {
+  const productHandle = handle.trim();
+  if (!isStorefrontConfigured || !productHandle) return Promise.resolve(null);
+
+  const cachedProduct = productPromiseCache.get(productHandle);
+  if (cachedProduct) return cachedProduct;
+
+  const productPromise = fetchProduct(productHandle).then(
+    (product) => {
+      if (!product) {
+        productPromiseCache.delete(productHandle);
+      }
+      return product;
+    },
+    (error: unknown) => {
+      productPromiseCache.delete(productHandle);
+      throw error;
+    },
+  );
+  productPromiseCache.set(productHandle, productPromise);
+  return productPromise;
+}
+
+export const prefetchProduct = getProduct;
 
 const POLICIES_QUERY = /* GraphQL */ `
   query Policies {
