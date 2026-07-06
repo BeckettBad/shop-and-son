@@ -23,6 +23,16 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 // Block 1 — desktop: vertical left menu; mobile: horizontal tabs over fullscreen video.
 ---
 <section class="block hero-video" id="hero">
+  <div class="hero__search" data-search>
+    <button class="hero__search-toggle" data-search-toggle type="button" aria-label="search">
+      <svg class="hero__search-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+        <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" fill="none" stroke-width="1.5" />
+        <path d="M12.5 12.5L17 17" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" />
+      </svg>
+    </button>
+    <input class="hero__search-input" data-search-input type="text" placeholder="search…" aria-label="search products" autocomplete="off" />
+  </div>
+
   <button type="button" class="hero__cart" data-cart-toggle aria-label="Cart">
     <svg focusable="false" class="icon icon-bag" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
 	 viewBox="0 0 20 20" style="enable-background:new 0 0 24 24;" xml:space="preserve">
@@ -313,6 +323,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const filmClose = hero?.querySelector<HTMLButtonElement>("[data-film-close]");
   const filmOpen = hero?.querySelector<HTMLButtonElement>("[data-film-open]");
   const famPanel = hero?.querySelector<HTMLElement>(".hero__fam");
+  const search = hero?.querySelector<HTMLElement>("[data-search]");
+  const searchToggle = hero?.querySelector<HTMLButtonElement>("[data-search-toggle]");
+  const searchInput = hero?.querySelector<HTMLInputElement>("[data-search-input]");
   const catalogDataNode = hero?.querySelector<HTMLScriptElement>("#catalog-data");
   const heroMenuElement = hero?.querySelector<HTMLElement>(".hero__menu");
   const menuSections = hero ? Array.from(hero.querySelectorAll<HTMLElement>("[data-hero-dropdown]")) : [];
@@ -342,6 +355,43 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   let activeProductHandle: string | null = null;
   let savedCatalog: SavedCatalog | null = null;
   let catalogScrollRestoreSequence = 0;
+
+  const isCartOpen = () => document.querySelector(".cart-drawer")?.classList.contains("is-open") ?? false;
+
+  const openSearch = () => {
+    if (!search || !searchInput) return;
+
+    search.classList.add("is-open");
+    window.requestAnimationFrame(() => {
+      searchInput.focus();
+    });
+  };
+
+  const closeSearch = (clearInput = false) => {
+    if (!search || !searchInput) return;
+
+    search.classList.remove("is-open");
+    if (clearInput) {
+      searchInput.value = "";
+    }
+  };
+
+  const toggleSearch = () => {
+    if (search?.classList.contains("is-open")) {
+      closeSearch();
+      return;
+    }
+
+    openSearch();
+  };
+
+  const hasTextInputFocus = () => {
+    const activeElement = document.activeElement;
+    if (!(activeElement instanceof HTMLElement)) return false;
+
+    const tagName = activeElement.tagName.toLowerCase();
+    return tagName === "input" || tagName === "textarea" || activeElement.isContentEditable;
+  };
 
   const parseCatalogData = (): Record<string, CatalogProduct[]> => {
     try {
@@ -1221,10 +1271,31 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   window.addEventListener("popstate", syncProductStageFromUrl);
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape" || activeStage !== "product") return;
-    if (document.querySelector(".cart-drawer")?.classList.contains("is-open")) return;
+    if (isCartOpen()) return;
 
     event.preventDefault();
     closeProduct();
+  });
+  searchToggle?.addEventListener("click", toggleSearch);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && search?.classList.contains("is-open")) {
+      event.preventDefault();
+      closeSearch(true);
+      return;
+    }
+
+    if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+    if (hasTextInputFocus() || isCartOpen()) return;
+
+    event.preventDefault();
+    openSearch();
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (!search?.classList.contains("is-open") || !searchInput || searchInput.value.trim()) return;
+    const target = event.target;
+    if (target instanceof Node && search.contains(target)) return;
+
+    closeSearch();
   });
 
   menuSections.forEach((section) => {
