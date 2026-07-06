@@ -265,7 +265,7 @@ position; mobile unchanged.
 
 ---
 
-**PHASE K2 STATUS: ALL 5 COMMITTED ON DEV (2026-07-06) — ready for operator verify. NOT pushed.**
+**PHASE K2 STATUS: SHIPPED — operator ordered "push all changes to main" 2026-07-06; PR #9 merged @ 43ee927 carrying Wave Mobile (MOB-1–7) + Phase J2 (8 commits) + Phase K2 (8 commits). Pages deploy run 28822275396 green; live site verified updated (hero__menu-break present, last-modified 20:50Z). Next: operator's mobile revision round.**
 
 **Log addendum (C4–C6 + C5b; build:green check:green each):**
 - K2-C7 — 7714b3c — italic left-edge glyph shear (operator report: the g in "green tea incense") — the scrolling details panel clipped left-overhanging italic strokes at its padding box (title left == panel left, paddingLeft 0). Fix: glyph gutter padding-left:clamp(8px,0.6vw,14px) on both stage + standalone panels (desktop). Verified before/after on ?product=green-tea-incense; demo artifact published for operator.
@@ -281,7 +281,7 @@ position; mobile unchanged.
 
 ---
 
-**PHASE J2 STATUS: ALL 8 COMMITTED ON DEV (2026-07-06) — ready for operator verify. NOT pushed.**
+**PHASE J2 STATUS: SHIPPED via PR #9 @ 43ee927 (2026-07-06) — see K2 status note.**
 
 **Log (newest first; every commit build:green check:green):**
 - J2-C8 — b142a32 — panel title aligned to menu header line — global.css one-liner: `.hero__catalog-title{margin-top:clamp(20px,3vh,32px)}` (desktop block); measured delta 0px at 1440; REWORKED from Codex's first attempt (menu-header `top:-3vh` caused OBJECTS+ to overprint DESIGNERS+ — reverted). No other element moved.
