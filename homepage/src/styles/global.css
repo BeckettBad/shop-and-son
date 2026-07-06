@@ -278,7 +278,7 @@ body{
   display:none;
 }
 .hero__cart{
-  position:absolute; top:calc(8vh - 4px); right:3.1vw; z-index:5;
+  position:absolute; top:5vh; right:2.25vw; z-index:5;
   display:inline-flex; align-items:center; justify-content:center;
   width:30px; height:30px; color:#000000; text-decoration:none;
   margin:0; padding:0; border:0; background:transparent;
