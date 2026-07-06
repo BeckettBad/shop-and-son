@@ -30,7 +30,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
         <path d="M12.5 12.5L17 17" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" />
       </svg>
     </button>
-    <input class="hero__search-input" data-search-input type="text" placeholder="search…" aria-label="search products" autocomplete="off" />
+    <input class="hero__search-input" data-search-input type="text" placeholder="search…" aria-label="search products" autocomplete="off" aria-controls="hero-search-suggest" aria-expanded="false" />
+    <div class="hero__search-suggest" data-search-suggest id="hero-search-suggest" role="listbox" hidden></div>
   </div>
 
   <button type="button" class="hero__cart" data-cart-toggle aria-label="Cart">
@@ -283,6 +284,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
 <script>
   import { getLiveHeroMenu, type LiveHeroMenuEntry } from "../../lib/menu";
+  import { getSizedShopifyImageUrl } from "../../lib/catalog";
   import { mountProductView, type ProductImageSeed } from "../../lib/product-view";
   import { getCollection, prefetchProduct, type CollectionDetail } from "../../lib/storefront-client";
 
@@ -326,6 +328,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const search = hero?.querySelector<HTMLElement>("[data-search]");
   const searchToggle = hero?.querySelector<HTMLButtonElement>("[data-search-toggle]");
   const searchInput = hero?.querySelector<HTMLInputElement>("[data-search-input]");
+  const searchSuggest = hero?.querySelector<HTMLElement>("[data-search-suggest]");
   const catalogDataNode = hero?.querySelector<HTMLScriptElement>("#catalog-data");
   const heroMenuElement = hero?.querySelector<HTMLElement>(".hero__menu");
   const menuSections = hero ? Array.from(hero.querySelectorAll<HTMLElement>("[data-hero-dropdown]")) : [];
@@ -355,6 +358,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   let activeProductHandle: string | null = null;
   let savedCatalog: SavedCatalog | null = null;
   let catalogScrollRestoreSequence = 0;
+  let searchResults: CatalogProduct[] = [];
+  let activeSearchIndex = -1;
 
   const isCartOpen = () => document.querySelector(".cart-drawer")?.classList.contains("is-open") ?? false;
 
@@ -364,6 +369,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     search.classList.add("is-open");
     window.requestAnimationFrame(() => {
       searchInput.focus();
+      updateSearchSuggestions();
     });
   };
 
@@ -374,6 +380,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (clearInput) {
       searchInput.value = "";
     }
+    renderSearchSuggestions([]);
   };
 
   const toggleSearch = () => {
@@ -402,6 +409,26 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   };
 
   const catalogData = parseCatalogData();
+  const searchIndexByHandle = new Map<string, CatalogProduct>();
+  Object.values(catalogData).forEach((products) => {
+    products.forEach((product) => {
+      if (!product.handle || searchIndexByHandle.has(product.handle)) return;
+
+      searchIndexByHandle.set(product.handle, product);
+    });
+  });
+  const searchIndex = Array.from(searchIndexByHandle.values());
+
+  const normalizeSearchText = (value: string) => value.trim().toLocaleLowerCase("en-US");
+
+  const getSearchMatches = (query: string) => {
+    const normalizedQuery = normalizeSearchText(query);
+    if (!normalizedQuery) return [];
+
+    return searchIndex
+      .filter((product) => normalizeSearchText(`${product.title} ${product.vendor}`).includes(normalizedQuery))
+      .slice(0, 6);
+  };
 
   const getProductHref = (handle: string) => {
     const base = BASE.replace(/\/$/, "");
@@ -462,6 +489,99 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       height,
       aspect,
     };
+  };
+
+  const getSearchSeedImage = (product: CatalogProduct): ProductImageSeed | undefined => {
+    const seedUrl = getSizedShopifyImageUrl(product.image, 120) ?? product.image;
+    if (!seedUrl) return undefined;
+
+    return {
+      url: seedUrl,
+      alt: product.title,
+      aspect: getCardAspect(product.imageAspect),
+    };
+  };
+
+  const setActiveSearchRow = (nextIndex: number) => {
+    if (!searchInput || !searchSuggest || searchResults.length === 0) {
+      activeSearchIndex = -1;
+      searchInput?.removeAttribute("aria-activedescendant");
+      return;
+    }
+
+    activeSearchIndex = ((nextIndex % searchResults.length) + searchResults.length) % searchResults.length;
+    const rows = Array.from(searchSuggest.querySelectorAll<HTMLElement>(".hero__search-row"));
+    rows.forEach((row, index) => {
+      const isActive = index === activeSearchIndex;
+      row.classList.toggle("is-active", isActive);
+      row.setAttribute("aria-selected", String(isActive));
+    });
+
+    const activeRow = rows[activeSearchIndex];
+    if (activeRow) {
+      searchInput.setAttribute("aria-activedescendant", activeRow.id);
+    }
+  };
+
+  const openSearchProduct = (product: CatalogProduct) => {
+    if (!product.handle) return;
+
+    history.pushState({ product: product.handle }, "", getHomepageProductUrl(product.handle));
+    closeSearch(true);
+    openProduct(product.handle, { saveReturnPoint: false, seedImage: getSearchSeedImage(product) });
+  };
+
+  const createSearchSuggestionRow = (product: CatalogProduct, index: number) => {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "hero__search-row";
+    row.id = `hero-search-option-${index}`;
+    row.setAttribute("role", "option");
+    row.setAttribute("aria-selected", "false");
+
+    const thumb = document.createElement("span");
+    thumb.className = "hero__search-thumb";
+    const imageUrl = getSizedShopifyImageUrl(product.image, 120) ?? product.image;
+    if (imageUrl) {
+      const image = document.createElement("img");
+      image.src = imageUrl;
+      image.alt = product.title;
+      image.loading = "lazy";
+      image.decoding = "async";
+      thumb.append(image);
+    }
+
+    const copy = document.createElement("span");
+    copy.className = "hero__search-copy";
+
+    const title = document.createElement("span");
+    title.className = "hero__search-title";
+    title.textContent = product.title;
+
+    const meta = document.createElement("span");
+    meta.className = "hero__search-meta";
+    meta.textContent = [product.vendor, product.price].filter(Boolean).join(" · ");
+
+    copy.append(title, meta);
+    row.append(thumb, copy);
+    row.addEventListener("pointerenter", () => prefetchCatalogProduct(product.handle), { passive: true });
+    row.addEventListener("click", () => openSearchProduct(product));
+    return row;
+  };
+
+  const renderSearchSuggestions = (products: CatalogProduct[]) => {
+    if (!searchSuggest || !searchInput) return;
+
+    searchResults = products.slice(0, 6);
+    activeSearchIndex = -1;
+    searchInput.removeAttribute("aria-activedescendant");
+    searchInput.setAttribute("aria-expanded", String(searchResults.length > 0));
+    searchSuggest.hidden = searchResults.length === 0;
+    searchSuggest.replaceChildren(...searchResults.map(createSearchSuggestionRow));
+  };
+
+  const updateSearchSuggestions = () => {
+    renderSearchSuggestions(getSearchMatches(searchInput?.value ?? ""));
   };
 
   const getCollectionButtons = () =>
@@ -1277,6 +1397,30 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     closeProduct();
   });
   searchToggle?.addEventListener("click", toggleSearch);
+  searchInput?.addEventListener("input", updateSearchSuggestions);
+  searchInput?.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown") {
+      if (searchResults.length === 0) return;
+
+      event.preventDefault();
+      setActiveSearchRow(activeSearchIndex + 1);
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      if (searchResults.length === 0) return;
+
+      event.preventDefault();
+      setActiveSearchRow(activeSearchIndex - 1);
+      return;
+    }
+
+    if (event.key !== "Enter") return;
+    if (activeSearchIndex < 0 || activeSearchIndex >= searchResults.length) return;
+
+    event.preventDefault();
+    openSearchProduct(searchResults[activeSearchIndex]);
+  });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && search?.classList.contains("is-open")) {
       event.preventDefault();
