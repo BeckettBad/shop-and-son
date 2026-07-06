@@ -73,7 +73,9 @@ diff against that sub-task's **Done when** + the risks list before the next
 dispatch. Before each dispatch, Claude updates the line below so Codex has ONE
 target; everything else in this file is context, not instruction.
 
-> **ACTIVE SUB-TASK: WAVE MOBILE — MOB-2 (stage/menu exclusivity, state-preserving; full spec below). MOB-3 (stacked two-row menu + always-visible cart) dispatches immediately after MOB-2 is reviewed. Status: ready for Codex.**
+> **ACTIVE SUB-TASK: WAVE MOBILE — MOB-5 (polish: film controls + tap targets), then MOB-6 (mobile product page: image-left / text-right). MOB-1/2/3 are committed on dev + verified by the operator ON PHONE (2026-07-06). MOB-7 (long-menu-list treatment) awaits the operator's design pick. Status: ready for Codex.**
+>
+> **STANDING RULE (operator, 2026-07-06): the desktop site must NOT change during Wave Mobile — every revision scoped inside ≤760px. Mobile should EMULATE the original desktop experience, condensed and clean — no overlays, no visual distortion.**
 >
 > (Prior state, for the record: Wave 2 + Phase N SHIPPED to main via PR #8 on 2026-07-02 — the ship gate was passed. A 2026-07-06 mobile scout found the published mobile experience has structural overlap bugs; WAVE MOBILE fixes them before official publish. Deferred: "now playing in store" idea (needs Ben's OK). Operator has further small site-wide design tweaks queued — briefs to come later, one at a time.)
 
@@ -228,18 +230,95 @@ never overlapped in any state (landing, each section open, each stage open),
 opening CLOTHES pushes & FAM/PRE-ORDER down; stages all open/close normally;
 desktop unchanged.
 
-### MOB-4 / MOB-5 — queued (do NOT start)
+### MOB-5 — mobile polish: film stage controls + tap targets
 
-- **MOB-4 — preorder horizontal shift:** expected RESOLVED by MOB-3's
-  no-horizontal-scroll change — verify during MOB-3; only becomes its own task
-  if the shift survives. (Operator confirms preorder itself works on the live
-  build; the dev-server 404 is expected — `/preorders/` exists only in the
-  deployed bundle.)
-- **MOB-5 — polish:** film × styling + frame centering; tap-target/type-size
-  pass; film-stage about-block decision (see MOB-1 flag).
-- Exit gate: re-scout + operator verify on real iPhone (browse → product → add
-  to cart → drawer → checkout hand-off; every stage; pre-order on live build) →
-  explicit **"ship wave mobile"**.
+**Status:** committed @ 6738a1d — ready for operator verify
+
+**Log:**
+- 2026-07-06 — MOB-5: film controls unboxed + centered, tap-target pass — 6738a1d — build:green check:green — global.css only, all ≤760px. Film: frame flex-centered (top clamp 78-104px), ×/sound-toggle/playback → transparent bg, white ink + dark text/drop-shadow (legible over video), 40px tap boxes; menu links/subheaders min-height 36px flex; catalog/product/preorder × → 40px; cart 32→40px box (22px glyph). About block stays hidden on film per default. Reviewed clean by Claude + headless-verified at 390. Desktop untouched. Not pushed. NOTE: 36px tap rows make the expanded DESIGNERS list even taller — MOB-7 (operator picking treatment) addresses the list itself.
+**Task:** two contained mobile polish fixes. ONE focused commit. Build + check
+green. **Scope:** `homepage/` only; ALL rules inside ≤760px — desktop
+byte-identical.
+
+**Files:** `src/styles/global.css` (expect CSS-only; touch
+`HeroVideo.astro` only if a class is genuinely missing).
+
+- **Film stage controls (≤760px):** the × close (`[data-film-close]`) and the
+  sound toggle currently render as opaque paper-colored boxes sitting ON the
+  video — clunky in the condensed window. Mobile override: strip the box
+  (`background:transparent; border:none`), render glyph/text directly over the
+  video in white with a subtle dark drop-shadow/text-shadow for legibility
+  (matches the site's minimal ink language). Keep the lowercase mono for the
+  sound label. Give both a ≥40px effective tap box (padding — visual size can
+  stay small). Also VERTICALLY CENTER the film frame in the stage area below
+  the tab rows (it currently floats low with dead space above) — flex
+  centering on the ≤760px `.hero__film`, transforms/animations untouched.
+  About block stays HIDDEN on film (operator default — MOB-1 flag stands).
+- **Tap-target pass (≤760px):** without changing the visual type scale:
+  `.hero__menu-link`, `.hero__menu-subheader` → min-height ~36px effective tap
+  (line-height/padding, text can stay 10.5px); every panel × close
+  (`[data-catalog-close]`, `[data-product-close]`, `[data-preorder-close]`,
+  `[data-film-close]`) → ≥40px tap box; `.hero__cart` tap box 32→40px (icon
+  glyph stays 22px). Verify nothing shifts layout (padding inward, not margin
+  outward).
+
+**Done when:** build + check green; at 390: film stage centered with clean
+un-boxed controls that are still legible over bright video; all listed
+controls have the enlarged tap boxes; desktop unchanged.
+
+### MOB-6 — mobile product page: images LEFT, text RIGHT (emulate desktop)
+
+**Status:** committed @ 549834a — ready for operator verify
+
+**Log:**
+- 2026-07-06 — MOB-6: mobile product two-column (images left 54% / detail right / desc full-width below) — 549834a — build:green check:green — global.css only, ≤760px. `.product-detail__content` float-left gallery (54%, CSS vars for gutter/edge), vendor/title/price/control margin-tracked into the right column, serif title clamp(20px,7.2vw,30px), variants/add wrap-enabled, desc clear:both full-width; same rules cover `.hero__product` stage overrides so in-hero stage + standalone /product/ match. Reviewed clean by Claude + headless-verified 390+360 (stage AND standalone): images left, SUB SUN/title/$/ADD TO CART right, desc below. Desktop product view verified unchanged at 1440 (landing/catalog/product screenshots). Not pushed.
+**Task:** operator (2026-07-06): the mobile product view must read like the
+original website — images on the left, text on the right — instead of the
+current single stacked column. Applies to BOTH the in-hero product stage and
+the standalone `/product/` page (they share the `.product-detail*` CSS — keep
+them consistent). ONE focused commit. Build + check green. **Scope:**
+`homepage/` only; ≤760px only — the desktop 55/45 grid is the reference and
+must not change.
+
+**Files:** `src/styles/global.css` (goal: CSS-only re-grid of the existing
+`.product-detail*` structure; consult `src/pages/product.astro` +
+`src/lib/product-view.ts` for the real class names — do not restructure their
+markup).
+
+- **Layout (≤760px):** the product content becomes a two-column grid echoing
+  the desktop split, condensed: **gallery LEFT ~54%** (images stacked, scroll
+  with the page, full-bleed within their column), **detail panel RIGHT ~46%**
+  (vendor → serif title → price → variant selector → add-to-cart), with the
+  **description spanning FULL WIDTH below** both columns (at ~46% of a phone
+  the description would be unreadably narrow — full-width below keeps it
+  clean; flag for operator if he'd rather have it in-column).
+- Scale the serif title down for the narrow column
+  (`clamp()` — it currently renders huge on mobile), tighten variant buttons
+  to fit the column (wrap allowed), keep the M1 neon hover/active language.
+- The in-hero product stage (`.hero__product` overrides) inherits the same
+  two-column read; its own scroll context/close behavior untouched.
+- Sticky behavior on mobile: keep it simple — both columns flow (no sticky) to
+  avoid iOS jank inside the stage panel; standalone page may keep sticky only
+  if it verifiably doesn't fight the narrow viewport.
+
+**Done when:** build + check green; at 390 AND 360: product opens with images
+left / text right, description full-width below; add-to-cart still fires the
+drawer; the standalone `/product/?handle=` page matches; desktop product view
+pixel-identical.
+
+### MOB-7 — long menu lists (DESIGNERS) — awaiting operator design pick
+
+Operator flagged (2026-07-06): expanded DESIGNERS (32 designers) is visually
+overwhelming on mobile — a wall of static text. Claude to present treatment
+options (two-column compact grid / capped-height internal scroll with edge
+fade / sub-clustering); operator picks; then this becomes the active brief.
+Do NOT start.
+
+### Exit gate (unchanged)
+
+Re-scout + operator verify on real iPhone (browse → product → add to cart →
+drawer → checkout hand-off; every stage; pre-order on live build) → explicit
+**"ship wave mobile"**.
 
 ---
 
