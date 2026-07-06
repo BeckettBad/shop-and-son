@@ -73,7 +73,7 @@ diff against that sub-task's **Done when** + the risks list before the next
 dispatch. Before each dispatch, Claude updates the line below so Codex has ONE
 target; everything else in this file is context, not instruction.
 
-> **ACTIVE SUB-TASK: WAVE MOBILE — MOB-1 (about block drops to bottom-center on mobile; full spec in the "WAVE MOBILE" section immediately below). Status: ready for Codex.**
+> **ACTIVE SUB-TASK: WAVE MOBILE — MOB-2 (stage/menu exclusivity, state-preserving; full spec below). MOB-3 (stacked two-row menu + always-visible cart) dispatches immediately after MOB-2 is reviewed. Status: ready for Codex.**
 >
 > (Prior state, for the record: Wave 2 + Phase N SHIPPED to main via PR #8 on 2026-07-02 — the ship gate was passed. A 2026-07-06 mobile scout found the published mobile experience has structural overlap bugs; WAVE MOBILE fixes them before official publish. Deferred: "now playing in store" idea (needs Ben's OK). Operator has further small site-wide design tweaks queued — briefs to come later, one at a time.)
 
@@ -133,16 +133,110 @@ centered below the house stencil; MUSIC and & FAM same; catalogue/product/
 pre-order/film show NO about block; expanding CLOTHES/OBJECTS hides it;
 closing back to bare hero brings it back; desktop rendering unchanged.
 
-### MOB-2 … MOB-5 — queued (do NOT start)
+### MOB-2 — mobile: stage/menu exclusivity — STATE-PRESERVING (P0 root fix)
 
-- **MOB-2 — stage/menu exclusivity + z-order (the P0 root fix):** on ≤760px an
-  open stage panel and an open menu list are mutually exclusive; panels above the
-  overlay. Kills the tap-interception + text-over-product bugs.
-- **MOB-3 — tab row + cart slot:** reserve the cart icon a real slot; make
-  PRE-ORDER reachable/discoverable (operator picks wrap vs. scroll cue).
-- **MOB-4 — pre-order horizontal shift fix:** contain the tab-strip's horizontal
-  scroll; page must never displace sideways.
-- **MOB-5 — polish:** film × styling + frame centering; tap-target/type-size pass.
+**Status:** committed @ c6259d5 — ready for operator verify
+
+**Log:**
+- 2026-07-06 — MOB-2: stage/menu exclusivity, state-preserving — c6259d5 — build:green check:green — HeroVideo.astro + global.css. JS: mobileQuery(≤760px); [data-shop-all] leaf → openCatalog + setMenuSectionState(null) on mobile only; plain-section header click skips closeStage() on mobile (stage survives hidden under menu — desktop closeStage unchanged). CSS ≤760px: non-stage open section (`:not([data-music/fam/preorder])`) hides .hero__catalog/__product/__preorder/__film/__fam/__dj via opacity/visibility/pointer-events + .18s fade (reduced-motion: none) — state/DOM untouched. Reviewed clean by Claude + headless REAL-TAP verified at 390 AND 360: card tap opens product, ADD TO CART opens drawer (full CART drawer w/ qty + CHECKOUT), menu-over-product hides then restores the SAME product on collapse. Not pushed.
+**Task:** on ≤760px only, an expanded CLOTHES/OBJECTS menu list and a visible
+stage panel never coexist — but the stage's STATE IS NEVER DESTROYED by the
+menu. Operator's UX decision (2026-07-06): an accidental menu tap must cost the
+user nothing — close the menu and you're exactly where you were; only choosing
+a NEW destination replaces the old one. ONE focused commit. Build + check green.
+**Scope:** `homepage/` only. **Desktop (>760px) byte-identical.**
+
+**Files:** `src/components/blocks/HeroVideo.astro` (client script),
+`src/styles/global.css` (≤760px rules).
+
+- **JS — opening a stage collapses the menu (mobile only):** add
+  `const mobileQuery = window.matchMedia("(max-width: 760px)")`. When a stage is
+  opened from a menu LEAF — the `[data-shop-all]` collection buttons (catalog) —
+  after the stage transition is initiated, if `mobileQuery.matches` call
+  `setMenuSectionState(null)` so the expanded list collapses and the overlay
+  shrinks to the tab rows. Do NOT do this for the header-opened stages
+  (MUSIC / & FAM / PRE-ORDER) — their section staying open (`–`) IS the design.
+  Do not change any desktop code path.
+- **CSS — opening the menu hides (not kills) the stage (mobile only):** when a
+  NON-stage section is open —
+  `.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])`
+  — hide every stage panel visually, preserving all state/DOM:
+  `.hero__catalog, .hero__product, .hero__preorder, .hero__film, .hero__fam`
+  and the music stage panel (use its real class — check the component) →
+  `opacity:0; visibility:hidden; pointer-events:none`, `.18s` fade,
+  `prefers-reduced-motion` → no transition. Do NOT touch `activeStage`, do NOT
+  unmount/re-render anything, do NOT change close/× logic. Collapsing the
+  section back must reveal the stage exactly as it was (same catalogue row,
+  same product, video still paused where it was).
+- **Tap landing:** with all sections collapsed, the overlay's box (height:auto)
+  must not cover the stage area — audit the ≤760px overlay rules for anything
+  forcing full-viewport height and remove it if found. Product cards, ADD TO
+  CART, and the panel × buttons must receive real taps.
+
+**Done when:** build + check green; at 390×844: open catalogue → menu list
+auto-collapses, cards tappable → card opens product → ADD TO CART opens the
+cart drawer (real tap, not JS dispatch); with product open, tapping CLOTHES
+hides the product, collapsing CLOTHES brings the same product back; MUSIC /
+& FAM / PRE-ORDER header flows unchanged; desktop unchanged.
+
+### MOB-3 — mobile: stacked two-row menu + cart always visible
+
+**Status:** committed @ 445d522 — ready for operator verify
+
+**Log:**
+- 2026-07-06 — MOB-3: stacked two-row mobile menu + cart always visible — 445d522 — build:green check:green — HeroVideo.astro + global.css. Markup: `<li class="hero__menu-break" aria-hidden>` after 3rd section (display:none desktop / flex-basis:100% mobile) → row 1 CLOTHES+/OBJECTS+/MUSIC+, row 2 centered & FAM+/PRE-ORDER+. Overlay overflow-x auto→hidden + menu width:max-content→wrap/center/max-width:calc(100%-48px) — horizontal scroll GONE (preorder shift verified dead: scrollX 0, docW==winW at both widths → old MOB-4 resolved, no separate task needed). Header font 14→12.5px, panel links 11→10.5px wrap-enabled. Cart: z5 + forced visible on is-catalog/product/preorder/film/fam (mobile only; desktop hide rules untouched); badge renders. Reviewed clean by Claude + headless-verified 390+360: two centered rows, PRE-ORDER visible, bag clear in all states, panels push row 2 down. Not pushed. FLAG for operator: row 2 re-centers under an open row-1 panel (drops below accordingly per your spec) — check the feel; and panel lists are now center-ish under centered headers — flag if you want them left-aligned within their column.
+**Task:** on ≤760px, replace the single sideways-scrolling tab strip with a
+STACKED, CENTERED, two-row header (operator's design, 2026-07-06):
+row 1 `CLOTHES +  OBJECTS +  MUSIC +`, row 2 centered beneath
+`& FAM +  PRE-ORDER +`. Section panels open in flow BELOW their header, pushing
+what's beneath down (no overlap). The cart bag is visible and tappable AT ALL
+TIMES on mobile. ONE focused commit. Build + check green.
+**Scope:** `homepage/` only. **Desktop (>760px) byte-identical.**
+
+**Files:** `src/styles/global.css` (primary),
+`src/components/blocks/HeroVideo.astro` (only if a row-break element is the
+cleanest wrap mechanism).
+
+- **Rows:** ≤760px `.hero__menu` becomes centered wrapped rows
+  (`display:flex; flex-wrap:wrap; justify-content:center;` tuned row/column
+  gaps). Force the break after MUSIC (3rd section): cleanest is a static
+  `<li class="hero__menu-break" aria-hidden="true">` after the 3rd section
+  (`display:none` desktop, `flex-basis:100%; height:0` mobile) — or a pure-CSS
+  mechanism if genuinely reliable. Section order comes from `content.ts`
+  (clothes, objects, music, fam, preorder) — do not reorder data.
+- **Kill horizontal scrolling entirely** on the mobile overlay: remove the
+  `overflow-x:auto` / `width:max-content; min-width:100%` strip behavior and
+  `white-space:nowrap` where it forces overflow. Both rows must fit 360px wide
+  with zero sideways scroll — trim tab font (14px → down to ~12.5px if needed)
+  and gaps to make it true. THIS ALSO must eliminate the old "page shifts left
+  with a white band when opening PRE-ORDER" bug (old MOB-4) — verify it's gone.
+- **Cart always visible (mobile):** on ≤760px REMOVE/override the stage
+  cart-hide rules (`.is-catalog`/`.is-preorder`/`.is-product` etc. hiding
+  `.hero__cart`) — operator wants the bag accessible at all times. Keep it
+  pinned top-right (`top:max(3vh,safe-area) right:4vw`, z above panels, below
+  drawer 80/81). Reserve it space: the menu rows get enough right padding (or
+  max-width) that no tab ever sits under the bag at 390px AND 360px. Check it
+  clears each panel's × close button (they sit lower — confirm visually).
+  Desktop cart-hide behavior UNCHANGED.
+- **Panels in flow:** opening a row-1 section pushes row 2 (and everything
+  below) down — natural document flow, no absolute overlay of the rows. The
+  MOB-1 fixed about block + MOB-2 hide rules keep working unchanged.
+
+**Done when:** build + check green; at 390 AND 360 wide: two centered rows
+exactly as specified, PRE-ORDER visible with no sideways scroll anywhere, bag
+never overlapped in any state (landing, each section open, each stage open),
+opening CLOTHES pushes & FAM/PRE-ORDER down; stages all open/close normally;
+desktop unchanged.
+
+### MOB-4 / MOB-5 — queued (do NOT start)
+
+- **MOB-4 — preorder horizontal shift:** expected RESOLVED by MOB-3's
+  no-horizontal-scroll change — verify during MOB-3; only becomes its own task
+  if the shift survives. (Operator confirms preorder itself works on the live
+  build; the dev-server 404 is expected — `/preorders/` exists only in the
+  deployed bundle.)
+- **MOB-5 — polish:** film × styling + frame centering; tap-target/type-size
+  pass; film-stage about-block decision (see MOB-1 flag).
 - Exit gate: re-scout + operator verify on real iPhone (browse → product → add
   to cart → drawer → checkout hand-off; every stage; pre-order on live build) →
   explicit **"ship wave mobile"**.
