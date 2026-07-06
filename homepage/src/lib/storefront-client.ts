@@ -47,6 +47,8 @@ interface StorefrontCollectionProduct {
   };
 }
 
+type StorefrontPredictiveSearchProduct = StorefrontCollectionProduct;
+
 interface StorefrontMenuItemRaw {
   title: string;
   url: string | null;
@@ -344,6 +346,51 @@ export async function getMenu(handle: string): Promise<StorefrontMenuItem[]> {
   try {
     const data = await storefrontFetch<MenuQueryData>(MENU_QUERY, { handle });
     return data?.menu?.items.map(mapMenuItem) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+const PREDICTIVE_SEARCH_QUERY = /* GraphQL */ `
+  query PredictiveSearch($query: String!) {
+    predictiveSearch(query: $query, limit: 8, types: [PRODUCT]) {
+      products {
+        handle
+        title
+        vendor
+        availableForSale
+        featuredImage {
+          url
+          altText
+          width
+          height
+        }
+        priceRange {
+          minVariantPrice {
+            amount
+            currencyCode
+          }
+        }
+      }
+    }
+  }
+`;
+
+interface PredictiveSearchQueryData {
+  predictiveSearch: {
+    products: StorefrontPredictiveSearchProduct[];
+  } | null;
+}
+
+export async function predictiveSearch(query: string): Promise<CatalogProduct[]> {
+  const searchQuery = query.trim();
+  if (!isStorefrontConfigured || !searchQuery) return [];
+
+  try {
+    const data = await storefrontFetch<PredictiveSearchQueryData>(PREDICTIVE_SEARCH_QUERY, {
+      query: searchQuery,
+    });
+    return data?.predictiveSearch?.products.map(mapCatalogProduct) ?? [];
   } catch {
     return [];
   }

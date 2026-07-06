@@ -286,7 +286,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   import { getLiveHeroMenu, type LiveHeroMenuEntry } from "../../lib/menu";
   import { getSizedShopifyImageUrl } from "../../lib/catalog";
   import { mountProductView, type ProductImageSeed } from "../../lib/product-view";
-  import { getCollection, prefetchProduct, type CollectionDetail } from "../../lib/storefront-client";
+  import { getCollection, predictiveSearch, prefetchProduct, type CollectionDetail } from "../../lib/storefront-client";
 
   interface CatalogProduct {
     handle: string;
@@ -338,6 +338,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const preorderDesktopWidth = 1160;
   const stageDuration = 550;
   const fallbackCardAspect = 0.75;
+  const searchPredictiveDelayMs = 250;
   const liveCollectionCache = new Map<string, Promise<CollectionDetail | null>>();
   let filmHasStarted = false;
   let stencilReturnCleanup: (() => void) | undefined;
@@ -360,6 +361,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   let catalogScrollRestoreSequence = 0;
   let searchResults: CatalogProduct[] = [];
   let activeSearchIndex = -1;
+  let searchPredictiveTimer: ReturnType<typeof window.setTimeout> | undefined;
+  let searchPredictiveSequence = 0;
 
   const isCartOpen = () => document.querySelector(".cart-drawer")?.classList.contains("is-open") ?? false;
 
@@ -380,6 +383,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (clearInput) {
       searchInput.value = "";
     }
+    clearPredictiveSearch();
     renderSearchSuggestions([]);
   };
 
@@ -428,6 +432,56 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     return searchIndex
       .filter((product) => normalizeSearchText(`${product.title} ${product.vendor}`).includes(normalizedQuery))
       .slice(0, 6);
+  };
+
+  const mergeSearchResults = (localProducts: CatalogProduct[], predictiveProducts: CatalogProduct[]) => {
+    const seenHandles = new Set<string>();
+    const mergedProducts: CatalogProduct[] = [];
+
+    [...localProducts, ...predictiveProducts].forEach((product) => {
+      if (!product.handle || seenHandles.has(product.handle) || mergedProducts.length >= 6) return;
+
+      seenHandles.add(product.handle);
+      mergedProducts.push(product);
+    });
+
+    return mergedProducts;
+  };
+
+  const searchResultsMatch = (products: CatalogProduct[]) =>
+    searchResults.length === products.length &&
+    searchResults.every((product, index) => product.handle === products[index]?.handle);
+
+  const clearPredictiveSearch = () => {
+    searchPredictiveSequence += 1;
+    if (!searchPredictiveTimer) return;
+
+    window.clearTimeout(searchPredictiveTimer);
+    searchPredictiveTimer = undefined;
+  };
+
+  const schedulePredictiveSearch = (query: string, localProducts: CatalogProduct[]) => {
+    const normalizedQuery = normalizeSearchText(query);
+    clearPredictiveSearch();
+    if (!normalizedQuery) return;
+
+    const requestSequence = searchPredictiveSequence;
+    searchPredictiveTimer = window.setTimeout(() => {
+      searchPredictiveTimer = undefined;
+      predictiveSearch(query)
+        .then((predictiveProducts) => {
+          const currentQuery = normalizeSearchText(searchInput?.value ?? "");
+          if (requestSequence !== searchPredictiveSequence || currentQuery !== normalizedQuery) return;
+
+          const mergedProducts = mergeSearchResults(localProducts, predictiveProducts);
+          if (!searchResultsMatch(mergedProducts)) {
+            renderSearchSuggestions(mergedProducts);
+          }
+        })
+        .catch(() => {
+          // Search degrades to the already-rendered local rows.
+        });
+    }, searchPredictiveDelayMs);
   };
 
   const getProductHref = (handle: string) => {
@@ -581,7 +635,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   };
 
   const updateSearchSuggestions = () => {
-    renderSearchSuggestions(getSearchMatches(searchInput?.value ?? ""));
+    const query = searchInput?.value ?? "";
+    const localMatches = getSearchMatches(query);
+    renderSearchSuggestions(localMatches);
+    schedulePredictiveSearch(query, localMatches);
   };
 
   const getCollectionButtons = () =>
