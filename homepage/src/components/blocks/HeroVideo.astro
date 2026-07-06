@@ -286,7 +286,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   import { getLiveHeroMenu, type LiveHeroMenuEntry } from "../../lib/menu";
   import { getSizedShopifyImageUrl } from "../../lib/catalog";
   import { mountProductView, type ProductImageSeed } from "../../lib/product-view";
-  import { getCollection, predictiveSearch, prefetchProduct, type CollectionDetail } from "../../lib/storefront-client";
+  import { getCollection, predictiveSearch, prefetchProduct, searchProducts, type CollectionDetail } from "../../lib/storefront-client";
 
   interface CatalogProduct {
     handle: string;
@@ -343,13 +343,21 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   let filmHasStarted = false;
   let stencilReturnCleanup: (() => void) | undefined;
   let stageCleanup: ReturnType<typeof window.setTimeout> | undefined;
-  type HeroStage = "landing" | "catalog" | "product" | "preorder" | "music" | "film" | "fam";
-  type PanelStage = "catalog" | "product" | "preorder" | "music" | "film" | "fam";
-  interface SavedCatalog {
+  type HeroStage = "landing" | "catalog" | "search" | "product" | "preorder" | "music" | "film" | "fam";
+  type PanelStage = "catalog" | "search" | "product" | "preorder" | "music" | "film" | "fam";
+  interface SavedCatalogReturn {
+    stage: "catalog";
     collection: string;
     label: string;
     scrollTop: number;
   }
+  interface SavedSearchReturn {
+    stage: "search";
+    query: string;
+    products: CatalogProduct[];
+    scrollTop: number;
+  }
+  type SavedStageReturn = SavedCatalogReturn | SavedSearchReturn;
   interface OpenProductOptions {
     saveReturnPoint?: boolean;
     seedImage?: ProductImageSeed;
@@ -357,12 +365,15 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   let activeStage: HeroStage = "landing";
   let activeProductHandle: string | null = null;
-  let savedCatalog: SavedCatalog | null = null;
+  let savedStageReturn: SavedStageReturn | null = null;
   let catalogScrollRestoreSequence = 0;
   let searchResults: CatalogProduct[] = [];
   let activeSearchIndex = -1;
   let searchPredictiveTimer: ReturnType<typeof window.setTimeout> | undefined;
   let searchPredictiveSequence = 0;
+  let activeSearchQuery = "";
+  let renderedSearchProducts: CatalogProduct[] = [];
+  let searchStageSequence = 0;
 
   const isCartOpen = () => document.querySelector(".cart-drawer")?.classList.contains("is-open") ?? false;
 
@@ -425,21 +436,26 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   const normalizeSearchText = (value: string) => value.trim().toLocaleLowerCase("en-US");
 
-  const getSearchMatches = (query: string) => {
+  const getSearchMatches = (query: string, limit = Number.POSITIVE_INFINITY) => {
     const normalizedQuery = normalizeSearchText(query);
     if (!normalizedQuery) return [];
 
-    return searchIndex
-      .filter((product) => normalizeSearchText(`${product.title} ${product.vendor}`).includes(normalizedQuery))
-      .slice(0, 6);
+    const matches = searchIndex.filter((product) =>
+      normalizeSearchText(`${product.title} ${product.vendor}`).includes(normalizedQuery),
+    );
+    return Number.isFinite(limit) ? matches.slice(0, limit) : matches;
   };
 
-  const mergeSearchResults = (localProducts: CatalogProduct[], predictiveProducts: CatalogProduct[]) => {
+  const mergeSearchResults = (
+    localProducts: CatalogProduct[],
+    predictiveProducts: CatalogProduct[],
+    limit = Number.POSITIVE_INFINITY,
+  ) => {
     const seenHandles = new Set<string>();
     const mergedProducts: CatalogProduct[] = [];
 
     [...localProducts, ...predictiveProducts].forEach((product) => {
-      if (!product.handle || seenHandles.has(product.handle) || mergedProducts.length >= 6) return;
+      if (!product.handle || seenHandles.has(product.handle) || mergedProducts.length >= limit) return;
 
       seenHandles.add(product.handle);
       mergedProducts.push(product);
@@ -497,6 +513,15 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     return url;
   };
 
+  const getHomepageSearchUrl = (query: string) => {
+    const url = new URL(location.href);
+    url.pathname = BASE;
+    url.searchParams.delete("product");
+    url.searchParams.set("search", query.trim());
+    url.hash = "";
+    return url;
+  };
+
   const prefetchCatalogProduct = (handle: string) => {
     if (!handle) return;
     void prefetchProduct(handle);
@@ -504,11 +529,21 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   const getCurrentProductParam = () => new URL(location.href).searchParams.get("product");
 
+  const getCurrentSearchParam = () => new URL(location.href).searchParams.get("search");
+
   const stripProductParamFromUrl = () => {
     const url = new URL(location.href);
     if (!url.searchParams.has("product")) return;
 
     url.searchParams.delete("product");
+    history.replaceState(null, "", url);
+  };
+
+  const stripSearchParamFromUrl = () => {
+    const url = new URL(location.href);
+    if (!url.searchParams.has("search")) return;
+
+    url.searchParams.delete("search");
     history.replaceState(null, "", url);
   };
 
@@ -556,14 +591,19 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     };
   };
 
+  function getSearchOptionCount() {
+    return normalizeSearchText(searchInput?.value ?? "") ? searchResults.length + 1 : 0;
+  }
+
   const setActiveSearchRow = (nextIndex: number) => {
-    if (!searchInput || !searchSuggest || searchResults.length === 0) {
+    const optionCount = getSearchOptionCount();
+    if (!searchInput || !searchSuggest || optionCount === 0) {
       activeSearchIndex = -1;
       searchInput?.removeAttribute("aria-activedescendant");
       return;
     }
 
-    activeSearchIndex = ((nextIndex % searchResults.length) + searchResults.length) % searchResults.length;
+    activeSearchIndex = ((nextIndex % optionCount) + optionCount) % optionCount;
     const rows = Array.from(searchSuggest.querySelectorAll<HTMLElement>(".hero__search-row"));
     rows.forEach((row, index) => {
       const isActive = index === activeSearchIndex;
@@ -623,20 +663,49 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     return row;
   };
 
+  const createSearchAllRow = (query: string, index: number) => {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "hero__search-row hero__search-row--all";
+    row.id = `hero-search-option-${index}`;
+    row.setAttribute("role", "option");
+    row.setAttribute("aria-selected", "false");
+
+    const marker = document.createElement("span");
+    marker.className = "hero__search-thumb hero__search-thumb--all";
+    marker.textContent = "all";
+
+    const copy = document.createElement("span");
+    copy.className = "hero__search-copy";
+
+    const title = document.createElement("span");
+    title.className = "hero__search-title";
+    title.textContent = `all results for "${query}" \u2192`;
+
+    copy.append(title);
+    row.append(marker, copy);
+    row.addEventListener("click", () => openSearchResults(query));
+    return row;
+  };
+
   const renderSearchSuggestions = (products: CatalogProduct[]) => {
     if (!searchSuggest || !searchInput) return;
 
+    const query = searchInput.value.trim();
     searchResults = products.slice(0, 6);
     activeSearchIndex = -1;
     searchInput.removeAttribute("aria-activedescendant");
-    searchInput.setAttribute("aria-expanded", String(searchResults.length > 0));
-    searchSuggest.hidden = searchResults.length === 0;
-    searchSuggest.replaceChildren(...searchResults.map(createSearchSuggestionRow));
+    searchInput.setAttribute("aria-expanded", String(Boolean(query)));
+    searchSuggest.hidden = !query;
+    searchSuggest.replaceChildren(
+      ...searchResults.map(createSearchSuggestionRow),
+      ...(query ? [createSearchAllRow(query, searchResults.length)] : []),
+    );
   };
 
   const updateSearchSuggestions = () => {
     const query = searchInput?.value ?? "";
-    const localMatches = getSearchMatches(query);
+    const localMatches = getSearchMatches(query, 6);
     renderSearchSuggestions(localMatches);
     schedulePredictiveSearch(query, localMatches);
   };
@@ -834,6 +903,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const getStagePanel = (stage: PanelStage) =>
     stage === "catalog"
       ? catalog
+      : stage === "search"
+        ? catalog
       : stage === "product"
         ? productPanel
       : stage === "preorder"
@@ -879,20 +950,21 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     const hasActiveStage =
       hero.classList.contains("is-catalog") ||
+      hero.classList.contains("is-search") ||
       hero.classList.contains("is-product") ||
       hero.classList.contains("is-preorder") ||
       hero.classList.contains("is-music") ||
       hero.classList.contains("is-film") ||
       hero.classList.contains("is-fam");
     if (!stencil || !hasActiveStage) {
-      hero.classList.remove("is-catalog", "is-product", "is-preorder", "is-music", "is-film", "is-fam", "is-settled");
+      hero.classList.remove("is-catalog", "is-search", "is-product", "is-preorder", "is-music", "is-film", "is-fam", "is-settled");
       return;
     }
 
     clearStencilReturn();
     stencil.style.transition = "none";
     stencil.style.transform = "translateX(calc(50vw + 100%))";
-    hero.classList.remove("is-catalog", "is-product", "is-preorder", "is-music", "is-film", "is-fam", "is-settled");
+    hero.classList.remove("is-catalog", "is-search", "is-product", "is-preorder", "is-music", "is-film", "is-fam", "is-settled");
     void stencil.offsetWidth;
 
     const finishReturn = (event?: TransitionEvent) => {
@@ -940,6 +1012,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const getStageClass = (stage: PanelStage) =>
     stage === "catalog"
       ? "is-catalog"
+      : stage === "search"
+        ? "is-search"
       : stage === "product"
         ? "is-product"
       : stage === "preorder"
@@ -969,6 +1043,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     const previousStage = activeStage;
     const previousPanelStage: PanelStage | undefined = previousStage === "landing" ? undefined : previousStage;
     const previousPanel = previousPanelStage ? getStagePanel(previousPanelStage) : undefined;
+    const nextPanel = getStagePanel(nextStage);
+    const isSharedPanelTransition = Boolean(
+      previousPanelStage && previousPanel === nextPanel && previousStage !== nextStage,
+    );
     if (previousStage === "film") {
       filmVideo?.pause();
       resetFilmMute();
@@ -997,9 +1075,11 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       return;
     }
 
-    if (previousPanelStage) {
+    if (previousPanelStage && !isSharedPanelTransition) {
       previousPanel?.classList.add("is-exiting-left");
       setPanelHidden(previousPanelStage, true);
+    } else if (previousPanelStage && isSharedPanelTransition) {
+      hero.classList.remove(getStageClass(previousPanelStage));
     }
 
     prepareIncoming();
@@ -1009,8 +1089,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     if (previousPanelStage) {
       stageCleanup = window.setTimeout(() => {
-        deactivatePanel(previousPanelStage);
-        previousPanel?.classList.remove("is-exiting-left");
+        if (!isSharedPanelTransition) {
+          deactivatePanel(previousPanelStage);
+          previousPanel?.classList.remove("is-exiting-left");
+        }
         if (nextStage === "music") setMusicSettled(true);
         stageCleanup = undefined;
       }, stageDuration);
@@ -1098,6 +1180,12 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     restoreCatalogScroll(targetScrollTop);
   };
 
+  const renderSearchGrid = (query: string, products: CatalogProduct[], targetScrollTop = 0) => {
+    renderedSearchProducts = products;
+    renderCatalogHeader(`SEARCH \u2014 "${query}" (${products.length})`);
+    renderCatalogGrid(products, targetScrollTop);
+  };
+
   const getComparableProducts = (products: CatalogProduct[]) =>
     products.map((product) => ({
       handle: product.handle,
@@ -1148,6 +1236,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const renderCatalogContent = (collection: string, label: string) => {
     if (!hero || !catalogTitle || !catalogTrack) return;
 
+    activeSearchQuery = "";
+    renderedSearchProducts = [];
     hero.dataset.activeCollection = collection;
     renderCatalogHeader(label);
     setActiveButton(collection);
@@ -1170,10 +1260,48 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     });
   };
 
+  const renderSearchContent = (query: string, initialProducts?: CatalogProduct[], targetScrollTop = 0) => {
+    if (!hero || !catalogTitle || !catalogTrack) return;
+
+    const trimmedQuery = query.trim();
+    const normalizedQuery = normalizeSearchText(trimmedQuery);
+    const requestSequence = ++searchStageSequence;
+    activeSearchQuery = normalizedQuery;
+    delete hero.dataset.activeCollection;
+    setActiveButton(null);
+
+    const localProducts = initialProducts ?? getSearchMatches(trimmedQuery);
+    renderSearchGrid(trimmedQuery, localProducts, targetScrollTop);
+
+    void searchProducts(trimmedQuery, 24).then((liveProducts) => {
+      if (requestSequence !== searchStageSequence || activeStage !== "search" || activeSearchQuery !== normalizedQuery) return;
+
+      const refreshScrollTop = getCatalogScrollTop();
+      renderSearchGrid(trimmedQuery, mergeSearchResults(localProducts, liveProducts), refreshScrollTop);
+    });
+  };
+
+  function openSearchResults(
+    query: string,
+    options: { pushState?: boolean; initialProducts?: CatalogProduct[]; scrollTop?: number } = {},
+  ) {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery || !hero || !catalog || !catalogTitle || !catalogTrack) return;
+
+    if (options.pushState !== false) {
+      history.pushState({ search: trimmedQuery }, "", getHomepageSearchUrl(trimmedQuery));
+    }
+
+    closeSearch(true);
+    prepareToLeaveProductForStage();
+    transitionToStage("search", () => renderSearchContent(trimmedQuery, options.initialProducts, options.scrollTop ?? 0));
+  }
+
   const openCatalog = (collection: string, label: string) => {
     if (!hero || !catalog || !catalogTitle || !catalogTrack) return;
 
     prepareToLeaveProductForStage();
+    stripSearchParamFromUrl();
     transitionToStage("catalog", () => renderCatalogContent(collection, label));
   };
 
@@ -1181,6 +1309,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (!hero || !preorder) return;
 
     prepareToLeaveProductForStage();
+    stripSearchParamFromUrl();
+    activeSearchQuery = "";
+    renderedSearchProducts = [];
     delete hero.dataset.activeCollection;
     setActiveButton(null);
     resetCatalogScroll();
@@ -1191,6 +1322,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (!hero || !dj) return;
 
     prepareToLeaveProductForStage();
+    stripSearchParamFromUrl();
+    activeSearchQuery = "";
+    renderedSearchProducts = [];
     delete hero.dataset.activeCollection;
     setActiveButton(null);
     resetCatalogScroll();
@@ -1201,6 +1335,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (!hero || !famPanel) return;
 
     prepareToLeaveProductForStage();
+    stripSearchParamFromUrl();
+    activeSearchQuery = "";
+    renderedSearchProducts = [];
     delete hero.dataset.activeCollection;
     setActiveButton(null);
     resetCatalogScroll();
@@ -1211,6 +1348,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (!hero || !filmPanel) return;
 
     prepareToLeaveProductForStage();
+    stripSearchParamFromUrl();
+    activeSearchQuery = "";
+    renderedSearchProducts = [];
     delete hero.dataset.activeCollection;
     setActiveButton(null);
     resetCatalogScroll();
@@ -1227,13 +1367,21 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     productView.removeAttribute("class");
 
     if (saveReturnPoint && activeStage === "catalog") {
-      savedCatalog = {
+      savedStageReturn = {
+        stage: "catalog",
         collection: hero.dataset.activeCollection ?? "",
         label: catalogTitle?.textContent?.trim() ?? "",
         scrollTop: getCatalogScrollTop(),
       };
+    } else if (saveReturnPoint && activeStage === "search") {
+      savedStageReturn = {
+        stage: "search",
+        query: searchInput?.value.trim() || activeSearchQuery,
+        products: renderedSearchProducts,
+        scrollTop: getCatalogScrollTop(),
+      };
     } else {
-      savedCatalog = null;
+      savedStageReturn = null;
     }
 
     activeProductHandle = handle;
@@ -1241,17 +1389,25 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   };
 
   const actualCloseProduct = (stripUrl = false) => {
-    const catalogReturn = savedCatalog;
+    const stageReturn = savedStageReturn;
     activeProductHandle = null;
-    savedCatalog = null;
+    savedStageReturn = null;
 
-    if (catalogReturn?.collection) {
+    if (stageReturn?.stage === "catalog" && stageReturn.collection) {
       transitionToStage("catalog", () => {
         if (!hero) return;
-        hero.dataset.activeCollection = catalogReturn.collection;
-        if (catalogTitle) catalogTitle.textContent = catalogReturn.label;
-        setActiveButton(catalogReturn.collection);
-        restoreCatalogScroll(catalogReturn.scrollTop);
+        hero.dataset.activeCollection = stageReturn.collection;
+        if (catalogTitle) catalogTitle.textContent = stageReturn.label;
+        setActiveButton(stageReturn.collection);
+        restoreCatalogScroll(stageReturn.scrollTop);
+      });
+    } else if (stageReturn?.stage === "search" && stageReturn.query) {
+      transitionToStage("search", () => {
+        renderSearchContent(stageReturn.query, stageReturn.products, stageReturn.scrollTop);
+      });
+    } else if (getCurrentSearchParam()?.trim()) {
+      transitionToStage("search", () => {
+        renderSearchContent(getCurrentSearchParam() ?? "");
       });
     } else {
       closeStage();
@@ -1277,9 +1433,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (activeStage !== "product") return;
 
     activeProductHandle = null;
-    savedCatalog = null;
+    savedStageReturn = null;
     stripProductParamFromUrl();
     deactivatePanel("catalog");
+    deactivatePanel("search");
     catalog?.classList.remove("is-exiting-left");
   };
 
@@ -1337,6 +1494,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     resetCatalogScroll();
     returnStencilFromRight();
     delete hero.dataset.activeCollection;
+    activeSearchQuery = "";
+    renderedSearchProducts = [];
+    searchStageSequence += 1;
     catalog?.setAttribute("aria-hidden", "true");
     productPanel?.setAttribute("aria-hidden", "true");
     preorder?.setAttribute("aria-hidden", "true");
@@ -1345,11 +1505,23 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     famPanel?.setAttribute("aria-hidden", "true");
     setActiveButton(null);
     activeProductHandle = null;
-    savedCatalog = null;
+    savedStageReturn = null;
     activeStage = "landing";
   };
 
-  const syncProductStageFromUrl = () => {
+  const closeSearchStage = () => {
+    if (activeStage !== "search") return;
+
+    if (history.state?.search) {
+      history.back();
+      return;
+    }
+
+    closeStage();
+    stripSearchParamFromUrl();
+  };
+
+  const syncStageFromUrl = () => {
     const handle = getCurrentProductParam();
     if (handle) {
       if (activeStage !== "product" || activeProductHandle !== handle) {
@@ -1358,8 +1530,21 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       return;
     }
 
+    const searchParam = getCurrentSearchParam();
+    if (searchParam?.trim()) {
+      if (activeStage !== "search" || activeSearchQuery !== normalizeSearchText(searchParam)) {
+        openSearchResults(searchParam, { pushState: false });
+      }
+      return;
+    }
+
     if (activeStage === "product") {
       actualCloseProduct();
+      return;
+    }
+
+    if (activeStage === "search") {
+      closeStage();
     }
   };
 
@@ -1389,6 +1574,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   catalogClose?.addEventListener("click", () => {
     setMenuSectionState(null);
+    if (activeStage === "search") {
+      closeSearchStage();
+      return;
+    }
     closeStage();
   });
   productClose?.addEventListener("click", closeProduct);
@@ -1445,7 +1634,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     openProduct(handle, { seedImage: getProductSeedImage(link) });
   });
 
-  window.addEventListener("popstate", syncProductStageFromUrl);
+  window.addEventListener("popstate", syncStageFromUrl);
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape" || activeStage !== "product") return;
     if (isCartOpen()) return;
@@ -1457,7 +1646,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   searchInput?.addEventListener("input", updateSearchSuggestions);
   searchInput?.addEventListener("keydown", (event) => {
     if (event.key === "ArrowDown") {
-      if (searchResults.length === 0) return;
+      if (getSearchOptionCount() === 0) return;
 
       event.preventDefault();
       setActiveSearchRow(activeSearchIndex + 1);
@@ -1465,7 +1654,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     }
 
     if (event.key === "ArrowUp") {
-      if (searchResults.length === 0) return;
+      if (getSearchOptionCount() === 0) return;
 
       event.preventDefault();
       setActiveSearchRow(activeSearchIndex - 1);
@@ -1473,10 +1662,16 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     }
 
     if (event.key !== "Enter") return;
-    if (activeSearchIndex < 0 || activeSearchIndex >= searchResults.length) return;
+    const query = searchInput.value.trim();
+    if (!query) return;
 
     event.preventDefault();
-    openSearchProduct(searchResults[activeSearchIndex]);
+    if (activeSearchIndex >= 0 && activeSearchIndex < searchResults.length) {
+      openSearchProduct(searchResults[activeSearchIndex]);
+      return;
+    }
+
+    openSearchResults(query);
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && search?.classList.contains("is-open")) {
@@ -1544,5 +1739,5 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     window.addEventListener("resize", resizePreorderFrame);
   }
   void hydrateLiveMenu();
-  syncProductStageFromUrl();
+  syncStageFromUrl();
 </script>

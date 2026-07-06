@@ -343,6 +343,11 @@ body{
 .hero__search-thumb img{
   display:block; width:100%; height:100%; object-fit:cover;
 }
+.hero__search-thumb--all{
+  display:flex; align-items:center; justify-content:center;
+  font-family:"Courier New",Courier,monospace; font-size:9px; line-height:1;
+  text-transform:lowercase; color:rgba(0,0,0,.62);
+}
 .hero__search-copy{
   display:flex; flex-direction:column; gap:4px; min-width:0;
   text-transform:uppercase;
@@ -366,11 +371,13 @@ body{
 .hero__cart-count[hidden],
 .product-detail__cart-count[hidden]{display:none}
 .hero-video.is-catalog .hero__cart,
+.hero-video.is-search .hero__cart,
 .hero-video.is-product .hero__cart,
 .hero-video.is-preorder .hero__cart,
 .hero-video.is-film .hero__cart,
 .hero-video.is-fam .hero__cart,
 .hero-video.is-catalog .hero__search,
+.hero-video.is-search .hero__search,
 .hero-video.is-product .hero__search,
 .hero-video.is-preorder .hero__search,
 .hero-video.is-film .hero__search,
@@ -397,6 +404,7 @@ body{
   .hero__stencil:hover{background-color:var(--neon-green)}
 }
 .hero-video.is-catalog .hero__stencil,
+.hero-video.is-search .hero__stencil,
 .hero-video.is-product .hero__stencil,
 .hero-video.is-preorder .hero__stencil,
 .hero-video.is-music .hero__stencil,
@@ -538,6 +546,7 @@ body{
   line-height:1.2; font-style:italic; color:rgba(0,0,0,.62);
 }
 .hero-video.is-catalog .hero__catalog,
+.hero-video.is-search .hero__catalog,
 .hero-video.is-product .hero__product,
 .hero-video.is-preorder .hero__preorder,
 .hero-video.is-film .hero__film,
@@ -868,6 +877,7 @@ body{
   .hero__search{display:none}
   .hero__cart svg{width:22px; height:22px}
   .hero-video.is-catalog .hero__cart,
+  .hero-video.is-search .hero__cart,
   .hero-video.is-product .hero__cart,
   .hero-video.is-preorder .hero__cart,
   .hero-video.is-film .hero__cart,
@@ -1215,6 +1225,7 @@ body{
   }
   .hero-info__legal{font-size:9px}
   .hero-video.is-catalog .hero-info,
+  .hero-video.is-search .hero-info,
   .hero-video.is-product .hero-info,
   .hero-video.is-preorder .hero-info,
   .hero-video.is-film .hero-info,
@@ -1226,6 +1237,7 @@ body{
 @media(max-width:760px) and (prefers-reduced-motion:reduce){
   .hero-info,
   .hero-video.is-catalog .hero-info,
+  .hero-video.is-search .hero-info,
   .hero-video.is-product .hero-info,
   .hero-video.is-preorder .hero-info,
   .hero-video.is-film .hero-info,

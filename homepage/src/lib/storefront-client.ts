@@ -319,6 +319,53 @@ export async function getCollection(handle: string, first = 250): Promise<Collec
   }
 }
 
+const PRODUCT_SEARCH_QUERY = /* GraphQL */ `
+  query ProductSearch($query: String!, $first: Int!) {
+    products(first: $first, query: $query) {
+      nodes {
+        handle
+        title
+        vendor
+        availableForSale
+        featuredImage {
+          url
+          altText
+          width
+          height
+        }
+        priceRange {
+          minVariantPrice {
+            amount
+            currencyCode
+          }
+        }
+      }
+    }
+  }
+`;
+
+interface ProductSearchQueryData {
+  products: {
+    nodes: StorefrontCollectionProduct[];
+  };
+}
+
+export async function searchProducts(query: string, first = 24): Promise<CatalogProduct[]> {
+  const searchQuery = query.trim();
+  if (!isStorefrontConfigured || !searchQuery) return [];
+
+  try {
+    const requestedFirst = Number.isFinite(first) ? first : 24;
+    const data = await storefrontFetch<ProductSearchQueryData>(PRODUCT_SEARCH_QUERY, {
+      query: searchQuery,
+      first: Math.max(1, Math.min(requestedFirst, 250)),
+    });
+    return data?.products.nodes.map(mapCatalogProduct) ?? [];
+  } catch {
+    return [];
+  }
+}
+
 const MENU_QUERY = /* GraphQL */ `
   query Menu($handle: String!) {
     menu(handle: $handle) {
