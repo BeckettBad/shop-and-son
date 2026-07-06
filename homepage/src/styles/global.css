@@ -650,7 +650,7 @@ body{
   appearance:none; -webkit-appearance:none;
 }
 .hero__menu-link[data-shop-all]{cursor:pointer}
-.hero__menu-link.is-active{color:var(--neon-green); text-decoration:underline}
+.hero__menu-link.is-active{color:var(--neon-green)}
 .hero__menu-subheader{
   display:inline-flex; align-items:baseline; gap:.35em; margin:0; padding:0;
   border:none; background:none; appearance:none; -webkit-appearance:none;
@@ -705,7 +705,10 @@ body{
     font-size:clamp(14px,1.3vw,18px); line-height:1.22;
   }
   .hero__menu-section.is-open .hero__menu-nested .hero__menu-link{
-    font-size:clamp(10px,.95vw,13px); line-height:1.22;
+    font-size:clamp(11px,1.05vw,14px); line-height:1.28;
+  }
+  .hero__menu-section.is-open .hero__menu-nested > li{
+    margin-bottom:.14em;
   }
   .hero__menu-section.is-open .hero__menu-item--group{
     margin-top:.7em;
