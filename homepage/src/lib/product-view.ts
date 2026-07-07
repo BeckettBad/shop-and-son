@@ -17,14 +17,12 @@ const homeUrl = import.meta.env.BASE_URL.replace(/\/$/, "") + "/";
 const shopifyProductUrl = (handle: string) =>
   `https://shopandson.com/products/${encodeURIComponent(handle)}`;
 const activeCarouselPreloads = new Set<HTMLImageElement>();
-const mobileProductLightboxQuery = window.matchMedia("(max-width: 760px)");
 
 export interface ProductImageSeed {
   url: string;
   alt?: string;
   width?: number;
   height?: number;
-  aspect?: number;
 }
 
 export interface MountProductViewOptions {
@@ -177,196 +175,13 @@ const getSeedImageUrl = (seedImage: ProductImageSeed | undefined) => {
   return url || undefined;
 };
 
-const setGalleryAspect = (
-  gallery: HTMLElement,
-  image:
-    | {
-        width?: number | null;
-        height?: number | null;
-        aspect?: number;
-      }
-    | undefined,
-) => {
-  if (image?.width && image.height) {
-    gallery.style.setProperty("--product-carousel-aspect", `${image.width} / ${image.height}`);
-    return image.width / image.height;
-  }
-
-  if (image?.aspect && Number.isFinite(image.aspect) && image.aspect > 0) {
-    gallery.style.setProperty("--product-carousel-aspect", String(image.aspect));
-    return image.aspect;
-  }
-
-  return undefined;
-};
-
-const setGalleryAspectFromImageElement = (gallery: HTMLElement, image: HTMLImageElement | null | undefined) => {
-  if (!image) return undefined;
-
-  if (image.naturalWidth > 0 && image.naturalHeight > 0) {
-    gallery.style.setProperty("--product-carousel-aspect", `${image.naturalWidth} / ${image.naturalHeight}`);
-    return image.naturalWidth / image.naturalHeight;
-  }
-
-  const width = Number(image.getAttribute("width"));
-  const height = Number(image.getAttribute("height"));
-  if (width > 0 && height > 0) {
-    gallery.style.setProperty("--product-carousel-aspect", `${width} / ${height}`);
-    return width / height;
-  }
-
-  return undefined;
-};
-
-const getImageAspect = (
-  image: HTMLImageElement | null | undefined,
-  fallback:
-    | {
-        width?: number | null;
-        height?: number | null;
-        aspect?: number;
-      }
-    | undefined,
-) => {
-  if (image?.naturalWidth && image.naturalHeight) return image.naturalWidth / image.naturalHeight;
-  if (fallback?.width && fallback.height) return fallback.width / fallback.height;
-  if (fallback?.aspect && Number.isFinite(fallback.aspect) && fallback.aspect > 0) return fallback.aspect;
-
-  const width = Number(image?.getAttribute("width"));
-  const height = Number(image?.getAttribute("height"));
-  if (width > 0 && height > 0) return width / height;
-
-  return undefined;
-};
-
-const getPixelValue = (value: string) => {
-  if (!value.endsWith("px")) return undefined;
-
-  const pixels = Number.parseFloat(value);
-  return Number.isFinite(pixels) && pixels > 0 ? pixels : undefined;
-};
-
-const getContainedFrameSize = (availableWidth: number, availableHeight: number | undefined, aspect: number) => {
-  if (!Number.isFinite(availableWidth) || availableWidth <= 0 || !Number.isFinite(aspect) || aspect <= 0) {
-    return undefined;
-  }
-
-  if (availableHeight && Number.isFinite(availableHeight) && availableHeight > 0) {
-    const widthFromHeight = availableHeight * aspect;
-    if (widthFromHeight < availableWidth) {
-      return {
-        width: Math.max(1, Math.floor(widthFromHeight)),
-        height: Math.max(1, Math.floor(availableHeight)),
-      };
-    }
-  }
-
-  return {
-    width: Math.max(1, Math.floor(availableWidth)),
-    height: Math.max(1, Math.floor(availableWidth / aspect)),
-  };
-};
-
-const setCarouselFrameSize = (
-  gallery: HTMLElement,
-  carousel: HTMLElement,
-  viewport: HTMLElement,
-  aspect: number | undefined,
-) => {
-  if (!aspect || !Number.isFinite(aspect) || aspect <= 0) return;
-
-  const galleryRect = gallery.getBoundingClientRect();
-  const galleryWidth = galleryRect.width;
-  if (galleryWidth <= 0) return;
-
-  const viewportStyle = window.getComputedStyle(viewport);
-  const maxHeight = getPixelValue(viewportStyle.maxHeight);
-  const frameSize = getContainedFrameSize(galleryWidth, maxHeight, aspect);
-  if (!frameSize) return;
-
-  carousel.style.setProperty("--product-carousel-frame-width", `${frameSize.width}px`);
-  carousel.style.setProperty("--product-carousel-frame-height", `${frameSize.height}px`);
-};
-
-const bindCarouselFrameSize = (
-  gallery: HTMLElement,
-  carousel: HTMLElement,
-  viewport: HTMLElement,
-  getAspect: () => number | undefined,
-) => {
-  const update = () => setCarouselFrameSize(gallery, carousel, viewport, getAspect());
-  const resizeObserver = new ResizeObserver(update);
-  resizeObserver.observe(gallery);
-  resizeObserver.observe(viewport);
-
-  window.addEventListener("resize", update, { passive: true });
-
-  const cleanupObserver = new MutationObserver(() => {
-    if (document.body.contains(gallery)) return;
-    window.removeEventListener("resize", update);
-    resizeObserver.disconnect();
-    cleanupObserver.disconnect();
-  });
-  cleanupObserver.observe(document.body, { childList: true, subtree: true });
-
-  update();
-  window.requestAnimationFrame(update);
-};
-
-const setGalleryAspectOnImageLoad = (
-  gallery: HTMLElement,
-  image: HTMLImageElement | null | undefined,
-  shouldUpdate: () => boolean = () => true,
-  onAspect?: (aspect: number) => void,
-) => {
-  if (!image) return;
-
-  const update = () => {
-    if (!shouldUpdate()) return;
-    const aspect = setGalleryAspectFromImageElement(gallery, image);
-    if (aspect) onAspect?.(aspect);
-  };
-
-  if (image.complete) {
-    update();
-    return;
-  }
-
-  image.addEventListener("load", update, { once: true });
-};
-
-const setLightboxFrameSize = (
-  overlay: HTMLElement,
-  frame: HTMLElement,
-  image: HTMLImageElement,
-  fallback:
-    | {
-        width?: number | null;
-        height?: number | null;
-        aspect?: number;
-      }
-    | undefined,
-) => {
-  const aspect = getImageAspect(image, fallback);
-  if (!aspect) return;
-
-  const overlayRect = overlay.getBoundingClientRect();
-  const isDesktopLightbox = !mobileProductLightboxQuery.matches;
-  const availableWidth = isDesktopLightbox ? overlayRect.width * 0.9 : overlayRect.width;
-  const availableHeight = Math.max(1, isDesktopLightbox ? overlayRect.height * 0.92 : overlayRect.height - 24);
-  const frameSize = getContainedFrameSize(availableWidth, availableHeight, aspect);
-  if (!frameSize) return;
-
-  frame.style.setProperty("--product-lightbox-frame-width", `${frameSize.width}px`);
-  frame.style.setProperty("--product-lightbox-frame-height", `${frameSize.height}px`);
-};
-
 const upgradeSeededImage = (
   image: HTMLImageElement,
   productImage: ProductDetail["images"][number],
   onUpgrade?: () => void,
 ) => {
   const loader = new Image();
+  loader.crossOrigin = "anonymous";
   loader.decoding = "async";
   if (productImage.srcset) {
     loader.srcset = productImage.srcset;
@@ -375,6 +190,7 @@ const upgradeSeededImage = (
   loader.onload = () => {
     if (!image.isConnected) return;
 
+    image.crossOrigin = "anonymous";
     image.src = productImage.url;
     if (productImage.srcset) {
       image.srcset = productImage.srcset;
@@ -392,6 +208,7 @@ const preloadCarouselImage = (image: HTMLImageElement | null | undefined) => {
   image.loading = "eager";
 
   const loader = new Image();
+  loader.crossOrigin = "anonymous";
   loader.decoding = "async";
   activeCarouselPreloads.add(loader);
   const releaseLoader = () => activeCarouselPreloads.delete(loader);
@@ -448,14 +265,13 @@ const renderSeededProduct = (container: HTMLElement, seedImage: ProductImageSeed
   const track = document.createElement("div");
   track.className = "product-detail__carousel-track";
 
-  let activeAspect: number | undefined;
-
   const slide = document.createElement("div");
   slide.className = "product-detail__carousel-slide is-active";
   slide.setAttribute("aria-hidden", "false");
 
   const image = document.createElement("img");
   image.className = "product-detail__image";
+  image.crossOrigin = "anonymous";
   image.src = seedUrl;
   image.alt = seedImage.alt ?? "";
   image.decoding = "async";
@@ -463,11 +279,6 @@ const renderSeededProduct = (container: HTMLElement, seedImage: ProductImageSeed
   image.fetchPriority = "high";
   if (seedImage.width) image.width = seedImage.width;
   if (seedImage.height) image.height = seedImage.height;
-  activeAspect = setGalleryAspect(gallery, seedImage) ?? setGalleryAspectFromImageElement(gallery, image);
-  setGalleryAspectOnImageLoad(gallery, image, undefined, (aspect) => {
-    activeAspect = aspect;
-    setCarouselFrameSize(gallery, carousel, viewport, activeAspect);
-  });
 
   const detail = document.createElement("section");
   detail.className = "product-detail__panel";
@@ -478,7 +289,6 @@ const renderSeededProduct = (container: HTMLElement, seedImage: ProductImageSeed
   viewport.append(track);
   carousel.append(viewport);
   gallery.append(carousel);
-  bindCarouselFrameSize(gallery, carousel, viewport, () => activeAspect);
 
   container.className = "product-detail__content";
   container.replaceChildren(gallery, detail);
@@ -501,12 +311,35 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
   const slides: HTMLElement[] = [];
   const imageCount = product.images.length;
   let activeIndex = 0;
-  let activeAspect: number | undefined;
   let carouselCounter: HTMLElement | undefined;
   let activeLightbox: ProductLightbox | undefined;
   let touchStartX: number | undefined;
   let touchStartY: number | undefined;
   let didSwipeCarousel = false;
+
+  function updateLightboxImage() {
+    if (!activeLightbox) return;
+
+    const activeSlide = slides[activeIndex];
+    const carouselImage = activeSlide?.querySelector<HTMLImageElement>(".product-detail__image");
+    const productImage = product.images[activeIndex];
+    const srcset = carouselImage?.getAttribute("srcset") || productImage?.srcset || "";
+    const src = carouselImage?.currentSrc || carouselImage?.src || productImage?.url || "";
+
+    activeLightbox.image.crossOrigin = "anonymous";
+    activeLightbox.image.src = src;
+    if (srcset) {
+      activeLightbox.image.srcset = srcset;
+      activeLightbox.image.sizes = "100vw";
+    } else {
+      activeLightbox.image.removeAttribute("srcset");
+      activeLightbox.image.removeAttribute("sizes");
+    }
+    activeLightbox.image.alt = carouselImage?.alt ?? product.title;
+    if (productImage?.width) activeLightbox.image.width = productImage.width;
+    if (productImage?.height) activeLightbox.image.height = productImage.height;
+    if (activeLightbox.counter) activeLightbox.counter.textContent = `${activeIndex + 1} / ${imageCount}`;
+  }
 
   product.images.forEach((productImage, index) => {
     const seedUrl = index === 0 ? getSeedImageUrl(seedImage) : undefined;
@@ -515,6 +348,7 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
 
     const image = document.createElement("img");
     image.className = "product-detail__image";
+    image.crossOrigin = "anonymous";
     image.src = seedUrl ?? productImage.url;
     image.alt = productImage.altText || product.title;
     image.decoding = "async";
@@ -527,26 +361,8 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
       image.sizes = "(max-width: 760px) 54vw, 55vw";
     }
     if (seedUrl) {
-      window.requestAnimationFrame(() =>
-        upgradeSeededImage(image, productImage, () => {
-          if (slides[activeIndex] !== slide) return;
-
-          activeAspect = setGalleryAspect(gallery, productImage) ?? setGalleryAspectFromImageElement(gallery, image);
-          setCarouselFrameSize(gallery, carousel, viewport, activeAspect);
-        }),
-      );
+      window.requestAnimationFrame(() => upgradeSeededImage(image, productImage, updateLightboxImage));
     }
-
-    setGalleryAspectOnImageLoad(
-      gallery,
-      image,
-      () => slides[activeIndex] === slide,
-      (aspect) => {
-        activeAspect = aspect;
-        setCarouselFrameSize(gallery, carousel, viewport, activeAspect);
-        if (activeLightbox) setLightboxFrameSize(activeLightbox.overlay, activeLightbox.frame, activeLightbox.image, productImage);
-      },
-    );
 
     slide.append(image);
     slides.push(slide);
@@ -571,65 +387,10 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
     }
   };
 
-  const syncActiveSlideAspect = () => {
-    const activeSlide = slides[activeIndex];
-    const activeImage = activeSlide?.querySelector<HTMLImageElement>(".product-detail__image");
-    const activeProductImage = product.images[activeIndex];
-
-    activeAspect =
-      (activeImage?.complete ? setGalleryAspectFromImageElement(gallery, activeImage) : undefined) ??
-      setGalleryAspect(gallery, activeProductImage) ??
-      setGalleryAspectFromImageElement(gallery, activeImage);
-    if (activeAspect) {
-      setCarouselFrameSize(gallery, carousel, viewport, activeAspect);
-      window.requestAnimationFrame(() => setCarouselFrameSize(gallery, carousel, viewport, activeAspect));
-      return;
-    }
-
-    setGalleryAspectOnImageLoad(
-      gallery,
-      activeImage,
-      () => slides[activeIndex] === activeSlide,
-      (aspect) => {
-        activeAspect = aspect;
-        setCarouselFrameSize(gallery, carousel, viewport, activeAspect);
-      },
-    );
-  };
-
-  const updateLightboxImage = () => {
-    if (!activeLightbox) return;
-
-    const activeSlide = slides[activeIndex];
-    const carouselImage = activeSlide?.querySelector<HTMLImageElement>(".product-detail__image");
-    const productImage = product.images[activeIndex];
-    const srcset = carouselImage?.getAttribute("srcset") || productImage?.srcset || "";
-    const src = carouselImage?.currentSrc || carouselImage?.src || productImage?.url || "";
-
-    activeLightbox.image.src = src;
-    if (srcset) {
-      activeLightbox.image.srcset = srcset;
-      activeLightbox.image.sizes = "100vw";
-    } else {
-      activeLightbox.image.removeAttribute("srcset");
-      activeLightbox.image.removeAttribute("sizes");
-    }
-    activeLightbox.image.alt = carouselImage?.alt ?? product.title;
-    if (productImage?.width) activeLightbox.image.width = productImage.width;
-    if (productImage?.height) activeLightbox.image.height = productImage.height;
-    if (activeLightbox.counter) activeLightbox.counter.textContent = `${activeIndex + 1} / ${imageCount}`;
-    setLightboxFrameSize(activeLightbox.overlay, activeLightbox.frame, activeLightbox.image, productImage);
-    window.requestAnimationFrame(() =>
-      activeLightbox &&
-      setLightboxFrameSize(activeLightbox.overlay, activeLightbox.frame, activeLightbox.image, productImage),
-    );
-  };
-
   const setActiveImage = (index: number) => {
     if (imageCount < 1) return;
 
     activeIndex = (index + imageCount) % imageCount;
-    track.style.transform = `translateX(-${activeIndex * 100}%)`;
     if (carouselCounter) carouselCounter.textContent = `${activeIndex + 1} / ${imageCount}`;
 
     slides.forEach((slide, slideIndex) => {
@@ -638,7 +399,6 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
       slide.setAttribute("aria-hidden", isActive ? "false" : "true");
     });
 
-    syncActiveSlideAspect();
     preloadAdjacentImages();
     updateLightboxImage();
   };
@@ -657,6 +417,7 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
 
     const image = document.createElement("img");
     image.className = "product-lightbox__image";
+    image.crossOrigin = "anonymous";
     image.decoding = "async";
     image.loading = "eager";
 
@@ -672,11 +433,6 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
     let didSwipeLightbox = false;
     let pushedHistoryEntry = false;
     let isClosed = false;
-
-    const syncLightboxFrame = () => {
-      const productImage = product.images[activeIndex];
-      setLightboxFrameSize(overlay, frame, image, productImage);
-    };
 
     const closeLightbox = (restoreHistory = true) => {
       if (isClosed) return;
@@ -752,18 +508,14 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
       if (didSwipeLightbox) return;
       closeLightbox();
     });
-    image.addEventListener("load", syncLightboxFrame);
     close.addEventListener("click", () => closeLightbox());
     overlay.addEventListener("touchstart", handleTouchStart, { passive: true });
     overlay.addEventListener("touchend", handleTouchEnd, { passive: true });
     document.addEventListener("keydown", handleKeydown, true);
     window.addEventListener("popstate", handlePopstate);
-    window.addEventListener("resize", syncLightboxFrame, { passive: true });
     cleanupFns.push(
-      () => image.removeEventListener("load", syncLightboxFrame),
       () => document.removeEventListener("keydown", handleKeydown, true),
       () => window.removeEventListener("popstate", handlePopstate),
-      () => window.removeEventListener("resize", syncLightboxFrame),
     );
 
     frame.append(image);
@@ -877,7 +629,6 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
   });
 
   gallery.append(carousel);
-  bindCarouselFrameSize(gallery, carousel, viewport, () => activeAspect);
   return gallery;
 };
 

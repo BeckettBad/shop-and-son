@@ -636,18 +636,14 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     const seedUrl = image?.currentSrc || image?.src;
     if (!image || !seedUrl) return undefined;
 
-    const cardAspect = Number.parseFloat(card.style.getPropertyValue("--card-aspect"));
     const width = image.naturalWidth || undefined;
     const height = image.naturalHeight || undefined;
-    const naturalAspect = width && height ? width / height : undefined;
-    const aspect = Number.isFinite(cardAspect) && cardAspect > 0 ? cardAspect : naturalAspect;
 
     return {
       url: seedUrl,
       alt: image.alt,
       width,
       height,
-      aspect,
     };
   };
 
