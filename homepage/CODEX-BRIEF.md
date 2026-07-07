@@ -261,6 +261,14 @@ rows, empty-query behavior.
 
 **CAROUSEL-CONTROLS (one-off, operator-directed 2026-07-06) — a0ca7ec — universal control placement — build:green check:green.** product-view.ts + global.css: frame now derives its aspect (and width, via min(galleryWidth, maxHeight×aspect)) from the ACTIVE slide's image — frame edge == image edge for any asset; arrows inset 16px from the image edges at mid-height, counter 12px in the image's bottom-right; controls not rendered at all when images.length < 2 (incl. seed/loading path); Phase-K viewport-fit intact. VERIFIED matrix: portrait 512×768 + landscape 512×342 both insets 16/16 + counter 12,12 + arrowMidY 0; cross-ratio arrowing holds 16; single-image ufo-tumbler renders zero controls; mobile landscape inset 16; no page scroll. Not pushed.
 
+**PHASE M2 STATUS: COMPLETE ON DEV (2026-07-06) — 4 commits + 2 fixes, all verified 380px + desktop 1440. NOT pushed.**
+- M2-C1 — a8a133d — mobile headers cluster on top (display:contents + order), open panel below; desktop column untouched (82px line verified).
+- M2-C2 — 10de952 — stencil fades under expanded non-stage sections (mobile), restores on collapse; stage-exit transform preserved.
+- M2-C3 — fce17be (amended) — search surfaced ≤760px: magnifier below the bag (matched 22px glyph/40px box), same toggleSearch machinery, live search stage works from mobile; header row clearance 112px (headers 28px clear of bag).
+- M2-C4 — 5cc7757 — catalogue 2-col at ALL phone widths (420px 1fr override removed), title 12px/meta 10.5px, smooth scroll intact.
+- FIX — 0ca5d0c — open panel escapes the header clearance (negative margins): full inner width (350/350 @380), no overflow.
+- **HOTFIX — 56fab28 — PRODUCTION BUG (live on main too, predates M2/SRCH): opening a catalog on desktop scrolled .hero-video 82px left (menu flush to edge, dead right band). Fixed: overflow:hidden→clip + scrollLeft/Top reset in transitionToStage. Verified: catalog + product stages hold menu at x=82, scrollLeft 0. Ships with this batch and fixes live behavior.**
+
 ## PHASE N2 — animated cart+search icon pair (operator 2026-07-06; logged N2 — Phase N shipped Jul 2). QUEUED — dispatch ONLY after M2-C3/C4 land (same files).
 
 Intent (operator; judgment granted on structure/selectors/timing/distances):
