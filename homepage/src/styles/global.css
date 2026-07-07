@@ -1751,8 +1751,8 @@ html.cart-ready .cart-drawer.is-open{transition:transform .55s ease-in-out,visib
   }
   .product-detail__carousel{
     z-index:0; cursor:zoom-in;
-    outline:1px solid var(--neon-green);
-    outline-offset:3px;
+    outline:2px solid var(--neon-green);
+    outline-offset:0;
   }
   .product-detail__carousel::before{
     content:""; position:absolute; inset:-7px -9px; z-index:-1;
@@ -1819,9 +1819,9 @@ html.cart-ready .cart-drawer.is-open{transition:transform .55s ease-in-out,visib
   .product-lightbox{
     position:fixed; inset:0; z-index:140;
     display:flex; align-items:center; justify-content:center;
-    background:rgba(255,255,255,.76); color:#000;
-    backdrop-filter:blur(1.5px);
-    -webkit-backdrop-filter:blur(1.5px);
+    background:transparent; color:#000;
+    backdrop-filter:blur(2px) saturate(.62) brightness(1.06);
+    -webkit-backdrop-filter:blur(2px) saturate(.62) brightness(1.06);
     opacity:0; transform:scale(.985);
     transition:opacity .18s ease, transform .18s ease;
   }
