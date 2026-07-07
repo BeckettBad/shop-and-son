@@ -476,6 +476,15 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
       closeLightbox(false);
     };
 
+    const handleBackdropClick = (event: MouseEvent) => {
+      if (didSwipeLightbox) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target === overlay || !target.closest(".product-lightbox__frame")) {
+        closeLightbox();
+      }
+    };
+
     const handleTouchStart = (event: TouchEvent) => {
       const touch = event.touches[0];
       if (!touch) return;
@@ -509,11 +518,13 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
       closeLightbox();
     });
     close.addEventListener("click", () => closeLightbox());
+    overlay.addEventListener("click", handleBackdropClick);
     overlay.addEventListener("touchstart", handleTouchStart, { passive: true });
     overlay.addEventListener("touchend", handleTouchEnd, { passive: true });
     document.addEventListener("keydown", handleKeydown, true);
     window.addEventListener("popstate", handlePopstate);
     cleanupFns.push(
+      () => overlay.removeEventListener("click", handleBackdropClick),
       () => document.removeEventListener("keydown", handleKeydown, true),
       () => window.removeEventListener("popstate", handlePopstate),
     );
