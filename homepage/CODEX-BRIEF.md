@@ -269,11 +269,15 @@ with an × opens (catalog/search/product — ASSUMPTION: all ×-stages, operator
 may narrow to catalog-only): both icons ANIMATE a drop-down cascade — bag
 slides down into the magnifier's old slot (sitting ABOVE the ×), magnifier
 drops further to sit LEFT of the × on the ×'s row; that spot IS the search
-trigger there — tapping opens the input LEFTWARD along the ×'s row, its
-width CAPPED to the free space so it NEVER overlays the collection title /
-description / designer about-blurb (measure: input's left edge keeps a
-comfortable gap ≥16px from the title block's right edge; shrink the input
-cap rather than collide). (c) Closing the stage reverses the cascade back to
+trigger there — tapping opens the input LEFTWARD along the ×'s row. NO TEXT
+OVERLAY is the hard rule — the MEANS is judgment (operator 2026-07-07): the
+input width cap is ONE option, but the collection title / description /
+designer about-blurb may instead be REMOVED, REORIENTED, truncated, or
+temporarily collapsed/faded while the input is open, so the search isn't
+necessarily cramped — find what reads best so BOTH features coexist
+comfortably (e.g. description fades while typing, or the header reflows).
+Whatever the solution: input edge keeps ≥16px clear of any remaining text,
+and the description returns when the input closes. Screenshot every state. (c) Closing the stage reverses the cascade back to
 the rest stack. Timing/easing: the site's stage language (.55s family,
 subtle stagger like N2); reduced-motion: reposition without slide. ALSO
 verify DESKTOP: opening the search input in every state overlays no text
