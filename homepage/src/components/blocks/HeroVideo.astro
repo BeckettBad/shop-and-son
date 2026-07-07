@@ -400,10 +400,15 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     search?.setAttribute("aria-expanded", String(isExpanded));
   };
 
+  const setSearchOpen = (isOpen: boolean) => {
+    search?.classList.toggle("is-open", isOpen);
+    hero?.classList.toggle("is-search-open", isOpen);
+  };
+
   const openSearch = () => {
     if (!search || !searchInput) return;
 
-    search.classList.add("is-open");
+    setSearchOpen(true);
     window.requestAnimationFrame(() => {
       searchInput.focus();
       updateLiveSearchFromInput();
@@ -413,7 +418,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const closeSearch = (clearInput = false) => {
     if (!search || !searchInput) return;
 
-    search.classList.remove("is-open");
+    setSearchOpen(false);
     setSearchResultsExpanded(false);
     if (clearInput) {
       searchInput.value = "";
@@ -1357,7 +1362,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     }
 
     if (keepSearchOpen) {
-      search?.classList.add("is-open");
+      setSearchOpen(true);
       window.requestAnimationFrame(() => searchInput?.focus());
     } else {
       closeSearch(true);
@@ -1378,7 +1383,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       return;
     }
 
-    search?.classList.add("is-open");
+    setSearchOpen(true);
     rememberSearchSessionReturn();
     const scope = getSearchScopeFromCurrentContext();
     syncLiveSearchUrl(query, scope);
@@ -1406,7 +1411,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     syncLiveSearchUrl(query, null, true);
     renderSearchContent(query, undefined, 0, { scope: null });
-    search?.classList.add("is-open");
+    setSearchOpen(true);
     window.requestAnimationFrame(() => searchInput.focus());
   };
 
@@ -1501,7 +1506,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (!trimmedQuery || !hero || !catalog || !catalogTitle || !catalogTrack) return;
 
     const scope = options.scope ?? (options.pushState === false ? getSearchScopeFromUrl() : getSearchScopeFromCurrentContext());
-    search?.classList.add("is-open");
+    setSearchOpen(true);
     if (searchInput) searchInput.value = trimmedQuery;
     rememberSearchSessionReturn();
     if (options.pushState !== false) {
@@ -1898,7 +1903,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       if (searchInput?.value.trim()) {
         searchInput.value = "";
         updateLiveSearchFromInput();
-        search.classList.add("is-open");
+        setSearchOpen(true);
         window.requestAnimationFrame(() => searchInput.focus());
         return;
       }

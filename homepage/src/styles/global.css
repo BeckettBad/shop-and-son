@@ -332,7 +332,7 @@ body{
   transition:width .3s cubic-bezier(.16,1,.3,1),opacity .18s ease;
 }
 .hero__search.is-open .hero__search-input{
-  width:190px; opacity:1;
+  width:min(190px,22vw); opacity:1;
 }
 .hero__search-input::placeholder{
   color:var(--ink-soft); opacity:1; text-transform:lowercase;
@@ -786,6 +786,7 @@ body{
     -webkit-overflow-scrolling:touch;
   }
   .hero__catalog-title{margin-top:clamp(20px,3vh,32px)}
+  .hero-video.is-search-open .hero__catalog-title{margin-top:clamp(38px,5vh,56px)}
   .hero__menu-section{margin-bottom:.72em}
   .hero__menu-section.is-open .hero__menu-panel{
     display:block; padding:.65em 0 0;
@@ -880,18 +881,25 @@ body{
     --hero-icon-size:40px;
     --hero-icon-gap:10px;
     --hero-icon-stage-clearance:14px;
-    top:max(1.25vh, env(safe-area-inset-top)); right:4vw;
+    --hero-mobile-panel-top:clamp(88px,16vh,132px);
+    --hero-mobile-icon-top:max(1.25vh, env(safe-area-inset-top));
+    --hero-mobile-cart-stage-y:calc(var(--hero-icon-stage-clearance) + var(--hero-icon-size) + var(--hero-icon-gap));
+    --hero-mobile-search-stage-x:calc((var(--hero-icon-size) + 8px) * -1);
+    --hero-mobile-search-stage-y:calc(var(--hero-mobile-panel-top) - var(--hero-mobile-icon-top) - var(--hero-icon-size) - var(--hero-icon-gap));
+    top:var(--hero-mobile-icon-top); right:4vw;
     flex-direction:column; align-items:flex-end; gap:var(--hero-icon-gap);
   }
   .hero__cart{
     z-index:5; width:var(--hero-icon-size); height:var(--hero-icon-size);
     transform:translateY(var(--hero-icon-stage-clearance));
+    transition:transform .55s ease-in-out .08s,opacity .18s ease,visibility 0s;
   }
   .hero__search{
     z-index:5; display:flex; flex-flow:row-reverse wrap;
     justify-content:flex-start; align-items:center; gap:6px 8px;
     max-width:calc(100vw - 8vw);
     transform:translateY(var(--hero-icon-stage-clearance));
+    transition:transform .55s ease-in-out,opacity .18s ease,visibility 0s;
   }
   .hero__cart svg{width:22px; height:22px}
   .hero__search-toggle{
@@ -904,7 +912,7 @@ body{
     height:22px;
   }
   .hero__search.is-open .hero__search-input{
-    width:min(200px,58vw);
+    width:min(220px,58vw);
   }
   .hero__search-scope-chip{
     min-height:22px; max-width:58vw;
@@ -914,15 +922,19 @@ body{
   .hero-video.is-search .hero__cart,
   .hero-video.is-product .hero__cart,
   .hero-video.is-preorder .hero__cart{
-    transform:translateY(0);
-    transition-delay:.08s,0s,0s;
+    transform:translateY(var(--hero-mobile-cart-stage-y));
+    transition-delay:0s,0s,0s;
   }
   .hero-video.is-catalog .hero__search,
   .hero-video.is-search .hero__search,
   .hero-video.is-product .hero__search,
   .hero-video.is-preorder .hero__search{
-    transform:translateY(0);
-    transition-delay:0s,0s,0s;
+    transform:translate(var(--hero-mobile-search-stage-x),var(--hero-mobile-search-stage-y));
+    transition-delay:.08s,0s,0s;
+  }
+  .hero-video.is-search-open:not(.is-catalog):not(.is-search):not(.is-product):not(.is-preorder) .hero__menu{
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition:opacity .18s ease,visibility 0s linear .18s;
   }
   .hero__overlay{
     position:absolute; left:0; right:0; top:0; z-index:3;
@@ -987,6 +999,7 @@ body{
   .hero__catalog,
   .hero__product,
   .hero__preorder{
+    z-index:4;
     top:clamp(88px,16vh,132px); right:0; bottom:0; left:0;
     padding:0 4vw max(5vh, env(safe-area-inset-bottom));
   }
@@ -1032,6 +1045,24 @@ body{
   }
   .hero__catalog-head{padding-bottom:12px}
   .hero__catalog-title{font-size:14px; line-height:1.12}
+  .hero__catalog-title,
+  .hero__search-all-row,
+  .hero__product .product-detail__vendor,
+  .hero__product .product-detail__title,
+  .hero__product .product-detail__price{
+    transition:opacity .18s ease,visibility 0s, max-height .18s ease, margin .18s ease;
+  }
+  .hero-video.is-search-open .hero__catalog-title,
+  .hero-video.is-search-open .hero__search-all-row{
+    max-height:0; margin:0; overflow:hidden;
+    opacity:0; visibility:hidden; pointer-events:none;
+  }
+  .hero-video.is-search-open.is-product .product-detail__vendor,
+  .hero-video.is-search-open.is-product .product-detail__title,
+  .hero-video.is-search-open.is-product .product-detail__price{
+    max-height:0; margin-top:0; margin-bottom:0; overflow:hidden;
+    opacity:0; visibility:hidden; pointer-events:none;
+  }
   .hero__catalog-viewport{
     padding-top:12px;
     -webkit-overflow-scrolling:touch;
