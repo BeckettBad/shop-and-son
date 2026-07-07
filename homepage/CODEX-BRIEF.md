@@ -261,6 +261,27 @@ rows, empty-query behavior.
 
 **CAROUSEL-CONTROLS (one-off, operator-directed 2026-07-06) — a0ca7ec — universal control placement — build:green check:green.** product-view.ts + global.css: frame now derives its aspect (and width, via min(galleryWidth, maxHeight×aspect)) from the ACTIVE slide's image — frame edge == image edge for any asset; arrows inset 16px from the image edges at mid-height, counter 12px in the image's bottom-right; controls not rendered at all when images.length < 2 (incl. seed/loading path); Phase-K viewport-fit intact. VERIFIED matrix: portrait 512×768 + landscape 512×342 both insets 16/16 + counter 12,12 + arrowMidY 0; cross-ratio arrowing holds 16; single-image ufo-tumbler renders zero controls; mobile landscape inset 16; no page scroll. Not pushed.
 
+## PHASE O — mobile-first polish (operator 2026-07-07). Everything MOBILE-ONLY (≤760px); desktop pixel-unchanged, verified after each commit at 1440. Two focused commits; judgment granted on sizing/structure.
+
+**O-C1 — bigger mobile menu type.** Scale the WHOLE mobile menu up for
+comfortable reading/tapping: section headers (currently 12.5px → ~16-17px),
+panel links + subheaders (12px → ~14px), nested designer/category items
+proportionally, with matching breathing room (line-height/margins/taps).
+Keep hierarchy proportions feeling right; header rows must still wrap
+cleanly at 380 clear of the icon stack (retune clearance if the larger type
+needs it); open panel stays full inner width; no horizontal overflow.
+
+**O-C2 — tap-to-enlarge product carousel + faint green backing (mobile).**
+(a) Tapping the product carousel image (in-hero product stage AND standalone
+/product/, shared renderer) enlarges it — judgment: a full-bleed paper-toned
+lightbox overlay fitting the phone (image contain, no crop), swipe + arrows +
+counter still functional inside it, dismissed via a × (site convention) or
+tapping the image again; Esc/back-safe; body scroll locked while open;
+reduced-motion: no zoom animation. (b) On the mobile product view, an
+EXTREMELY subtle neon-green wash/glow behind the carousel — barely
+perceptible (think ~4-6% alpha radial wash or soft box-shadow using
+--neon-green), erring too-subtle. Desktop carousel/layout untouched.
+
 **PHASE N2 STATUS: COMMITTED ON DEV (2026-07-06) — fc7d8ce — verified. NOT pushed.**
 - Animated cart+search pair: desktop order SWAPPED to cart-left/search-right (search takes the corner, 32px inset); desktop cart-hide rules on panel stages RETIRED — pair always visible, sliding over by --hero-icon-stage-clearance on panel-stage entry (.55s ease-in-out, 80ms stagger: search leads in, cart follows; delays invert on exit) sitting 12px clear of the ×; mobile pair stacked vertical, translateY choreography; reduced-motion settles in place. Verified 1440 (rest + catalog: bag visible, pair clear of ×, order correct, hero scroll 0) + 380 (stacked, no overflow). FLAG for operator: pair-to-× gap is 12px — snug; one variable to widen.
 
