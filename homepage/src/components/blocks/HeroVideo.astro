@@ -393,7 +393,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   let searchSessionReturn: SearchSessionReturn | null = null;
   let searchSessionReturnUrl: URL | null = null;
   let searchSessionHasHistoryEntry = false;
-  let menuCollapseSequence = 0;
+  const sectionCollapseTokens = new WeakMap<HTMLElement, number>();
+  const subgroupCollapseTokens = new WeakMap<HTMLElement, number>();
+  const menuCollapseAnimations = new WeakMap<HTMLElement, Animation>();
 
   const isCartOpen = () => document.querySelector(".cart-drawer")?.classList.contains("is-open") ?? false;
   const isMobileSearchViewport = () => window.matchMedia("(max-width: 760px)").matches;
@@ -876,22 +878,48 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     reconcileObjectsMenuList(objectsSection, liveMenu.objects);
   };
 
-  const setMenuSubgroupState = (button: HTMLButtonElement, isOpen: boolean) => {
-    const group = button.closest(".hero__menu-item--group");
+  const prefersReducedMenuMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const nextMenuCollapseToken = (tokens: WeakMap<HTMLElement, number>, element: HTMLElement) => {
+    const token = (tokens.get(element) ?? 0) + 1;
+    tokens.set(element, token);
+    return token;
+  };
+
+  const isCurrentMenuCollapse = (tokens: WeakMap<HTMLElement, number>, element: HTMLElement, token: number) =>
+    tokens.get(element) === token;
+
+  const setMenuSubgroupExpanded = (button: HTMLButtonElement, isOpen: boolean) => {
     const toggle = button.querySelector(".hero__menu-subtoggle");
-    group?.classList.toggle("is-open", isOpen);
     button.setAttribute("aria-expanded", String(isOpen));
     if (toggle) {
       toggle.textContent = isOpen ? "\u2013" : "+";
     }
   };
 
-  const clearMenuSearchBreadcrumbs = () => {
-    menuSections.forEach((section) => section.classList.remove("is-search-breadcrumb"));
+  const setMenuSectionExpanded = (section: HTMLElement, isOpen: boolean) => {
+    const trigger = section.querySelector(".hero__menu-header");
+    const toggle = section.querySelector(".hero__menu-toggle");
+    trigger?.setAttribute("aria-expanded", String(isOpen));
+    if (toggle) {
+      toggle.textContent = isOpen ? "\u2013" : "+";
+    }
+  };
+
+  const cancelMenuCollapse = (element: HTMLElement | null | undefined) => {
+    if (!element) return;
+
+    const animation = menuCollapseAnimations.get(element);
+    if (animation) {
+      animation.cancel();
+      menuCollapseAnimations.delete(element);
+    }
+    element.style.removeProperty("overflow");
   };
 
   const animateMenuCollapse = async (element: HTMLElement) => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || element.offsetHeight <= 0) {
+    cancelMenuCollapse(element);
+    if (prefersReducedMenuMotion() || element.offsetHeight <= 0) {
       return;
     }
 
@@ -903,9 +931,54 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       ],
       { duration: stageDuration, easing: "cubic-bezier(.16,1,.3,1)" },
     );
+    menuCollapseAnimations.set(element, animation);
 
     await animation.finished.catch(() => undefined);
-    element.style.removeProperty("overflow");
+    if (menuCollapseAnimations.get(element) === animation) {
+      menuCollapseAnimations.delete(element);
+      element.style.removeProperty("overflow");
+    }
+  };
+
+  const resetMenuSubgroups = (section: HTMLElement) => {
+    const sectionSubgroups = Array.from(section.querySelectorAll<HTMLButtonElement>("[data-menu-subgroup]"));
+    sectionSubgroups.forEach((button) => setMenuSubgroupState(button, false, false));
+  };
+
+  const setMenuSubgroupState = (button: HTMLButtonElement, isOpen: boolean, shouldAnimate = true) => {
+    const group = button.closest<HTMLElement>(".hero__menu-item--group");
+    const nested = group?.querySelector<HTMLElement>(".hero__menu-nested");
+    if (!group) {
+      setMenuSubgroupExpanded(button, isOpen);
+      return;
+    }
+
+    if (isOpen) {
+      nextMenuCollapseToken(subgroupCollapseTokens, group);
+      cancelMenuCollapse(nested);
+      group.classList.add("is-open");
+      setMenuSubgroupExpanded(button, true);
+      return;
+    }
+
+    setMenuSubgroupExpanded(button, false);
+    const token = nextMenuCollapseToken(subgroupCollapseTokens, group);
+    if (!shouldAnimate || prefersReducedMenuMotion() || !group.classList.contains("is-open") || !nested) {
+      cancelMenuCollapse(nested);
+      group.classList.remove("is-open");
+      return;
+    }
+
+    void animateMenuCollapse(nested).then(() => {
+      if (!isCurrentMenuCollapse(subgroupCollapseTokens, group, token)) return;
+      if (button.getAttribute("aria-expanded") === "true") return;
+
+      group.classList.remove("is-open");
+    });
+  };
+
+  const clearMenuSearchBreadcrumbs = () => {
+    menuSections.forEach((section) => section.classList.remove("is-search-breadcrumb"));
   };
 
   const collapseMobileMenuForSearch = () => {
@@ -914,50 +987,55 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     const openSections = menuSections.filter((section) => section.classList.contains("is-open"));
     if (openSections.length === 0) return;
 
-    const collapseSequence = ++menuCollapseSequence;
     openSections.forEach((section) => {
-      const panel = section.querySelector<HTMLElement>(".hero__menu-panel");
-      const trigger = section.querySelector(".hero__menu-header");
-      const toggle = section.querySelector(".hero__menu-toggle");
-      const openSubgroups = Array.from(
-        section.querySelectorAll<HTMLElement>(".hero__menu-item--group.is-open .hero__menu-nested"),
-      );
-
       section.classList.add("is-search-breadcrumb");
-      const animations = [...openSubgroups, ...(panel ? [panel] : [])].map(animateMenuCollapse);
-      void Promise.all(animations).then(() => {
-        if (collapseSequence !== menuCollapseSequence) return;
-
-        resetMenuSubgroups(section);
-        section.classList.remove("is-open");
-        trigger?.setAttribute("aria-expanded", "false");
-        if (toggle) {
-          toggle.textContent = "+";
-        }
-      });
+      closeMenuSection(section, true);
     });
   };
 
-  const resetMenuSubgroups = (section: HTMLElement) => {
-    const sectionSubgroups = Array.from(section.querySelectorAll<HTMLButtonElement>("[data-menu-subgroup]"));
-    sectionSubgroups.forEach((button) => setMenuSubgroupState(button, false));
+  const closeMenuSection = (section: HTMLElement, keepSearchBreadcrumb = false) => {
+    const panel = section.querySelector<HTMLElement>(".hero__menu-panel");
+    setMenuSectionExpanded(section, false);
+
+    const token = nextMenuCollapseToken(sectionCollapseTokens, section);
+    if (!keepSearchBreadcrumb) {
+      section.classList.remove("is-search-breadcrumb");
+    }
+    if (!section.classList.contains("is-open") || !panel || prefersReducedMenuMotion()) {
+      cancelMenuCollapse(panel);
+      resetMenuSubgroups(section);
+      section.classList.remove("is-open");
+      return;
+    }
+
+    section.querySelectorAll<HTMLButtonElement>(".hero__menu-item--group.is-open [data-menu-subgroup]").forEach((button) => {
+      setMenuSubgroupState(button, false);
+    });
+
+    void animateMenuCollapse(panel).then(() => {
+      if (!isCurrentMenuCollapse(sectionCollapseTokens, section, token)) return;
+      const trigger = section.querySelector(".hero__menu-header");
+      if (trigger?.getAttribute("aria-expanded") === "true") return;
+
+      resetMenuSubgroups(section);
+      section.classList.remove("is-open");
+    });
+  };
+
+  const openMenuSection = (section: HTMLElement) => {
+    const panel = section.querySelector<HTMLElement>(".hero__menu-panel");
+    nextMenuCollapseToken(sectionCollapseTokens, section);
+    cancelMenuCollapse(panel);
+    section.classList.add("is-open");
+    setMenuSectionExpanded(section, true);
   };
 
   const setMenuSectionState = (activeSection: HTMLElement | null) => {
-    menuCollapseSequence += 1;
     clearMenuSearchBreadcrumbs();
     menuSections.forEach((section) => {
       const isOpen = section === activeSection;
-      const trigger = section.querySelector(".hero__menu-header");
-      const toggle = section.querySelector(".hero__menu-toggle");
-      section.classList.toggle("is-open", isOpen);
-      trigger?.setAttribute("aria-expanded", String(isOpen));
-      if (toggle) {
-        toggle.textContent = isOpen ? "\u2013" : "+";
-      }
-      if (!isOpen) {
-        resetMenuSubgroups(section);
-      }
+      if (isOpen) openMenuSection(section);
+      else closeMenuSection(section);
     });
   };
 
@@ -1892,8 +1970,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   subgroupToggles.forEach((button) => {
     button.addEventListener("click", () => {
-      const group = button.closest(".hero__menu-item--group");
-      setMenuSubgroupState(button, !group?.classList.contains("is-open"));
+      setMenuSubgroupState(button, button.getAttribute("aria-expanded") !== "true");
     });
   });
 
@@ -2019,7 +2096,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       const isPreorderSection = section.dataset.preorder === "true";
       const isFamSection = section.dataset.fam === "true";
       const isMusicSection = section.dataset.music === "true";
-      const isOpen = !section.classList.contains("is-open");
+      const isOpen = trigger.getAttribute("aria-expanded") !== "true";
 
       if (isPreorderSection && isOpen) {
         setMenuSectionState(section);
