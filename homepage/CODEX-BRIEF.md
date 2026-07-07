@@ -261,6 +261,10 @@ rows, empty-query behavior.
 
 **CAROUSEL-CONTROLS (one-off, operator-directed 2026-07-06) — a0ca7ec — universal control placement — build:green check:green.** product-view.ts + global.css: frame now derives its aspect (and width, via min(galleryWidth, maxHeight×aspect)) from the ACTIVE slide's image — frame edge == image edge for any asset; arrows inset 16px from the image edges at mid-height, counter 12px in the image's bottom-right; controls not rendered at all when images.length < 2 (incl. seed/loading path); Phase-K viewport-fit intact. VERIFIED matrix: portrait 512×768 + landscape 512×342 both insets 16/16 + counter 12,12 + arrowMidY 0; cross-ratio arrowing holds 16; single-image ufo-tumbler renders zero controls; mobile landscape inset 16; no page scroll. Not pushed.
 
+**PHASE O ROUND 2 STATUS: COMPLETE ON DEV (2026-07-07) — verified. NOT pushed.**
+- O-C4 — dfd7514 — universal control frame == rendered image (both dims, active slide, natural-dims fallback, re-assert on slide change + resize) across desktop stage / standalone / mobile view / lightbox. MEASURED: arrows 16px inside at exact mid-height + counter 12,12 inside bottom-right on ALL of: desktop short-asset (vase, cross-slide — the operator's bad case), desktop portrait, desktop landscape, mobile product view, mobile lightbox. Touches desktop intentionally (operator-reported desktop bug).
+- O-C3 — d491bd0 — lightbox scrim now translucent (rgba(255,255,255,.76) + 1.5px blur — site state visible, faded) + 1px neon-green outline (3px offset) on the pressable mobile carousel. Mobile-only.
+
 ### PHASE O ROUND 2 (operator 2026-07-07, with desktop screenshot of the vase bad-case)
 
 **O-C3 — lightbox backdrop + tappable-carousel affordance (mobile).**
