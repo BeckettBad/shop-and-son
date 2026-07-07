@@ -261,6 +261,28 @@ rows, empty-query behavior.
 
 **CAROUSEL-CONTROLS (one-off, operator-directed 2026-07-06) — a0ca7ec — universal control placement — build:green check:green.** product-view.ts + global.css: frame now derives its aspect (and width, via min(galleryWidth, maxHeight×aspect)) from the ACTIVE slide's image — frame edge == image edge for any asset; arrows inset 16px from the image edges at mid-height, counter 12px in the image's bottom-right; controls not rendered at all when images.length < 2 (incl. seed/loading path); Phase-K viewport-fit intact. VERIFIED matrix: portrait 512×768 + landscape 512×342 both insets 16/16 + counter 12,12 + arrowMidY 0; cross-ratio arrowing holds 16; single-image ufo-tumbler renders zero controls; mobile landscape inset 16; no page scroll. Not pushed.
 
+**O-C8 (QUEUED — dispatch after O-C7): mobile search-bar cascade (operator 2026-07-07).**
+PROBLEM: on mobile, opening the magnifier overlays the input across the menu
+header text — visually overwhelming. THE FLOW: (a) REST (no stage open):
+vertical stack unchanged (bag top, magnifier below). (b) When a panel stage
+with an × opens (catalog/search/product — ASSUMPTION: all ×-stages, operator
+may narrow to catalog-only): both icons ANIMATE a drop-down cascade — bag
+slides down into the magnifier's old slot (sitting ABOVE the ×), magnifier
+drops further to sit LEFT of the × on the ×'s row; that spot IS the search
+trigger there — tapping opens the input LEFTWARD along the ×'s row, its
+width CAPPED to the free space so it NEVER overlays the collection title /
+description / designer about-blurb (measure: input's left edge keeps a
+comfortable gap ≥16px from the title block's right edge; shrink the input
+cap rather than collide). (c) Closing the stage reverses the cascade back to
+the rest stack. Timing/easing: the site's stage language (.55s family,
+subtle stagger like N2); reduced-motion: reposition without slide. ALSO
+verify DESKTOP: opening the search input in every state overlays no text
+(landing + catalog + product at 1440); mobile menu-open (non-stage) state:
+magnifier input must not overlay header text either — if the rest-position
+input would, cap/reposition it similarly. No text crowded or overlaid
+anywhere, both views. ONE commit, build+check green, screenshots at 380 for
+rest/cascade/input-open states.
+
 **PHASE O ROUND 3 STATUS: COMPLETE ON DEV (2026-07-07) — verified. NOT pushed.**
 - O-C6 — 989f746 — DESKTOP port (operator-ordered desktop change): flush 2px neon outline + zoom-in cursor on desktop product carousels (gaps 0,0,0,0 to the image); click → same lightbox (transparent bg, blur(2px) saturate(.62) brightness(1.06) distant treatment), image contains in viewport caps, controls inside at 16px/12,12, Esc/×/click-image dismiss, scroll locked. Mobile regression-checked: C5 behavior intact.
 - O-C5 — e714068 — mobile refinements: outline 1px+3px-offset → 2px FLUSH on the image edge (measured 0-gap all sides); lightbox white wash REMOVED → transparent + blur/desaturate/brightness (site blends behind, distant).
