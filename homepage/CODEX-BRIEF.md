@@ -261,6 +261,7 @@ rows, empty-query behavior.
 
 **CAROUSEL-CONTROLS (one-off, operator-directed 2026-07-06) — a0ca7ec — universal control placement — build:green check:green.** product-view.ts + global.css: frame now derives its aspect (and width, via min(galleryWidth, maxHeight×aspect)) from the ACTIVE slide's image — frame edge == image edge for any asset; arrows inset 16px from the image edges at mid-height, counter 12px in the image's bottom-right; controls not rendered at all when images.length < 2 (incl. seed/loading path); Phase-K viewport-fit intact. VERIFIED matrix: portrait 512×768 + landscape 512×342 both insets 16/16 + counter 12,12 + arrowMidY 0; cross-ratio arrowing holds 16; single-image ufo-tumbler renders zero controls; mobile landscape inset 16; no page scroll. Not pushed.
 
+- O-C10 — cf53e27 — outline scoping: lightbox/enlarged image outline REMOVED universally (both views measured none); desktop product-listing outline REMOVED entirely (enlarge + zoom-in cursor kept); mobile 2px flush outline stays (measured 2px neon at 380).
 - O-C9 — c4185b0 — mobile Return commits the search: input blurs + collapses (keyboard dismissed), results stage + title + scope intact (verified: SEARCH — "VASE" (9) remains, 9 cards); magnifier reopen restores the query; enterkeyhint=search; desktop Enter unchanged.
 
 **PHASE O ROUND 4 STATUS: COMPLETE ON DEV (2026-07-07) — verified with screenshots. NOT pushed.**
