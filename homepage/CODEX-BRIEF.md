@@ -68,9 +68,130 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — Q1 committed @ 5308070, reviewed + verified
-> (desktop tree 0/14/28px via --menu-indent, mobile pixel-unchanged), ready
-> for operator verify. Tune by changing --menu-indent in global.css line 714.**
+> **ACTIVE SUB-TASK: (none) — Q5b @ 25a93fd committed + verified (mobile
+> cards to 1px hairline). Frame system final state: desktop cards 2px /
+> product 3px; mobile cards 1px / product 2px. Awaiting operator verify of
+> Q2–Q5b.**
+>
+> **Q5 spec.** Make the catalog-card + product-view neon frame system
+> universal across viewports, proportioned for mobile:
+> 1. Product view (individual listing), mobile: REPLACE the current
+>    `outline:2px solid var(--neon-green)` on `.product-detail__carousel`
+>    (mobile block ~1898) with the same inset overlay used on desktop:
+>    `::after { content:""; position:absolute; inset:0; border:2px solid
+>    var(--neon-green); pointer-events:none; z-index:1 }` — same visible
+>    weight as today (operator wants the current mobile size kept), but
+>    hugging the carousel frame exactly and unclippable. Keep the existing
+>    mobile glow `::before` exactly as-is. Carry over the lightbox
+>    suppression on mobile the same way desktop does (border transparent
+>    while `body.is-product-lightbox-open`; check what the mobile block
+>    currently does with the outline in that state and mirror it for the
+>    overlay). Remove the now-dead outline rules (including the
+>    `transition:outline-color` line) — don't leave both mechanisms active.
+>    Carousel arrows must stay above the border line and clickable (they are
+>    z-index:2 on desktop; verify mobile stacking).
+> 2. Catalog/search cards, mobile: add the `.product-card__media::after`
+>    frame in the mobile block too, at reduced weight for the compact
+>    2-column cards — 1.5px solid var(--neon-green) (judgment range 1-2px,
+>    constraint: the product-view 2px frame must still read a visible step
+>    stronger on a phone). Sold-out chip stays above (z-index parity with
+>    the desktop change).
+> Verify: build + check green; at 390px the catalog grid shows subtle neon
+> frames on every card, an opened product shows the 2px frame hugging the
+> image exactly (no drift from the old outline position), lightbox opens
+> clean with no border bleed, arrows work; at 1440 desktop is pixel-identical
+> to Q4 (3px product, 2px cards).**
+>
+> **Q4 spec.** Two coordinated changes forming a visual hierarchy:
+> 1. Catalog/search cards: apply the Q3b inset-overlay treatment to every
+>    catalogue listing image on desktop — target `.product-card__media`
+>    (ensure `position:relative`), add `::after { content:""; position:
+>    absolute; inset:0; border:2px solid var(--neon-green);
+>    pointer-events:none; }` with z-index above the img but below the
+>    sold-out chip (`.product-card__sold-out`) — check its stacking and keep
+>    the chip on top. Cards are DOM-built in HeroVideo.astro (media class at
+>    ~1273); the pure-CSS overlay needs no JS change. Scope to desktop so the
+>    mobile 2-col cards stay untouched (the catalog grid's mobile block is
+>    ~1109; mirror that split).
+> 2. Individual product view: make its frame slightly more apparent than the
+>    cards — bump the Q3b carousel overlay border from 2px to 3px (both
+>    `.hero__product` and `.product-detail--standalone` desktop contexts).
+>    Mobile's own outline stays 2px, untouched.
+> Verify: build + check green; at 1440 every card in the catalog grid AND in
+> search results shows the 2px neon frame on its image tile (sold-out chip
+> still on top, sold-out opacity treatment intact); an opened product shows
+> the 3px frame reading a step stronger; 390px mobile pixel-unchanged (no
+> card borders, product outline still 2px).**
+>
+> **Q3b spec.** Operator verified Q3 on dev: the outline is invisible on most
+> products and shows only along the bottom on others. Root cause: `outline`
+> paints OUTSIDE the border box, and the desktop carousel sits flush against
+> overflow-clipped ancestors, so the outline is clipped wherever the image
+> fills its container (tall images = all edges clipped except any slack side).
+> Replace the desktop treatment with an INSET overlay that cannot be clipped:
+> - Remove the desktop `outline`-based neon rules Q3 added (both
+>   `.hero__product` and `.product-detail--standalone` contexts), including
+>   any now-orphaned glow `::before` desktop rules if they are also clipped
+>   into invisibility — judgment: keep the glow only if it actually renders.
+> - Add, desktop contexts only (`.hero__product .product-detail__carousel`
+>   and `.product-detail--standalone .product-detail__carousel`):
+>   `::after { content:""; position:absolute; inset:0;
+>   border:2px solid var(--neon-green); pointer-events:none; }` with a
+>   z-index just high enough to sit above the image but below the carousel
+>   arrows/counter chips (check their stacking; arrows must stay clickable
+>   and visually above the border line where they overlap it).
+> - The carousel is `position:relative` already (verify; add if a context
+>   lacks it).
+> - Lightbox parity with Q3: while the product lightbox is open the border
+>   must not glow through — carry over the existing suppression state
+>   (border-color transparent under `body.is-product-lightbox-open`), and the
+>   lightbox itself gains no border.
+> - Mobile (≤760px) keeps its current outline+glow exactly as-is.
+> Verify: build + check green; at 1440, opening several products from the
+> catalog (landscape AND tall portrait assets) shows the full 2px neon frame
+> on ALL FOUR edges hugging the image; same on /product/?handle=…; arrows
+> and lightbox still work; 390px mobile unchanged.**
+>
+> **ACTIVE SUB-TASK: PHASE Q2 then Q3 (operator desktop pass, 2026-07-07).
+> Two ordered commits, one dispatch each, Claude reviews between. DESKTOP
+> ONLY — mobile must stay pixel-identical in both. Specs below.**
+>
+> **Q2 spec — catalog rows back to 3-across (desktop).** `.hero__catalog-track`
+> (global.css ~672) is `grid-template-columns:repeat(4,minmax(0,1fr))` on
+> desktop. Change to `repeat(3,minmax(0,1fr))` — the old catalogue dimensions.
+> Cards enlarge automatically (fractional columns). This one grid serves the
+> catalog rail, the search results, and the search "more like this" fallback,
+> which is exactly the operator's intent (every multi-listing catalogue grid
+> on desktop). The mobile override (~1109, `repeat(2,...)`) stays untouched.
+> Before committing, grep the catalog/search JS (HeroVideo.astro, catalog.ts)
+> for any logic coupled to a 4-column count (page-size math, batch/fill
+> counts, "row" calculations) and reconcile with 3 if found — QA found only a
+> generic slice(limit); confirm. Verify: build + check green; at 1440 the
+> catalog and search grids show 3 larger listings per row; at 390 mobile still
+> shows 2.
+>
+> **Q3 spec — neon carousel border on desktop product views.** Mobile already
+> frames the product-detail carousel in neon green (mobile block ~1898:
+> `.product-detail__carousel{outline:2px solid var(--neon-green)}` plus the
+> soft radial glow `::before`). Recreate that same treatment on DESKTOP for
+> every individual product view: the in-page product stage
+> (`.hero__product .product-detail__carousel`) and the standalone page
+> (`/product/`, `.product-detail--standalone`). Notes:
+> - The carousel element is `display:inline-flex; width:fit-content`, so it
+>   already hugs the rendered asset frame — the outline will fit each
+>   product's carousel dimensions automatically, which is the requirement.
+>   Do not fix the width/aspect; the border adapts per product.
+> - Desktop currently kills it explicitly (~1751:
+>   `.hero__product .product-detail__carousel{outline:0; box-shadow:none}`) —
+>   that rule (and any sibling suppressors) is what you're overriding/removing
+>   for the outline; check the lightbox-open state (~1915) still behaves (no
+>   double border or stray glow while the lightbox is up, and the lightbox
+>   itself gains no border).
+> - Same neon (`--neon-green`), same 2px weight and glow as mobile so the
+>   language matches.
+> Verify: build + check green; at 1440 a product opened from the catalog AND
+> /product/?handle=… show the neon-framed carousel hugging the image; sold-out
+> and multi-image products frame correctly; mobile (390px) pixel-unchanged.**
 >
 > **PHASE Q1 spec.** DESKTOP ONLY (the existing desktop media block for the
 > hero menu, where indentation is currently flattened flush-left — see
@@ -109,6 +230,12 @@ below so Codex has ONE target; everything else in this file is context.
 
 ## Log (Phase Q)
 
+- 2026-07-07 — Q5b mobile card frame 1.5px→1px — 25a93fd — build:green check:green — operator tone-down; one value
+- 2026-07-07 — Q5 mobile neon frame parity — f209c23 — build:green check:green — mobile product outline→inset ::after 2px (glow kept, lightbox suppression ported), mobile cards 1.5px; desktop pixel-identical
+- 2026-07-07 — Q4 catalog card neon frames + 3px product frame — 55d2fb1 — build:green check:green — .product-card__media::after 2px desktop-only, sold-out chip z-index 2, carousel overlay 2px→3px; verified 1440 + mobile 0px
+- 2026-07-07 — Q3b inset neon carousel frame (desktop) — 35f197a — build:green check:green — replaces Q3 outline; 4-edge pixel-verified portrait+landscape, stage+standalone; arrows/lightbox stack intact
+- 2026-07-07 — Q3 desktop neon carousel border — 1fa8189 — build:green check:green — superseded by Q3b (outline clipped by overflow ancestors)
+- 2026-07-07 — Q2 catalog rows 3-across (desktop) — 817767f — build:green check:green — one grid value + img sizes hint 16vw→22vw; search + more-like-this share the track; mobile 2-col untouched
 - 2026-07-07 — Q1 desktop menu tree indent — 5308070 — build:green check:green — one --menu-indent var (14px), levels 0/1/2, structural so future subfolders inherit; verified 1440 + mobile unchanged
 
 ## Log (Phase P)
