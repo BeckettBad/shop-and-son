@@ -17,6 +17,7 @@ const homeUrl = import.meta.env.BASE_URL.replace(/\/$/, "") + "/";
 const shopifyProductUrl = (handle: string) =>
   `https://shopandson.com/products/${encodeURIComponent(handle)}`;
 const activeCarouselPreloads = new Set<HTMLImageElement>();
+const mobileProductLightboxQuery = window.matchMedia("(max-width: 760px)");
 
 export interface ProductImageSeed {
   url: string;
@@ -330,6 +331,28 @@ const preloadCarouselImage = (image: HTMLImageElement | null | undefined) => {
   loader.src = image.currentSrc || image.src;
 };
 
+interface ProductLightbox {
+  overlay: HTMLElement;
+  image: HTMLImageElement;
+  previous?: HTMLButtonElement;
+  next?: HTMLButtonElement;
+  counter?: HTMLElement;
+}
+
+const setProductLightboxOpen = (isOpen: boolean) => {
+  document.documentElement.classList.toggle("is-product-lightbox-open", isOpen);
+  document.body.classList.toggle("is-product-lightbox-open", isOpen);
+};
+
+const getHistoryStateWithProductLightbox = () => {
+  const state = history.state;
+  if (state && typeof state === "object") {
+    return { ...state, productLightbox: true };
+  }
+
+  return { productLightbox: true };
+};
+
 const renderSeededProduct = (container: HTMLElement, seedImage: ProductImageSeed) => {
   const seedUrl = getSeedImageUrl(seedImage);
   if (!seedUrl) return;
@@ -401,8 +424,11 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
   const imageCount = product.images.length;
   let activeIndex = 0;
   let activeAspect: number | undefined;
+  let carouselCounter: HTMLElement | undefined;
+  let activeLightbox: ProductLightbox | undefined;
   let touchStartX: number | undefined;
   let touchStartY: number | undefined;
+  let didSwipeCarousel = false;
 
   product.images.forEach((productImage, index) => {
     const seedUrl = index === 0 ? getSeedImageUrl(seedImage) : undefined;
@@ -479,12 +505,35 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
     );
   };
 
-  const setActiveImage = (index: number, counter?: HTMLElement) => {
+  const updateLightboxImage = () => {
+    if (!activeLightbox) return;
+
+    const activeSlide = slides[activeIndex];
+    const carouselImage = activeSlide?.querySelector<HTMLImageElement>(".product-detail__image");
+    const productImage = product.images[activeIndex];
+    const srcset = carouselImage?.getAttribute("srcset") || productImage?.srcset || "";
+    const src = carouselImage?.currentSrc || carouselImage?.src || productImage?.url || "";
+
+    activeLightbox.image.src = src;
+    if (srcset) {
+      activeLightbox.image.srcset = srcset;
+      activeLightbox.image.sizes = "100vw";
+    } else {
+      activeLightbox.image.removeAttribute("srcset");
+      activeLightbox.image.removeAttribute("sizes");
+    }
+    activeLightbox.image.alt = carouselImage?.alt ?? product.title;
+    if (productImage?.width) activeLightbox.image.width = productImage.width;
+    if (productImage?.height) activeLightbox.image.height = productImage.height;
+    if (activeLightbox.counter) activeLightbox.counter.textContent = `${activeIndex + 1} / ${imageCount}`;
+  };
+
+  const setActiveImage = (index: number) => {
     if (imageCount < 1) return;
 
     activeIndex = (index + imageCount) % imageCount;
     track.style.transform = `translateX(-${activeIndex * 100}%)`;
-    if (counter) counter.textContent = `${activeIndex + 1} / ${imageCount}`;
+    if (carouselCounter) carouselCounter.textContent = `${activeIndex + 1} / ${imageCount}`;
 
     slides.forEach((slide, slideIndex) => {
       const isActive = slideIndex === activeIndex;
@@ -494,6 +543,173 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
 
     syncActiveSlideAspect();
     preloadAdjacentImages();
+    updateLightboxImage();
+  };
+
+  const openLightbox = () => {
+    if (!mobileProductLightboxQuery.matches || imageCount < 1 || activeLightbox) return;
+
+    const overlay = document.createElement("div");
+    overlay.className = "product-lightbox";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-label", "product image");
+
+    const frame = document.createElement("div");
+    frame.className = "product-lightbox__frame";
+
+    const image = document.createElement("img");
+    image.className = "product-lightbox__image";
+    image.decoding = "async";
+    image.loading = "eager";
+
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "product-lightbox__close";
+    close.setAttribute("aria-label", "close image");
+    close.textContent = "×";
+
+    const cleanupFns: (() => void)[] = [];
+    let lightboxTouchStartX: number | undefined;
+    let lightboxTouchStartY: number | undefined;
+    let didSwipeLightbox = false;
+    let pushedHistoryEntry = false;
+    let isClosed = false;
+
+    const closeLightbox = (restoreHistory = true) => {
+      if (isClosed) return;
+
+      isClosed = true;
+      activeLightbox = undefined;
+      setProductLightboxOpen(false);
+      overlay.classList.remove("is-open");
+      cleanupFns.forEach((cleanup) => cleanup());
+      window.setTimeout(() => overlay.remove(), 180);
+      if (restoreHistory && pushedHistoryEntry) {
+        history.back();
+      }
+    };
+
+    const goToLightboxImage = (index: number) => {
+      setActiveImage(index);
+    };
+
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        closeLightbox();
+        return;
+      }
+      if (event.key === "ArrowLeft" && imageCount > 1) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        goToLightboxImage(activeIndex - 1);
+        return;
+      }
+      if (event.key === "ArrowRight" && imageCount > 1) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        goToLightboxImage(activeIndex + 1);
+      }
+    };
+
+    const handlePopstate = () => {
+      closeLightbox(false);
+    };
+
+    const handleMobileQueryChange = () => {
+      if (!mobileProductLightboxQuery.matches) {
+        closeLightbox();
+      }
+    };
+
+    const handleTouchStart = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (!touch) return;
+
+      lightboxTouchStartX = touch.clientX;
+      lightboxTouchStartY = touch.clientY;
+    };
+
+    const handleTouchEnd = (event: TouchEvent) => {
+      const touch = event.changedTouches[0];
+      if (!touch || lightboxTouchStartX === undefined || lightboxTouchStartY === undefined) return;
+
+      const deltaX = touch.clientX - lightboxTouchStartX;
+      const deltaY = touch.clientY - lightboxTouchStartY;
+      lightboxTouchStartX = undefined;
+      lightboxTouchStartY = undefined;
+
+      if (Math.abs(deltaX) < 36 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
+
+      didSwipeLightbox = true;
+      window.setTimeout(() => {
+        didSwipeLightbox = false;
+      }, 240);
+      if (imageCount > 1) {
+        goToLightboxImage(activeIndex + (deltaX < 0 ? 1 : -1));
+      }
+    };
+
+    image.addEventListener("click", () => {
+      if (didSwipeLightbox) return;
+      closeLightbox();
+    });
+    close.addEventListener("click", () => closeLightbox());
+    overlay.addEventListener("touchstart", handleTouchStart, { passive: true });
+    overlay.addEventListener("touchend", handleTouchEnd, { passive: true });
+    document.addEventListener("keydown", handleKeydown, true);
+    window.addEventListener("popstate", handlePopstate);
+    mobileProductLightboxQuery.addEventListener("change", handleMobileQueryChange);
+    cleanupFns.push(
+      () => document.removeEventListener("keydown", handleKeydown, true),
+      () => window.removeEventListener("popstate", handlePopstate),
+      () => mobileProductLightboxQuery.removeEventListener("change", handleMobileQueryChange),
+    );
+
+    frame.append(image);
+    overlay.append(frame, close);
+
+    const lightbox: ProductLightbox = {
+      overlay,
+      image,
+    };
+
+    if (imageCount > 1) {
+      const previous = document.createElement("button");
+      previous.type = "button";
+      previous.className = "product-lightbox__arrow product-lightbox__arrow--previous";
+      previous.setAttribute("aria-label", "previous image");
+      previous.textContent = "←";
+
+      const next = document.createElement("button");
+      next.type = "button";
+      next.className = "product-lightbox__arrow product-lightbox__arrow--next";
+      next.setAttribute("aria-label", "next image");
+      next.textContent = "→";
+
+      const counter = document.createElement("p");
+      counter.className = "product-lightbox__counter";
+      counter.setAttribute("aria-live", "polite");
+
+      previous.addEventListener("click", () => goToLightboxImage(activeIndex - 1));
+      next.addEventListener("click", () => goToLightboxImage(activeIndex + 1));
+      overlay.append(previous, next, counter);
+      lightbox.previous = previous;
+      lightbox.next = next;
+      lightbox.counter = counter;
+    }
+
+    activeLightbox = lightbox;
+    document.body.append(overlay);
+    setProductLightboxOpen(true);
+    updateLightboxImage();
+    if (!history.state?.productLightbox) {
+      history.pushState(getHistoryStateWithProductLightbox(), "", location.href);
+      pushedHistoryEntry = true;
+    }
+    window.requestAnimationFrame(() => overlay.classList.add("is-open"));
   };
 
   if (imageCount > 1) {
@@ -512,9 +728,10 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
     const counter = document.createElement("p");
     counter.className = "product-detail__carousel-counter";
     counter.setAttribute("aria-live", "polite");
+    carouselCounter = counter;
 
-    previous.addEventListener("click", () => setActiveImage(activeIndex - 1, counter));
-    next.addEventListener("click", () => setActiveImage(activeIndex + 1, counter));
+    previous.addEventListener("click", () => setActiveImage(activeIndex - 1));
+    next.addEventListener("click", () => setActiveImage(activeIndex + 1));
     viewport.addEventListener(
       "touchstart",
       (event) => {
@@ -537,16 +754,28 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
         touchStartY = undefined;
 
         if (Math.abs(deltaX) < 36 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
-        setActiveImage(activeIndex + (deltaX < 0 ? 1 : -1), counter);
+        didSwipeCarousel = true;
+        window.setTimeout(() => {
+          didSwipeCarousel = false;
+        }, 240);
+        setActiveImage(activeIndex + (deltaX < 0 ? 1 : -1));
       },
       { passive: true },
     );
 
     carousel.append(previous, next, counter);
-    setActiveImage(0, counter);
+    setActiveImage(0);
   } else {
     setActiveImage(0);
   }
+
+  viewport.addEventListener("click", (event) => {
+    if (!mobileProductLightboxQuery.matches || didSwipeCarousel) return;
+    const target = event.target;
+    if (!(target instanceof Element) || !target.closest(".product-detail__image")) return;
+
+    openLightbox();
+  });
 
   gallery.append(carousel);
   bindCarouselFrameWidth(gallery, carousel, viewport, () => activeAspect);
