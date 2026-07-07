@@ -1122,7 +1122,7 @@ body{
   .product-card__media::after{
     content:""; position:absolute; inset:0; z-index:1;
     pointer-events:none;
-    border:1.5px solid var(--neon-green);
+    border:1px solid var(--neon-green);
   }
   .product-card__title{font-size:12px; line-height:1.22}
   .product-card__vendor,.product-card__price{font-size:10.5px; line-height:1.28}
