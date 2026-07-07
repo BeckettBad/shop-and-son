@@ -58,22 +58,166 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 > **Phases G–J are SHIPPED** (merged `dev → main` @ `012f918`, live). Do not re-do
 > any of them; their brief text lives in this file's git history + the sections below.
 
-**Status:** ready for Codex — **K0 is an operator prerequisite** (Storefront token).
-K1 and the snapshot half of K2 can start without it; K2's live-refresh, K3's live
-fetch, K4, and K6 need the token in `homepage/.env` to be testable. L1 and L2 need
-nothing; **L3 needs the operator to save the fam photo** to
-`homepage/public/images/fam-tattoo.jpg` first. M3's video asset is likely already
-in the repo (see M3's asset note) — operator confirms it before M3 is dispatched.
-**Operator priority within Phase M: M3 (the film stage) first**; M2's green
-stencil is best-effort — if the recolor fights back, ship it white and flag.
+**Status:** ready for Codex — Phase P (production hardening, from the 2026-07-07
+pre-launch QA + security sweep; report at repo root `SITE-QA-2026-07-07.md`,
+deliberately untracked). Phases through O are SHIPPED; the J2/K/L/M/N sections
+below are history, not instruction.
 
-**DISPATCH PROTOCOL — this brief is 12 sub-tasks, NOT one dispatch.** One
-sub-task per `./dispatch-codex.sh` run, one commit each, Claude reviews the real
-diff against that sub-task's **Done when** + the risks list before the next
-dispatch. Before each dispatch, Claude updates the line below so Codex has ONE
-target; everything else in this file is context, not instruction.
+**DISPATCH PROTOCOL — one sub-task per `./dispatch-codex.sh` run, one commit
+each.** Claude reviews the real diff against that sub-task's **Done when** +
+risks before the next dispatch. Before each dispatch, Claude updates the line
+below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: PHASE J2 (operator voice-memo pass, 2026-07-06) — 8 ordered commits, one dispatch each, Claude reviews each diff before the next. Full spec in the "PHASE J2" section below. Named J2 because "Phase J" (footer scroll gate) already shipped 2026-07-01. Do NOT push / NO PR until operator says "ship" — and PR #9 (Wave Mobile) is still OPEN: it must be merged by the operator BEFORE J2 is pushed, or it would quietly carry J2. Status: ready for Codex (Commit 1).**
+> **ACTIVE SUB-TASK: (none) — PHASE P COMPLETE on `dev`, ready for operator
+> verify. All 7 commits reviewed clean: P1 @ ab0c046, P2 @ 10dc58d, P3 @
+> 75ba18f + 42144bc (CSP is PROD-only; the layout's is:inline
+> clock/overlay/header script was externalized to public/scripts/base.js to
+> satisfy script-src 'self'), P4 @ d6be23c, P5 @ 8c58f4d, P6 @ 7da4540.
+> Final Playwright verification on the production build (desktop + mobile):
+> zero console errors / zero CSP violations across menu, search, catalog,
+> product, add-to-cart, film, and policy flows; /legacy/ 404s; robots.txt
+> ships; badges pin to the bag icon unclipped; hit areas expanded. Do NOT
+> push to main / NO PR until the operator says "ship Phase P".**
+
+## Log (Phase P)
+
+- 2026-07-07 — P6 robots.txt — 7da4540 — build:green check:green — ships at /robots.txt
+- 2026-07-07 — P5 cart badge anchoring — 8c58f4d — build:green check:green — mobile hero + product header pinned to bag glyph; desktop hero untouched
+- 2026-07-07 — P4 mobile tap targets — d6be23c — build:green check:green — additive ::after hit areas ≤760px, no visual change
+- 2026-07-07 — P3 fix: CSP PROD-only + externalize Base inline script — 42144bc — build:green check:green — public/scripts/base.js; zero violations on preview
+- 2026-07-07 — P3 CSP meta tag — 75ba18f — build:green check:green — full-directive policy in Base.astro head
+- 2026-07-07 — P2 sanitizer hardening — 10dc58d — build:green check:green — allowlist URL schemes, xlink:href, base/meta/link/style stripped; sanity vectors verified dead
+- 2026-07-07 — P1 retire legacy page — ab0c046 — build:green check:green — dist/legacy gone, components/assets kept
+
+---
+
+## PHASE P — production hardening (pre-launch QA + security sweep, 2026-07-07)
+
+Source: full-site Playwright QA (desktop 1440x900 + mobile 390x844) plus a
+3-agent security audit. Everything functional passed; these six commits close
+the punch list. **Hard constraints for every commit:** zero visual change at
+1440 desktop unless the sub-task says otherwise; do not break any existing
+behavior (menu, search, catalog, product view, cart, film, policies, preorders);
+`npm run build` AND `npx astro check` green before each commit; one focused
+commit per sub-task, message prefixed `P<n>:`.
+
+### P1 — retire the legacy page
+`src/pages/legacy.astro` is the pre-overlay editorial homepage. It is unlinked
+from the live experience, still builds/deploys/is crawlable, and is the only
+page with real layout defects (15px horizontal overflow on mobile). The
+operator approved removing it.
+- **Delete `src/pages/legacy.astro` and nothing else.** Keep every component it
+  imports (`About`, `Clothing`, `Objects`, `Music`, `Preorders`, `Vault`, plus
+  `FlowerDivider`/`TopBar`/`IndexOverlay` if now unused) and all assets on
+  disk — reference material; unused components are not bundled.
+- First grep `legacy` across `src/` — if anything else references the page,
+  stop and report instead of improvising.
+- **Done when:** `dist/legacy/` no longer exists after build; build + check
+  green; the only file changed is the deleted page.
+
+### P2 — harden sanitizeShopifyHtml (allowlist URL schemes)
+`src/lib/storefront-client.ts:153-172` `sanitizeShopifyHtml()` is a denylist
+feeding `innerHTML` (`product-view.ts:695`, `policies.astro:65`). Known
+bypasses: whitespace-obfuscated schemes (`java\tscript:` passes the
+`startsWith("javascript:")` check but executes on click), namespaced
+`xlink:href` never checked (attribute name is `xlink:href`, code compares
+`=== "href"`), and injected `<base>`/`<meta>` survive. Rewrite the function's
+internals (same export, same signature, same call sites):
+- Element strip list becomes: `script, iframe, object, embed, form, base,
+  meta, link, style`.
+- Iterate `getAttributeNames()` on every element. Remove any attribute whose
+  lowercased name starts with `on`.
+- URL-bearing attributes — `href`, `src`, `action`, `formaction`, `srcset`,
+  and any name ENDING in `:href` (covers `xlink:href`) — validate the value:
+  make a lowercased copy with all `[\x00-\x20]` chars stripped, then ALLOW only
+  values starting with `http:`, `https:`, `mailto:`, `tel:`, `/`, `./`, `../`,
+  `#`, `?`, or values containing no `:` at all. Anything else (`javascript:`,
+  `data:`, `vbscript:`, unknown schemes) → remove the attribute.
+- Dependency-free vanilla TS — no DOMPurify, no new packages in this pass.
+- **Done when:** build + check green; `/policies/?policy=refund-policy` still
+  renders its body in `npm run dev` with no console error; sanity test pasted
+  into stdout: running the function on
+  `<a href="java\tscript:alert(1)">x</a><svg><a xlink:href="javascript:alert(1)">y</a></svg><base href="//evil">`
+  yields output with no `<base>` and no surviving `javascript` URL.
+
+### P3 — Content-Security-Policy meta tag
+GitHub Pages cannot set response headers; a `<meta http-equiv>` CSP in
+`src/layouts/Base.astro` `<head>` is the only available mitigation and is the
+second layer behind P2. Facts already verified from the built output: all
+executable scripts are same-origin module files (the only inline `<script>` is
+`type="application/json"`, which CSP does not execute); styles are
+Astro-inlined `<style>` tags + Google Fonts CSS; images come from self +
+`cdn.shopify.com`; runtime fetches go to `https://shopandson.com` (Storefront
+GraphQL + products.json); the only iframe is same-origin `/preorders/`;
+Spotify is a plain link, no embed. Add exactly:
+```html
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://cdn.shopify.com; media-src 'self' https://cdn.shopify.com; connect-src 'self' https://shopandson.com; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https://shopandson.com;" />
+```
+Place it in `<head>` before the font `<link>` tags. Do NOT touch
+`public/preorders/index.html` (ships as-is and uses an inline `onclick`; the
+iframe content is not governed by the parent page's CSP).
+- **Done when:** build + check green; in `npm run dev` there are ZERO
+  CSP-violation console messages while: opening the menu, running a search
+  (cdn.shopify.com thumbnails load), opening a product (images render,
+  add-to-cart opens the drawer), opening the film, and loading
+  `/policies/?policy=refund-policy`. If a violation appears, report it in
+  stdout — do not loosen the policy on your own.
+
+### P4 — mobile tap-target hit areas (NO visual change)
+Mobile-only (`≤760px`, matching the existing mobile media blocks in
+`src/styles/global.css`). QA measured these controls far under the 44px floor:
+`.hero__menu-header` (90x25), the hero footer links (`info@…` mail link +
+refund/privacy/terms, ~11-13px tall), `.product-detail__carousel-arrow`
+(28x28), `.cart-line__step` (28x26), `.cart-line__remove` (28x28),
+`.policy-page__back` + `.product-detail__back` (40x12),
+`.product-detail__home-link` (59x12).
+- Technique: enlarge the HIT AREA only — `position:relative` on the control
+  plus a transparent `::after { content:""; position:absolute; inset:<negative
+  offsets>; }` bringing the effective target to ≥44px in the short dimension.
+  Where `::after` is already used for styling, use `::before` or
+  padding+negative-margin instead — per element, never restyling anything
+  visible.
+- Risks to manage: adjacent controls swallowing each other (the cart line's
+  − / count / + / remove sit in a row — cap horizontal expansion there;
+  vertical is free); pseudo-elements intercepting clicks meant for other
+  elements (keep them on the control, no z-index changes).
+- **Done when:** build + check green; at 390px each listed control's effective
+  tap box is ≥40px in its short dimension; zero visible change at 390px and
+  1440px; menu open/close, qty steppers, remove, and back buttons still work.
+
+### P5 — cart-count badge anchoring (mobile hero + standalone product header)
+`global.css:344-352` places `.hero__cart-count` / `.product-detail__cart-count`
+at `top:-7px; right:-8px` of the BUTTON. On mobile the hero cart button's box
+is taller than the bag glyph, so the badge floats detached above the icon; on
+`/product/` the header hugs the viewport top so the badge rides the edge.
+- Fix so the badge visually pins to the bag icon's top-right corner in all
+  three contexts: hero desktop (1440), hero mobile (≤760px), and the
+  `/product/` standalone header. Cleanest is anchoring relative to the SVG's
+  box (inner wrapper span around the svg, or context-specific offsets in the
+  mobile media query) — your judgment, but the badge must never be viewport-
+  clipped and never overlap the search icon.
+- Desktop hero at 1440 must stay pixel-identical (it is already correct there;
+  if you restructure markup, reproduce the current desktop position exactly).
+- **Done when:** build + check green; with one item in the cart the badge
+  touches the bag's top-right corner at 390px hero and on
+  `/product/?handle=<any real handle>`, unclipped; desktop hero unchanged.
+
+### P6 — robots.txt
+Add `public/robots.txt` (homepage project's public dir):
+```
+User-agent: *
+Allow: /
+```
+No sitemap this pass — deliberate skip for a 4-page site.
+- **Done when:** `dist/robots.txt` exists after build; build + check green;
+  nothing else changed.
+
+### Out of scope for Codex (operator/Ben actions, recorded here)
+- Shopify admin: confirm the Storefront token's scopes are read-only.
+- Shopify admin: refund-policy text has a stray `]` after "NY 10012".
+- `public/preorders/images/fam-tatoo.jpg` (repo root) is untracked AND
+  unreferenced — operator decides commit-or-delete; Codex must not touch it.
+- `WebSA.md` relocated to the Studio vault by Claude (business doc, wrong repo).
 
 ---
 
