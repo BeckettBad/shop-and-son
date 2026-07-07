@@ -68,10 +68,10 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — Q5b @ 25a93fd committed + verified (mobile
-> cards to 1px hairline). Frame system final state: desktop cards 2px /
-> product 3px; mobile cards 1px / product 2px. Awaiting operator verify of
-> Q2–Q5b.**
+> **ACTIVE SUB-TASK: (none) — PHASE Q SHIPPED LIVE 2026-07-07 (PR #15,
+> deploy green, live CSS verified). Q1 indent shipped earlier via PR #13.
+> Final frame hierarchy: desktop cards 2px / product 3px; mobile cards 1px /
+> product 2px; catalog 3-across desktop / 2-across mobile.**
 >
 > **Q5 spec.** Make the catalog-card + product-view neon frame system
 > universal across viewports, proportioned for mobile:
