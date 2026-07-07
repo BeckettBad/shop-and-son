@@ -47,6 +47,8 @@ interface StorefrontCollectionProduct {
   };
 }
 
+type StorefrontPredictiveSearchProduct = StorefrontCollectionProduct;
+
 interface StorefrontMenuItemRaw {
   title: string;
   url: string | null;
@@ -317,6 +319,53 @@ export async function getCollection(handle: string, first = 250): Promise<Collec
   }
 }
 
+const PRODUCT_SEARCH_QUERY = /* GraphQL */ `
+  query ProductSearch($query: String!, $first: Int!) {
+    products(first: $first, query: $query) {
+      nodes {
+        handle
+        title
+        vendor
+        availableForSale
+        featuredImage {
+          url
+          altText
+          width
+          height
+        }
+        priceRange {
+          minVariantPrice {
+            amount
+            currencyCode
+          }
+        }
+      }
+    }
+  }
+`;
+
+interface ProductSearchQueryData {
+  products: {
+    nodes: StorefrontCollectionProduct[];
+  };
+}
+
+export async function searchProducts(query: string, first = 24): Promise<CatalogProduct[]> {
+  const searchQuery = query.trim();
+  if (!isStorefrontConfigured || !searchQuery) return [];
+
+  try {
+    const requestedFirst = Number.isFinite(first) ? first : 24;
+    const data = await storefrontFetch<ProductSearchQueryData>(PRODUCT_SEARCH_QUERY, {
+      query: searchQuery,
+      first: Math.max(1, Math.min(requestedFirst, 250)),
+    });
+    return data?.products.nodes.map(mapCatalogProduct) ?? [];
+  } catch {
+    return [];
+  }
+}
+
 const MENU_QUERY = /* GraphQL */ `
   query Menu($handle: String!) {
     menu(handle: $handle) {
@@ -344,6 +393,51 @@ export async function getMenu(handle: string): Promise<StorefrontMenuItem[]> {
   try {
     const data = await storefrontFetch<MenuQueryData>(MENU_QUERY, { handle });
     return data?.menu?.items.map(mapMenuItem) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+const PREDICTIVE_SEARCH_QUERY = /* GraphQL */ `
+  query PredictiveSearch($query: String!) {
+    predictiveSearch(query: $query, limit: 8, types: [PRODUCT]) {
+      products {
+        handle
+        title
+        vendor
+        availableForSale
+        featuredImage {
+          url
+          altText
+          width
+          height
+        }
+        priceRange {
+          minVariantPrice {
+            amount
+            currencyCode
+          }
+        }
+      }
+    }
+  }
+`;
+
+interface PredictiveSearchQueryData {
+  predictiveSearch: {
+    products: StorefrontPredictiveSearchProduct[];
+  } | null;
+}
+
+export async function predictiveSearch(query: string): Promise<CatalogProduct[]> {
+  const searchQuery = query.trim();
+  if (!isStorefrontConfigured || !searchQuery) return [];
+
+  try {
+    const data = await storefrontFetch<PredictiveSearchQueryData>(PREDICTIVE_SEARCH_QUERY, {
+      query: searchQuery,
+    });
+    return data?.predictiveSearch?.products.map(mapCatalogProduct) ?? [];
   } catch {
     return [];
   }

@@ -172,7 +172,81 @@ Operator fine-tunes on dev.
 **After C8:** stop; report 8 hashes + verify results to operator. No push, no
 PR until an explicit "ship" (and PR #9 must merge first).
 
-## PHASE SRCH — product search (PROPOSED 2026-07-06 — awaiting operator approval; do NOT start)
+## PHASE SRCH — product search (APPROVED 2026-07-06 — operator's REVISED picks: thin MAGNIFIER GLYPH trigger matching the bag's line weight · suggestion rows WITH small thumbnails · empty query shows nothing. Everything must match the site's style/taste and be implemented efficiently + thoroughly.)
+
+Scope: homepage/ only, on dev (PERF shipped to main via PR #10 first), one
+focused commit per sub-task, build+check green each, NO push until ship.
+Desktop-first: hide the whole feature ≤760px (mobile placement joins the
+mobile round). Design tokens: lowercase mono utility voice, green-only
+affordance (no underline states beyond the input rule), menu-drawer easing.
+
+**SRCH-C1 — trigger + slide-out input.** HeroVideo.astro + global.css.
+Markup inside .hero-video next to the cart: `<div class="hero__search"
+data-search>` with `<button class="hero__search-toggle" data-search-toggle
+type="button" aria-label="search">…magnifier svg…</button>` — the trigger is
+a THIN MAGNIFIER GLYPH, not a word: inline SVG viewBox 0 0 20 20, circle +
+angled handle, `stroke="currentColor" fill="none" stroke-width:~1.5` sized
+~20-22px so its optical line weight matches the bag icon beside it
+(the bag is the 20×20 icon-bag path — eyeball-match the weight); ink color,
+green on hover/open like the bag's hover — and `<input class="hero__search-input"
+data-search-input type="text" placeholder="search…" aria-label="search
+products" autocomplete="off">`. Position: absolute, same top as the cart
+(top:5vh), right: calc(2.25vw + 56px) so it sits LEFT of the bag with a
+clean gap; z-index 5. Behavior: toggle click → `.is-open` on .hero__search →
+input slides out leftward width 0→~190px (.3s, the menu-drawer cubic-bezier),
+focus; toggle turns green while open; Esc closes+clears; click-away with
+empty input closes; `/` keypress opens+focuses (ONLY when no input/textarea
+is focused and the cart drawer is closed). Styling: toggle 12px lowercase
+mono ink→green hover; input bare with 1px bottom border ink, 12px mono
+lowercase, muted placeholder. VISIBILITY: mirror the cart's stage show/hide
+rules exactly (hidden on is-catalog/is-preorder/is-product desktop states,
+same transition); display:none ≤760px. Reduced-motion: no slide animation.
+No data wiring yet. Done when: corner reads `[magnifier]  [bag]` with matched
+line weights, opens/closes per above, all stage/menu behavior untouched.
+
+**SRCH-C2 — instant local suggestions.** HeroVideo.astro (+ a small module if
+cleaner). Build one in-memory index at init from the catalogue data the page
+already carries (the build-time snapshot products used by the catalogue —
+flatten across collections, dedupe by handle; fields: handle/title/vendor/
+price/image). On input (every keystroke, no debounce): lowercase substring
+match over title+vendor; up to 6 rows in `<div class="hero__search-suggest">`
+below the input, right-aligned, width ~340px: row = SMALL THUMBNAIL at left
+(40×40, the product's snapshot image via getSizedShopifyImageUrl at a small
+width (~120) if available — object-fit:cover, no border-radius, 1px ink
+border matching the site's card language; loading=lazy decoding=async) then
+title (ellipsized) + `vendor · $price` muted meta; hover green on the title; ArrowUp/Down walk rows
+(aria-activedescendant or .is-active class), Enter opens the active row,
+click opens the row: → the EXISTING product stage via the same openProduct
+path (pushState ?product=…), and fire prefetchProduct(handle) on row
+pointerenter (PERF cache). Empty input → no rows (approved). Esc clears rows
+then closes. Done when: typing "sock"/"vase" shows instant rows with zero
+network; row click lands in the product stage; keyboard path works.
+
+**SRCH-C3 — Storefront predictive merge.** storefront-client.ts: add
+`predictiveSearch(query)` using the same GraphQL client (Storefront
+`predictiveSearch` query, products only, first 8; fields handle/title/vendor/
+price range/featured image; map through the existing mapper conventions +
+getSizedShopifyImageUrl). In the search UI: debounce 250ms after local rows
+render; merge results deduped by handle (local first, predictive appended up
+to the 6-row cap... if a predictive hit ranks an exact-title match, fine to
+just dedupe+append — keep it simple); ANY api failure = silent local-only
+(no error UI — the site's degradation pattern). Done when: a query matching a
+product NOT in the snapshot (verify live) appears after ~250ms; api blocked
+→ local rows unaffected.
+
+**SRCH-C4 — results stage + deep link.** Enter on a free query (no active
+row) or a final `all results for "q" →` row opens a SEARCH results stage:
+reuse the catalogue panel + renderer (renderCatalogRows/header machinery)
+with title `SEARCH — "q" (n)`; data = local index filter merged with a
+Storefront full `search` (or predictiveSearch first 24) deduped by handle;
+sold-out/prefetch/in-site links come free. URL sync `?search=q` mirroring the
+?product pattern (pushState, popstate, direct-load opens the stage,
+strip-on-close); × closes to bare hero; opening it closes other stages the
+standard way; menu-over-stage hides it state-preserved (MOB-2 selector family
+— add the stage class to those lists). Done when: enter shows the grid with
+count, deep link works cold, back button behaves, menu interplay clean.
+
+
 
 Proposal drafted + interactive mock published to the operator. Concept: a quiet
 lowercase-mono `search` word left of the bag → slide-out underlined input
@@ -184,6 +258,121 @@ Plan: SRCH-C1 trigger+input · C2 local suggestions · C3 predictive merge ·
 C4 results stage. Desktop first; mobile placement joins the mobile round.
 Awaiting Ben's three taste picks: word-vs-icon trigger, text-only-vs-thumbnail
 rows, empty-query behavior.
+
+**CAROUSEL-CONTROLS (one-off, operator-directed 2026-07-06) — a0ca7ec — universal control placement — build:green check:green.** product-view.ts + global.css: frame now derives its aspect (and width, via min(galleryWidth, maxHeight×aspect)) from the ACTIVE slide's image — frame edge == image edge for any asset; arrows inset 16px from the image edges at mid-height, counter 12px in the image's bottom-right; controls not rendered at all when images.length < 2 (incl. seed/loading path); Phase-K viewport-fit intact. VERIFIED matrix: portrait 512×768 + landscape 512×342 both insets 16/16 + counter 12,12 + arrowMidY 0; cross-ratio arrowing holds 16; single-image ufo-tumbler renders zero controls; mobile landscape inset 16; no page scroll. Not pushed.
+
+**PHASE N2 STATUS: COMMITTED ON DEV (2026-07-06) — fc7d8ce — verified. NOT pushed.**
+- Animated cart+search pair: desktop order SWAPPED to cart-left/search-right (search takes the corner, 32px inset); desktop cart-hide rules on panel stages RETIRED — pair always visible, sliding over by --hero-icon-stage-clearance on panel-stage entry (.55s ease-in-out, 80ms stagger: search leads in, cart follows; delays invert on exit) sitting 12px clear of the ×; mobile pair stacked vertical, translateY choreography; reduced-motion settles in place. Verified 1440 (rest + catalog: bag visible, pair clear of ×, order correct, hero scroll 0) + 380 (stacked, no overflow). FLAG for operator: pair-to-× gap is 12px — snug; one variable to widen.
+
+**PHASE M2 STATUS: COMPLETE ON DEV (2026-07-06) — 4 commits + 2 fixes, all verified 380px + desktop 1440. NOT pushed.**
+- M2-C1 — a8a133d — mobile headers cluster on top (display:contents + order), open panel below; desktop column untouched (82px line verified).
+- M2-C2 — 10de952 — stencil fades under expanded non-stage sections (mobile), restores on collapse; stage-exit transform preserved.
+- M2-C3 — fce17be (amended) — search surfaced ≤760px: magnifier below the bag (matched 22px glyph/40px box), same toggleSearch machinery, live search stage works from mobile; header row clearance 112px (headers 28px clear of bag).
+- M2-C4 — 5cc7757 — catalogue 2-col at ALL phone widths (420px 1fr override removed), title 12px/meta 10.5px, smooth scroll intact.
+- FIX — 0ca5d0c — open panel escapes the header clearance (negative margins): full inner width (350/350 @380), no overflow.
+- **HOTFIX — 56fab28 — PRODUCTION BUG (live on main too, predates M2/SRCH): opening a catalog on desktop scrolled .hero-video 82px left (menu flush to edge, dead right band). Fixed: overflow:hidden→clip + scrollLeft/Top reset in transitionToStage. Verified: catalog + product stages hold menu at x=82, scrollLeft 0. Ships with this batch and fixes live behavior.**
+
+## PHASE N2 — animated cart+search icon pair (operator 2026-07-06; logged N2 — Phase N shipped Jul 2). QUEUED — dispatch ONLY after M2-C3/C4 land (same files).
+
+Intent (operator; judgment granted on structure/selectors/timing/distances):
+the cart and search icons read as ONE coordinated pair, top-right, ALWAYS
+visible at rest in every state (this RETIRES the desktop cart-hide rules on
+is-catalog/is-search/is-product/is-preorder — the × keeps the extreme corner
+on panel stages, the pair sits gracefully beside/clear of it). Whenever a
+panel stage fills the page (catalog/search/product/preorder) the pair
+animates as a flourish IN SYNC with the .55s stage transitions: search
+settles in from the ×/close area, cart follows into place beside it
+(staggered ~60-90ms); reversing on stage exit. FIXED decisions: desktop pair
+is horizontal, CART LEFT, SEARCH RIGHT (search nearest the corner — note
+this SWAPS the current desktop order); mobile pair animates vertically (up
+off the top / back down) — mobile stack from M2-C3 stays search-below-cart
+unless vertical choreography reads better flipped (judgment). Function
+unchanged (drawer, live search). prefers-reduced-motion: settle in place
+(opacity), no slide. Feel: the site's existing motion language, not a
+separate effect. ONE commit, build+check green, verify desktop 1440 +
+mobile 380 across landing/catalog/product/music transitions.
+
+Log:
+- 2026-07-06 — PHASE N2 animated cart+search icon pair — build:green check:green — desktop pair swapped to cart-left/search-right with panel-stage clearance; mobile stack animates vertically; browser geometry verified at 1440×900 and 380×844.
+
+## PHASE M2 — MOBILE-ONLY pass (operator 2026-07-06; logged M2 — Phase M/film shipped Jul 1)
+
+HARD RULE: every change gated to the mobile sheet (~max-width:760px); desktop
+visually unchanged — verify BOTH after every commit (mobile at ~380px wide,
+desktop at 1440). homepage/ only, dev, one commit each, build+check green.
+NOTE current mobile state: menu is ALREADY centered wrapping rows (Wave
+Mobile); an open section's panel currently renders INSIDE its section box and
+reflows the rows — C1 fixes that. PRE-ORDER is gone (4 headers). Search is
+currently display:none ≤760px — C3 surfaces it.
+
+**M2-C1 — headers cluster on top; open panel full-width below.** Mobile only:
+the four section headers (CLOTHES/OBJECTS/MUSIC/& FAM) form a wrapping row(s)
+pinned at the top of the menu, ALWAYS clustered together; the open section's
+panel renders BELOW the header rows at FULL width. Suggested mechanism (CSS
+only, mobile-gated): `.hero__menu-section{display:contents}` so header+panel
+become direct flex items of the wrapping `.hero__menu`; all
+`.hero__menu-header{order:0}` and `.hero__menu-panel{order:1; flex-basis:100%;
+width:100%; max-width:none}` — headers cluster first, the (single) open panel
+wraps to its own full-width line beneath. Neutralize the mobile
+`.hero__menu-break` (display:none ≤760px) so the 4 headers wrap naturally;
+keep them clear of the top-right icon stack (existing max-width clearance —
+retune if needed). Verify menu handlers (open/close, subgroups, MOB-2
+stage-hide selectors that reference .hero__menu-section.is-open) still work —
+display:contents changes layout only, not the DOM. Desktop untouched.
+
+**M2-C2 — hide the stencil under an expanded menu (mobile).** ≤760px: when a
+NON-stage section is open (`:has(.hero__menu-section.is-open:not([data-music
+="true"]):not([data-fam="true"]))` family — same pattern as the existing
+mobile hide rules), fade `.hero__stencil` out (opacity/visibility, ~.25s,
+reduced-motion: none) so the expanded shopping menu reads clean; restore on
+collapse/landing. Desktop stencil untouched.
+
+**M2-C3 — mobile search icon below the cart, same machinery.** ≤760px: remove
+`display:none` on `.hero__search`; position the EXISTING magnifier toggle
+(data-search-toggle → toggleSearch — the same live-search build) as a glyph
+directly BELOW the bag at top-right, matching the bag's size/weight (22px
+glyph in a 40px tap box, same color/hover). The input opens leftward from
+that spot (width ~min(200px, 58vw)); the live results stage (is-search →
+catalogue panel) already works on mobile. Ensure: no collision between the
+2-icon stack and the header rows at 380px (retune row clearance/top offsets
+as needed); the mobile stage-hide rules that hide .hero__cart on catalog/
+product/etc must NOT hide search (search stays reachable at all times —
+that's the point); scope chip/status positioning sane on mobile (chip may
+wrap under the input). Flag anything ambiguous for the operator.
+
+**M2-C4 — mobile catalogue grid: 2 columns, larger cards.** ≤760px: the
+catalogue grid stays/becomes 2 columns at ALL phone widths — REMOVE the
+`@media(max-width:420px){.hero__catalog-track{grid-template-columns:1fr}}`
+override so ~380px shows 2-up; tune gap + card type (title ~12px, vendor/
+price ~10.5px) so cards read larger and cleaner; keep the continuous smooth
+scroll + scroll-restore + content-visibility intact. Desktop 4-up untouched.
+
+**After C4:** report 4 hashes + verify results (mobile 380 + desktop-unchanged
+checks per commit). NO push/PR until operator ship.
+
+### SRCH ROUND 2 (operator 2026-07-06): live full-panel results + always-available scoped search
+Research-informed (Baymard search-within-category study: 94% of sites lack it, avoid unintentional scope-jumping, zero-results must fall back to all-category matches; NN/g Scoped Search: default scope ALL, strong visible scope labeling at box + results, one-click escape to site-wide, unscoped path as the first suggestion; users refine AFTER seeing results). Desktop; mobile still hidden pending the mobile round.
+
+**SRCH-C5 — live full-panel results (the dropdown dies).** Typing (debounced ~250ms; local index renders instantly, predictive merges in) drives the EXISTING `is-search` catalogue-panel stage LIVE — the results grid IS the suggestion surface (massively larger, right-hand side). Remove the small `.hero__search-suggest` dropdown entirely. Title `SEARCH — "q" (n)` updates per keystroke; count announced via aria-live polite. Input keeps focus + query while the stage updates; Enter is a no-op commit; Esc with text clears query (stage closes back to prior state); × on the panel closes stage and search. ?search= URL sync stays (replaceState per keystroke, not pushState spam — one history entry per search session). ALSO: search becomes ALWAYS VISIBLE on desktop — remove its stage-hide mirror of the cart; its corner slot composition: glyph left, right neighbor = bag (landing/music/fam/film) or the stage × (catalog/product/preorder — × already occupies the cart's spot on those stages, same footprint, no collision; verify visually).
+
+**SRCH-C6 — scoped search within an open folder.** If a catalogue collection stage is open (or a product stage with a saved return-point collection) when the user searches: scope = THAT collection. Requirements (NN/g/Baymard compliance): (a) scope LOUDLY labeled: panel title `SEARCH IN <COLLECTION LABEL> — "q" (n)` AND a small scope chip right of the input (lowercase mono, e.g. `in: clothes — shop all ×`) whose × drops scope to all with one click; (b) an always-present escape row in the panel head: `search all products →` re-runs unscoped; (c) ZERO results in scope → NO dead end: render the message `nothing matches "q" in <label>` in site voice + automatically show all-products matches beneath a `more like this — all products` heading; (d) clearing the query / Esc restores the folder's full listing EXACTLY (rows kept alive, scroll reset OK); (e) opened from bare hero → scope ALL (default-all rule). Scope encoded in URL (?search=q&scope=handle) for deep links + popstate.
+
+**SRCH-C7 — matching quality + a11y polish (production-grade).** Local index: case + diacritic folding (NFD strip), rank title word-prefix > title substring > vendor match, stable order; predictive results merge AFTER local ranking, dedupe by handle. Input: autocomplete=off spellcheck=false; combobox-lite a11y (aria-expanded on the search wrapper, aria-controls the panel, aria-live count). No behavior change otherwise.
+
+**SRCH ROUND 2 STATUS: ALL 3 COMMITTED ON DEV (2026-07-06) — verified end-to-end. NOT pushed.**
+- SRCH-C7 — 947b3b0 — diacritic/case folding + prefix>substring>vendor ranking + combobox-lite a11y.
+- SRCH-C6 — 519aa08 — scoped search: SearchScope from active collection/product return-point; title `SEARCH IN <LABEL> — "q" (n)` + chip `in: <label> ×` + `search all products →` row; zero-in-scope → "more like this — all products" fallback grid; ?search=&scope= URL; clear/Esc restores folder exactly.
+- SRCH-C5 — 930f507 — dropdown deleted; typing drives the is-search panel LIVE (instant local + debounced merge), one history entry per session (push-then-replace, session return URL), aria-live count, search always visible on desktop.
+- VERIFIED (1440×900): live "sock"(12)→"socks in black"(2); Esc-with-text clears+closes; CLOTHES-scoped "linen"(34) w/ chip+escape+URL scope; "vase"(0-in-scope) → more-like-this 9 cards; escape→all(9); clear→CLOTHES—SHOP ALL restored; cold deep link ?search=linen&scope=clothing-1 correct.
+
+**PHASE SRCH STATUS: ALL 4 COMMITTED ON DEV (2026-07-06) — ready for operator verify. NOT pushed. (PERF shipped separately via PR #10 @ 56650bc before SRCH began.)**
+
+**Log (build:green check:green each):**
+- SRCH-C4 — 1eea848 — results stage `is-search` reusing catalogue panel/renderer; title `SEARCH — "q" (n)`; ?search= URL sync (pushState/popstate/direct-load/strip-on-close). Verified: enter → 39-card grid for "linen"; cold deep-link ?search=vase → 17 cards.
+- SRCH-C3 — df90a7a — Storefront predictiveSearch (first 8, mapped + sized images) debounced 250ms, deduped by handle after local rows; silent local-only on failure. Verified: 0 graphql before debounce, fires after.
+- SRCH-C2 — cd9acbc — instant local suggestions from the flattened snapshot index: 6 rows + all-results row, 40px bordered thumbnails, keyboard nav (arrows/enter), row click → product stage, prefetchProduct on row hover, empty = nothing.
+- SRCH-C1 — de23a16 (amended from 0dd0339 per operator's revised pick) — thin magnifier glyph (20×20 stroke 1.5 currentColor, weight-matched to icon-bag), green hover/open; slide-out underlined input (.3s), Esc / click-away / `/` shortcut; mirrors cart stage-visibility; display:none ≤760px (mobile round places it).
+- Operator's final picks: magnifier glyph · thumbnail rows · empty shows nothing.
 
 ## PHASE PERF — image/product loading speed (operator-approved, 2026-07-06)
 

@@ -23,16 +23,30 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 // Block 1 — desktop: vertical left menu; mobile: horizontal tabs over fullscreen video.
 ---
 <section class="block hero-video" id="hero">
-  <button type="button" class="hero__cart" data-cart-toggle aria-label="Cart">
-    <svg focusable="false" class="icon icon-bag" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 viewBox="0 0 20 20" style="enable-background:new 0 0 24 24;" xml:space="preserve">
-<path fill="currentColor" d="M17.200012,5.519043h-3.573059V4.60791c0-2-1.626953-3.626953-3.626953-3.626953S6.373047,2.60791,6.373047,4.60791
-	v0.911133H2.799988L1,18.519043h18L17.200012,5.519043z M7.373047,4.60791c0-1.44873,1.178223-2.626953,2.626953-2.626953
-	c1.448242,0,2.626953,1.178223,2.626953,2.626953v0.911133H7.373047V4.60791z M3.671082,6.519043h2.701965v1h1v-1h5.253906v1h1v-1
-	h2.701965l1.523071,11H2.14801L3.671082,6.519043z"/>
-</svg>
-    <span class="hero__cart-count" data-cart-count hidden></span>
-  </button>
+  <div class="hero__icon-pair" data-hero-icon-pair>
+    <button type="button" class="hero__cart" data-cart-toggle aria-label="Cart">
+      <svg focusable="false" class="icon icon-bag" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+        viewBox="0 0 20 20" style="enable-background:new 0 0 24 24;" xml:space="preserve">
+  <path fill="currentColor" d="M17.200012,5.519043h-3.573059V4.60791c0-2-1.626953-3.626953-3.626953-3.626953S6.373047,2.60791,6.373047,4.60791
+    v0.911133H2.799988L1,18.519043h18L17.200012,5.519043z M7.373047,4.60791c0-1.44873,1.178223-2.626953,2.626953-2.626953
+    c1.448242,0,2.626953,1.178223,2.626953,2.626953v0.911133H7.373047V4.60791z M3.671082,6.519043h2.701965v1h1v-1h5.253906v1h1v-1
+    h2.701965l1.523071,11H2.14801L3.671082,6.519043z"/>
+  </svg>
+      <span class="hero__cart-count" data-cart-count hidden></span>
+    </button>
+
+    <div class="hero__search" data-search role="combobox" aria-expanded="false" aria-controls="hero-search-results">
+      <button class="hero__search-toggle" data-search-toggle type="button" aria-label="search">
+        <svg class="hero__search-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+          <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" fill="none" stroke-width="1.5" />
+          <path d="M12.5 12.5L17 17" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" />
+        </svg>
+      </button>
+      <button class="hero__search-scope-chip" data-search-scope-chip type="button" hidden></button>
+      <input class="hero__search-input" data-search-input type="text" placeholder="search…" aria-label="search products" autocomplete="off" spellcheck="false" />
+      <span class="hero__search-status" data-search-status aria-live="polite" aria-atomic="true"></span>
+    </div>
+  </div>
 
   <video
     class="hero-video__media hero-video__media--desktop"
@@ -219,9 +233,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
         <span class="hero__catalog-description-separator" data-catalog-description-separator hidden>—</span>
         <span class="hero__catalog-description" data-catalog-description hidden></span>
       </h2>
+      <button type="button" class="hero__search-all-row" data-search-all-row hidden>search all products →</button>
       <button type="button" class="hero__catalog-close" data-catalog-close aria-label="Close catalogue">&times;</button>
     </div>
-    <div class="hero__catalog-viewport" data-catalog-viewport>
+    <div class="hero__catalog-viewport" data-catalog-viewport id="hero-search-results">
       <div class="hero__catalog-track" data-catalog-track></div>
     </div>
   </aside>
@@ -274,7 +289,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 <script>
   import { getLiveHeroMenu, type LiveHeroMenuEntry } from "../../lib/menu";
   import { mountProductView, type ProductImageSeed } from "../../lib/product-view";
-  import { getCollection, prefetchProduct, type CollectionDetail } from "../../lib/storefront-client";
+  import { getCollection, predictiveSearch, prefetchProduct, type CollectionDetail } from "../../lib/storefront-client";
 
   interface CatalogProduct {
     handle: string;
@@ -313,6 +328,12 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const filmClose = hero?.querySelector<HTMLButtonElement>("[data-film-close]");
   const filmOpen = hero?.querySelector<HTMLButtonElement>("[data-film-open]");
   const famPanel = hero?.querySelector<HTMLElement>(".hero__fam");
+  const search = hero?.querySelector<HTMLElement>("[data-search]");
+  const searchToggle = hero?.querySelector<HTMLButtonElement>("[data-search-toggle]");
+  const searchScopeChip = hero?.querySelector<HTMLButtonElement>("[data-search-scope-chip]");
+  const searchInput = hero?.querySelector<HTMLInputElement>("[data-search-input]");
+  const searchStatus = hero?.querySelector<HTMLElement>("[data-search-status]");
+  const searchAllRow = hero?.querySelector<HTMLButtonElement>("[data-search-all-row]");
   const catalogDataNode = hero?.querySelector<HTMLScriptElement>("#catalog-data");
   const heroMenuElement = hero?.querySelector<HTMLElement>(".hero__menu");
   const menuSections = hero ? Array.from(hero.querySelectorAll<HTMLElement>("[data-hero-dropdown]")) : [];
@@ -322,17 +343,37 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const preorderDesktopWidth = 1160;
   const stageDuration = 550;
   const fallbackCardAspect = 0.75;
+  const searchPredictiveDelayMs = 250;
   const liveCollectionCache = new Map<string, Promise<CollectionDetail | null>>();
   let filmHasStarted = false;
   let stencilReturnCleanup: (() => void) | undefined;
   let stageCleanup: ReturnType<typeof window.setTimeout> | undefined;
-  type HeroStage = "landing" | "catalog" | "product" | "preorder" | "music" | "film" | "fam";
-  type PanelStage = "catalog" | "product" | "preorder" | "music" | "film" | "fam";
-  interface SavedCatalog {
+  type HeroStage = "landing" | "catalog" | "search" | "product" | "preorder" | "music" | "film" | "fam";
+  type PanelStage = "catalog" | "search" | "product" | "preorder" | "music" | "film" | "fam";
+  interface SavedCatalogReturn {
+    stage: "catalog";
     collection: string;
     label: string;
     scrollTop: number;
   }
+  interface SavedSearchReturn {
+    stage: "search";
+    query: string;
+    products: CatalogProduct[];
+    fallbackProducts: CatalogProduct[];
+    scope: SearchScope | null;
+    scrollTop: number;
+  }
+  interface SearchScope {
+    collection: string;
+    label: string;
+  }
+  type SavedStageReturn = SavedCatalogReturn | SavedSearchReturn;
+  type SearchSessionReturn =
+    | { stage: "landing" }
+    | SavedCatalogReturn
+    | { stage: "product"; handle: string }
+    | { stage: "preorder" | "music" | "film" | "fam" };
   interface OpenProductOptions {
     saveReturnPoint?: boolean;
     seedImage?: ProductImageSeed;
@@ -340,8 +381,63 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   let activeStage: HeroStage = "landing";
   let activeProductHandle: string | null = null;
-  let savedCatalog: SavedCatalog | null = null;
+  let savedStageReturn: SavedStageReturn | null = null;
   let catalogScrollRestoreSequence = 0;
+  let searchPredictiveTimer: ReturnType<typeof window.setTimeout> | undefined;
+  let searchPredictiveSequence = 0;
+  let activeSearchQuery = "";
+  let renderedSearchProducts: CatalogProduct[] = [];
+  let renderedSearchFallbackProducts: CatalogProduct[] = [];
+  let activeSearchScope: SearchScope | null = null;
+  let searchStageSequence = 0;
+  let searchSessionReturn: SearchSessionReturn | null = null;
+  let searchSessionReturnUrl: URL | null = null;
+  let searchSessionHasHistoryEntry = false;
+
+  const isCartOpen = () => document.querySelector(".cart-drawer")?.classList.contains("is-open") ?? false;
+
+  const setSearchResultsExpanded = (isExpanded: boolean) => {
+    search?.setAttribute("aria-expanded", String(isExpanded));
+  };
+
+  const openSearch = () => {
+    if (!search || !searchInput) return;
+
+    search.classList.add("is-open");
+    window.requestAnimationFrame(() => {
+      searchInput.focus();
+      updateLiveSearchFromInput();
+    });
+  };
+
+  const closeSearch = (clearInput = false) => {
+    if (!search || !searchInput) return;
+
+    search.classList.remove("is-open");
+    setSearchResultsExpanded(false);
+    if (clearInput) {
+      searchInput.value = "";
+    }
+    clearPredictiveSearch();
+    searchStatus?.replaceChildren();
+  };
+
+  const toggleSearch = () => {
+    if (search?.classList.contains("is-open")) {
+      closeSearch();
+      return;
+    }
+
+    openSearch();
+  };
+
+  const hasTextInputFocus = () => {
+    const activeElement = document.activeElement;
+    if (!(activeElement instanceof HTMLElement)) return false;
+
+    const tagName = activeElement.tagName.toLowerCase();
+    return tagName === "input" || tagName === "textarea" || activeElement.isContentEditable;
+  };
 
   const parseCatalogData = (): Record<string, CatalogProduct[]> => {
     try {
@@ -352,6 +448,120 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   };
 
   const catalogData = parseCatalogData();
+  const searchIndexByHandle = new Map<string, CatalogProduct>();
+  Object.values(catalogData).forEach((products) => {
+    products.forEach((product) => {
+      if (!product.handle || searchIndexByHandle.has(product.handle)) return;
+
+      searchIndexByHandle.set(product.handle, product);
+    });
+  });
+  const searchIndex = Array.from(searchIndexByHandle.values());
+
+  const normalizeSearchText = (value: string) =>
+    value
+      .trim()
+      .toLocaleLowerCase("en-US")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+  const getTitleWords = (title: string) => normalizeSearchText(title).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+
+  const getSearchMatchRank = (product: CatalogProduct, normalizedQuery: string) => {
+    const normalizedTitle = normalizeSearchText(product.title);
+    const normalizedVendor = normalizeSearchText(product.vendor);
+
+    if (getTitleWords(product.title).some((word) => word.startsWith(normalizedQuery))) return 0;
+    if (normalizedTitle.includes(normalizedQuery)) return 1;
+    if (normalizedVendor.includes(normalizedQuery)) return 2;
+
+    return Number.POSITIVE_INFINITY;
+  };
+
+  const getScopeProducts = (scope: SearchScope | null) => (scope ? (catalogData[scope.collection] ?? []) : searchIndex);
+
+  const getSearchMatches = (query: string, limit = Number.POSITIVE_INFINITY, scope: SearchScope | null = null) => {
+    const normalizedQuery = normalizeSearchText(query);
+    if (!normalizedQuery) return [];
+
+    const matches = getScopeProducts(scope)
+      .map((product, index) => ({ product, index, rank: getSearchMatchRank(product, normalizedQuery) }))
+      .filter((match) => Number.isFinite(match.rank))
+      .sort((a, b) => a.rank - b.rank || a.index - b.index)
+      .map((match) => match.product);
+    return Number.isFinite(limit) ? matches.slice(0, limit) : matches;
+  };
+
+  const mergeSearchResults = (
+    localProducts: CatalogProduct[],
+    predictiveProducts: CatalogProduct[],
+    limit = Number.POSITIVE_INFINITY,
+  ) => {
+    const seenHandles = new Set<string>();
+    const mergedProducts: CatalogProduct[] = [];
+
+    const appendProduct = (product: CatalogProduct) => {
+      if (!product.handle || seenHandles.has(product.handle) || mergedProducts.length >= limit) return;
+
+      seenHandles.add(product.handle);
+      mergedProducts.push(product);
+    };
+
+    localProducts.forEach(appendProduct);
+    predictiveProducts.forEach(appendProduct);
+
+    return mergedProducts;
+  };
+
+  const clearPredictiveSearch = () => {
+    searchPredictiveSequence += 1;
+    if (!searchPredictiveTimer) return;
+
+    window.clearTimeout(searchPredictiveTimer);
+    searchPredictiveTimer = undefined;
+  };
+
+  const getCollectionHandleSet = (collection: string) =>
+    new Set((catalogData[collection] ?? []).map((product) => product.handle).filter(Boolean));
+
+  const schedulePredictiveSearch = (query: string, localProducts: CatalogProduct[], scope: SearchScope | null) => {
+    const normalizedQuery = normalizeSearchText(query);
+    clearPredictiveSearch();
+    if (!normalizedQuery) return;
+
+    const requestSequence = searchPredictiveSequence;
+    searchPredictiveTimer = window.setTimeout(() => {
+      searchPredictiveTimer = undefined;
+      predictiveSearch(query)
+        .then((predictiveProducts) => {
+          const currentQuery = normalizeSearchText(searchInput?.value ?? "");
+          if (
+            requestSequence !== searchPredictiveSequence ||
+            currentQuery !== normalizedQuery ||
+            activeStage !== "search" ||
+            activeSearchQuery !== normalizedQuery
+          ) return;
+
+          if (scope) {
+            const scopeHandles = getCollectionHandleSet(scope.collection);
+            const predictiveScopedProducts = predictiveProducts.filter((product) => scopeHandles.has(product.handle));
+            const mergedScopedProducts = mergeSearchResults(localProducts, predictiveScopedProducts);
+            const fallbackProducts =
+              mergedScopedProducts.length === 0
+                ? mergeSearchResults(getSearchMatches(query), predictiveProducts)
+                : [];
+            renderSearchGrid(query.trim(), mergedScopedProducts, getCatalogScrollTop(), { scope, fallbackProducts });
+            return;
+          }
+
+          const mergedProducts = mergeSearchResults(localProducts, predictiveProducts);
+          renderSearchGrid(query.trim(), mergedProducts, getCatalogScrollTop(), { scope: null });
+        })
+        .catch(() => {
+          // Search degrades to the already-rendered local grid.
+        });
+    }, searchPredictiveDelayMs);
+  };
 
   const getProductHref = (handle: string) => {
     const base = BASE.replace(/\/$/, "");
@@ -366,6 +576,20 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     return url;
   };
 
+  const getHomepageSearchUrl = (query: string, scope: SearchScope | null = null) => {
+    const url = new URL(location.href);
+    url.pathname = BASE;
+    url.searchParams.delete("product");
+    url.searchParams.set("search", query.trim());
+    if (scope?.collection) {
+      url.searchParams.set("scope", scope.collection);
+    } else {
+      url.searchParams.delete("scope");
+    }
+    url.hash = "";
+    return url;
+  };
+
   const prefetchCatalogProduct = (handle: string) => {
     if (!handle) return;
     void prefetchProduct(handle);
@@ -373,11 +597,24 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   const getCurrentProductParam = () => new URL(location.href).searchParams.get("product");
 
+  const getCurrentSearchParam = () => new URL(location.href).searchParams.get("search");
+
+  const getCurrentSearchScopeParam = () => new URL(location.href).searchParams.get("scope");
+
   const stripProductParamFromUrl = () => {
     const url = new URL(location.href);
     if (!url.searchParams.has("product")) return;
 
     url.searchParams.delete("product");
+    history.replaceState(null, "", url);
+  };
+
+  const stripSearchParamFromUrl = () => {
+    const url = new URL(location.href);
+    if (!url.searchParams.has("search") && !url.searchParams.has("scope")) return;
+
+    url.searchParams.delete("search");
+    url.searchParams.delete("scope");
     history.replaceState(null, "", url);
   };
 
@@ -468,6 +705,49 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       button.classList.toggle("is-active", isActive);
       button.setAttribute("aria-pressed", String(isActive));
     });
+  };
+
+  const getCollectionLabel = (collection: string) => {
+    const button = getCollectionButtons().find((entry) => entry.dataset.collection === collection);
+    return (
+      button?.dataset.collectionLabel?.trim() ||
+      button?.textContent?.trim() ||
+      collection.replace(/-/g, " ").toLocaleUpperCase("en-US")
+    );
+  };
+
+  const normalizeScopeLabel = (label: string) =>
+    label.trim().replace(/\s+/g, " ").toLocaleUpperCase("en-US");
+
+  const getSearchScopeFromCurrentContext = (): SearchScope | null => {
+    if (activeStage === "catalog") {
+      const collection = hero?.dataset.activeCollection?.trim() ?? "";
+      if (!collection) return null;
+
+      return {
+        collection,
+        label: normalizeScopeLabel(catalogTitle?.textContent?.trim() || getCollectionLabel(collection)),
+      };
+    }
+
+    if (activeStage === "product" && savedStageReturn?.stage === "catalog" && savedStageReturn.collection) {
+      return {
+        collection: savedStageReturn.collection,
+        label: normalizeScopeLabel(savedStageReturn.label || getCollectionLabel(savedStageReturn.collection)),
+      };
+    }
+
+    return activeSearchScope;
+  };
+
+  const getSearchScopeFromUrl = (): SearchScope | null => {
+    const collection = getCurrentSearchScopeParam()?.trim();
+    if (!collection) return null;
+
+    return {
+      collection,
+      label: normalizeScopeLabel(getCollectionLabel(collection)),
+    };
   };
 
   const getMenuLabel = (value: string | null | undefined) =>
@@ -607,6 +887,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const getStagePanel = (stage: PanelStage) =>
     stage === "catalog"
       ? catalog
+      : stage === "search"
+        ? catalog
       : stage === "product"
         ? productPanel
       : stage === "preorder"
@@ -652,20 +934,21 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     const hasActiveStage =
       hero.classList.contains("is-catalog") ||
+      hero.classList.contains("is-search") ||
       hero.classList.contains("is-product") ||
       hero.classList.contains("is-preorder") ||
       hero.classList.contains("is-music") ||
       hero.classList.contains("is-film") ||
       hero.classList.contains("is-fam");
     if (!stencil || !hasActiveStage) {
-      hero.classList.remove("is-catalog", "is-product", "is-preorder", "is-music", "is-film", "is-fam", "is-settled");
+      hero.classList.remove("is-catalog", "is-search", "is-product", "is-preorder", "is-music", "is-film", "is-fam", "is-settled");
       return;
     }
 
     clearStencilReturn();
     stencil.style.transition = "none";
     stencil.style.transform = "translateX(calc(50vw + 100%))";
-    hero.classList.remove("is-catalog", "is-product", "is-preorder", "is-music", "is-film", "is-fam", "is-settled");
+    hero.classList.remove("is-catalog", "is-search", "is-product", "is-preorder", "is-music", "is-film", "is-fam", "is-settled");
     void stencil.offsetWidth;
 
     const finishReturn = (event?: TransitionEvent) => {
@@ -713,6 +996,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const getStageClass = (stage: PanelStage) =>
     stage === "catalog"
       ? "is-catalog"
+      : stage === "search"
+        ? "is-search"
       : stage === "product"
         ? "is-product"
       : stage === "preorder"
@@ -726,11 +1011,13 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const activatePanel = (stage: PanelStage) => {
     hero?.classList.add(getStageClass(stage));
     setPanelHidden(stage, false);
+    if (stage === "search") setSearchResultsExpanded(true);
   };
 
   const deactivatePanel = (stage: PanelStage) => {
     hero?.classList.remove(getStageClass(stage));
     setPanelHidden(stage, true);
+    if (stage === "search") setSearchResultsExpanded(false);
   };
 
   const transitionToStage = (nextStage: PanelStage, prepareIncoming: () => void) => {
@@ -742,9 +1029,16 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     const previousStage = activeStage;
     const previousPanelStage: PanelStage | undefined = previousStage === "landing" ? undefined : previousStage;
     const previousPanel = previousPanelStage ? getStagePanel(previousPanelStage) : undefined;
+    const nextPanel = getStagePanel(nextStage);
+    const isSharedPanelTransition = Boolean(
+      previousPanelStage && previousPanel === nextPanel && previousStage !== nextStage,
+    );
     if (previousStage === "film") {
       filmVideo?.pause();
       resetFilmMute();
+    }
+    if (previousStage === "search" && nextStage !== "search") {
+      setSearchResultsExpanded(false);
     }
 
     if (previousStage === nextStage) {
@@ -756,6 +1050,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
         prepareIncoming();
         void previousPanel?.offsetWidth;
         activatePanel(nextStage);
+        hero.scrollLeft = 0;
+        hero.scrollTop = 0;
         if (nextStage === "preorder") resizePreorderFrame();
         activeStage = nextStage;
         if (nextStage === "music") {
@@ -770,20 +1066,26 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       return;
     }
 
-    if (previousPanelStage) {
+    if (previousPanelStage && !isSharedPanelTransition) {
       previousPanel?.classList.add("is-exiting-left");
       setPanelHidden(previousPanelStage, true);
+    } else if (previousPanelStage && isSharedPanelTransition) {
+      hero.classList.remove(getStageClass(previousPanelStage));
     }
 
     prepareIncoming();
     activatePanel(nextStage);
+    hero.scrollLeft = 0;
+    hero.scrollTop = 0;
     if (nextStage === "preorder") resizePreorderFrame();
     activeStage = nextStage;
 
     if (previousPanelStage) {
       stageCleanup = window.setTimeout(() => {
-        deactivatePanel(previousPanelStage);
-        previousPanel?.classList.remove("is-exiting-left");
+        if (!isSharedPanelTransition) {
+          deactivatePanel(previousPanelStage);
+          previousPanel?.classList.remove("is-exiting-left");
+        }
         if (nextStage === "music") setMusicSettled(true);
         stageCleanup = undefined;
       }, stageDuration);
@@ -864,11 +1166,252 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const renderCatalogGrid = (products: CatalogProduct[], targetScrollTop = 0) => {
     if (!catalogTrack) return;
 
-    const sorted = [...products].sort(
-      (a, b) => Number(a.available === false) - Number(b.available === false),
-    );
-    catalogTrack.replaceChildren(...sorted.map(createProductCard));
+    catalogTrack.replaceChildren(...getSortedProducts(products).map(createProductCard));
     restoreCatalogScroll(targetScrollTop);
+  };
+
+  const updateSearchScopeControls = (scope: SearchScope | null) => {
+    activeSearchScope = scope;
+
+    if (scope && searchScopeChip) {
+      searchScopeChip.hidden = false;
+      searchScopeChip.textContent = `in: ${scope.label.toLocaleLowerCase("en-US")} ×`;
+      searchScopeChip.setAttribute("aria-label", `search all products instead of ${scope.label}`);
+    } else if (searchScopeChip) {
+      searchScopeChip.hidden = true;
+      searchScopeChip.textContent = "";
+      searchScopeChip.removeAttribute("aria-label");
+    }
+
+    if (searchAllRow) {
+      searchAllRow.hidden = !scope;
+    }
+  };
+
+  const createSearchMessage = (message: string) => {
+    const element = document.createElement("p");
+    element.className = "hero__search-message";
+    element.textContent = message;
+    return element;
+  };
+
+  const createSearchSectionHeading = (heading: string) => {
+    const element = document.createElement("h3");
+    element.className = "hero__search-section-heading";
+    element.textContent = heading;
+    return element;
+  };
+
+  const getSortedProducts = (products: CatalogProduct[]) =>
+    [...products].sort((a, b) => Number(a.available === false) - Number(b.available === false));
+
+  const renderSearchGrid = (
+    query: string,
+    products: CatalogProduct[],
+    targetScrollTop = 0,
+    options: { scope?: SearchScope | null; fallbackProducts?: CatalogProduct[] } = {},
+  ) => {
+    if (!catalogTrack) return;
+
+    const scope = options.scope ?? null;
+    const fallbackProducts = options.fallbackProducts ?? [];
+    renderedSearchProducts = products;
+    renderedSearchFallbackProducts = fallbackProducts;
+    updateSearchScopeControls(scope);
+    renderCatalogHeader(
+      scope
+        ? `SEARCH IN ${scope.label} \u2014 "${query}" (${products.length})`
+        : `SEARCH \u2014 "${query}" (${products.length})`,
+    );
+    searchStatus?.replaceChildren(`${products.length} ${products.length === 1 ? "result" : "results"} for ${query}`);
+
+    if (scope && products.length === 0) {
+      const nodes: HTMLElement[] = [
+        createSearchMessage(`nothing matches "${query}" in ${scope.label.toLocaleLowerCase("en-US")}`),
+      ];
+      if (fallbackProducts.length > 0) {
+        nodes.push(createSearchSectionHeading("more like this \u2014 all products"));
+        nodes.push(...getSortedProducts(fallbackProducts).map(createProductCard));
+      }
+      catalogTrack.replaceChildren(...nodes);
+      restoreCatalogScroll(targetScrollTop);
+      return;
+    }
+
+    renderCatalogGrid(products, targetScrollTop);
+  };
+
+  const captureSearchSessionReturn = (): SearchSessionReturn => {
+    if (activeStage === "catalog") {
+      return {
+        stage: "catalog",
+        collection: hero?.dataset.activeCollection ?? "",
+        label: catalogTitle?.textContent?.trim() ?? "",
+        scrollTop: getCatalogScrollTop(),
+      };
+    }
+
+    if (activeStage === "product" && savedStageReturn?.stage === "catalog") {
+      return savedStageReturn;
+    }
+
+    if (activeStage === "product" && activeProductHandle) {
+      return { stage: "product", handle: activeProductHandle };
+    }
+
+    if (activeStage === "preorder" || activeStage === "music" || activeStage === "film" || activeStage === "fam") {
+      return { stage: activeStage };
+    }
+
+    return { stage: "landing" };
+  };
+
+  const rememberSearchSessionReturn = () => {
+    if (activeStage === "search" || searchSessionReturn) return;
+
+    searchSessionReturn = captureSearchSessionReturn();
+    searchSessionReturnUrl = new URL(location.href);
+    searchSessionReturnUrl.searchParams.delete("search");
+    searchSessionReturnUrl.searchParams.delete("scope");
+  };
+
+  const resetSearchSession = () => {
+    searchSessionReturn = null;
+    searchSessionReturnUrl = null;
+    searchSessionHasHistoryEntry = false;
+  };
+
+  const syncLiveSearchUrl = (query: string, scope: SearchScope | null, replaceOnly = false) => {
+    const url = getHomepageSearchUrl(query, scope);
+    const state = { search: query.trim(), scope: scope?.collection ?? null };
+    if (replaceOnly || searchSessionHasHistoryEntry || getCurrentSearchParam()?.trim()) {
+      history.replaceState(state, "", url);
+      searchSessionHasHistoryEntry = true;
+      return;
+    }
+
+    history.pushState(state, "", url);
+    searchSessionHasHistoryEntry = true;
+  };
+
+  const restoreSearchSessionUrl = () => {
+    if (!searchSessionReturnUrl) {
+      stripSearchParamFromUrl();
+      return;
+    }
+
+    history.replaceState(null, "", searchSessionReturnUrl);
+  };
+
+  const renderSearchContent = (
+    query: string,
+    initialProducts?: CatalogProduct[],
+    targetScrollTop = 0,
+    options: { schedulePredictive?: boolean; scope?: SearchScope | null; fallbackProducts?: CatalogProduct[] } = {},
+  ) => {
+    if (!hero || !catalogTitle || !catalogTrack) return;
+
+    const trimmedQuery = query.trim();
+    const normalizedQuery = normalizeSearchText(trimmedQuery);
+    const scope = options.scope ?? null;
+    searchStageSequence += 1;
+    activeSearchQuery = normalizedQuery;
+    delete hero.dataset.activeCollection;
+    setActiveButton(null);
+
+    const localProducts = initialProducts ?? getSearchMatches(trimmedQuery, Number.POSITIVE_INFINITY, scope);
+    const fallbackProducts =
+      options.fallbackProducts ??
+      (scope && localProducts.length === 0 ? getSearchMatches(trimmedQuery) : []);
+    renderSearchGrid(trimmedQuery, localProducts, targetScrollTop, { scope, fallbackProducts });
+    if (options.schedulePredictive !== false) {
+      schedulePredictiveSearch(trimmedQuery, localProducts, scope);
+    }
+  };
+
+  const restoreSearchSession = (keepSearchOpen = true) => {
+    if (!hero) return;
+
+    const stageReturn = searchSessionReturn;
+    clearPredictiveSearch();
+    restoreSearchSessionUrl();
+    activeSearchQuery = "";
+    renderedSearchProducts = [];
+    renderedSearchFallbackProducts = [];
+    updateSearchScopeControls(null);
+    setSearchResultsExpanded(false);
+    searchStageSequence += 1;
+    searchStatus?.replaceChildren();
+    resetSearchSession();
+
+    if (stageReturn?.stage === "catalog" && stageReturn.collection) {
+      transitionToStage("catalog", () => {
+        renderCatalogContent(stageReturn.collection, stageReturn.label);
+        restoreCatalogScroll(stageReturn.scrollTop);
+      });
+    } else if (stageReturn?.stage === "product" && stageReturn.handle && productView) {
+      transitionToStage("product", () => mountProductView(productView, stageReturn.handle));
+      activeProductHandle = stageReturn.handle;
+    } else if (stageReturn?.stage === "preorder") {
+      transitionToStage("preorder", resizePreorderFrame);
+    } else if (stageReturn?.stage === "music" || stageReturn?.stage === "film" || stageReturn?.stage === "fam") {
+      transitionToStage(stageReturn.stage, () => undefined);
+    } else {
+      closeStage();
+    }
+
+    if (keepSearchOpen) {
+      search?.classList.add("is-open");
+      window.requestAnimationFrame(() => searchInput?.focus());
+    } else {
+      closeSearch(true);
+    }
+  };
+
+  const updateLiveSearchFromInput = () => {
+    if (!searchInput || !hero || !catalog || !catalogTitle || !catalogTrack) return;
+
+    const query = searchInput.value.trim();
+    if (!query) {
+      clearPredictiveSearch();
+      if (activeStage === "search") {
+        restoreSearchSession(true);
+      } else {
+        searchStatus?.replaceChildren();
+      }
+      return;
+    }
+
+    search?.classList.add("is-open");
+    rememberSearchSessionReturn();
+    const scope = getSearchScopeFromCurrentContext();
+    syncLiveSearchUrl(query, scope);
+    const localProducts = getSearchMatches(query, Number.POSITIVE_INFINITY, scope);
+    const requestSequence = ++searchStageSequence;
+
+    const renderLiveSearch = () => {
+      if (requestSequence !== searchStageSequence) return;
+      renderSearchContent(query, localProducts, 0, { scope });
+    };
+
+    if (activeStage === "search") {
+      renderLiveSearch();
+      return;
+    }
+
+    transitionToStage("search", renderLiveSearch);
+  };
+
+  const dropSearchScope = () => {
+    if (!searchInput) return;
+
+    const query = searchInput.value.trim();
+    if (!query) return;
+
+    syncLiveSearchUrl(query, null, true);
+    renderSearchContent(query, undefined, 0, { scope: null });
+    search?.classList.add("is-open");
+    window.requestAnimationFrame(() => searchInput.focus());
   };
 
   const getComparableProducts = (products: CatalogProduct[]) =>
@@ -921,6 +1464,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const renderCatalogContent = (collection: string, label: string) => {
     if (!hero || !catalogTitle || !catalogTrack) return;
 
+    activeSearchQuery = "";
+    renderedSearchProducts = [];
+    renderedSearchFallbackProducts = [];
+    updateSearchScopeControls(null);
     hero.dataset.activeCollection = collection;
     renderCatalogHeader(label);
     setActiveButton(collection);
@@ -938,15 +1485,49 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       };
       if (!hasLiveCatalogChanged(reconciledLiveCollection, snapshotProducts)) return;
 
+      catalogData[collection] = reconciledLiveCollection.products;
       renderCatalogHeader(label, reconciledLiveCollection.description);
       renderCatalogGrid(reconciledLiveCollection.products, refreshScrollTop);
     });
   };
 
+  function openSearchResults(
+    query: string,
+    options: {
+      pushState?: boolean;
+      initialProducts?: CatalogProduct[];
+      fallbackProducts?: CatalogProduct[];
+      scrollTop?: number;
+      scope?: SearchScope | null;
+    } = {},
+  ) {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery || !hero || !catalog || !catalogTitle || !catalogTrack) return;
+
+    const scope = options.scope ?? (options.pushState === false ? getSearchScopeFromUrl() : getSearchScopeFromCurrentContext());
+    search?.classList.add("is-open");
+    if (searchInput) searchInput.value = trimmedQuery;
+    rememberSearchSessionReturn();
+    if (options.pushState !== false) {
+      syncLiveSearchUrl(trimmedQuery, scope);
+    } else {
+      searchSessionHasHistoryEntry = true;
+    }
+    prepareToLeaveProductForStage();
+    transitionToStage("search", () => {
+      renderSearchContent(trimmedQuery, options.initialProducts, options.scrollTop ?? 0, {
+        scope,
+        fallbackProducts: options.fallbackProducts,
+      });
+      window.requestAnimationFrame(() => searchInput?.focus());
+    });
+  }
+
   const openCatalog = (collection: string, label: string) => {
     if (!hero || !catalog || !catalogTitle || !catalogTrack) return;
 
     prepareToLeaveProductForStage();
+    stripSearchParamFromUrl();
     transitionToStage("catalog", () => renderCatalogContent(collection, label));
   };
 
@@ -954,6 +1535,11 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (!hero || !preorder) return;
 
     prepareToLeaveProductForStage();
+    stripSearchParamFromUrl();
+    activeSearchQuery = "";
+    renderedSearchProducts = [];
+    renderedSearchFallbackProducts = [];
+    updateSearchScopeControls(null);
     delete hero.dataset.activeCollection;
     setActiveButton(null);
     resetCatalogScroll();
@@ -964,6 +1550,11 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (!hero || !dj) return;
 
     prepareToLeaveProductForStage();
+    stripSearchParamFromUrl();
+    activeSearchQuery = "";
+    renderedSearchProducts = [];
+    renderedSearchFallbackProducts = [];
+    updateSearchScopeControls(null);
     delete hero.dataset.activeCollection;
     setActiveButton(null);
     resetCatalogScroll();
@@ -974,6 +1565,11 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (!hero || !famPanel) return;
 
     prepareToLeaveProductForStage();
+    stripSearchParamFromUrl();
+    activeSearchQuery = "";
+    renderedSearchProducts = [];
+    renderedSearchFallbackProducts = [];
+    updateSearchScopeControls(null);
     delete hero.dataset.activeCollection;
     setActiveButton(null);
     resetCatalogScroll();
@@ -984,6 +1580,11 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (!hero || !filmPanel) return;
 
     prepareToLeaveProductForStage();
+    stripSearchParamFromUrl();
+    activeSearchQuery = "";
+    renderedSearchProducts = [];
+    renderedSearchFallbackProducts = [];
+    updateSearchScopeControls(null);
     delete hero.dataset.activeCollection;
     setActiveButton(null);
     resetCatalogScroll();
@@ -1000,13 +1601,23 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     productView.removeAttribute("class");
 
     if (saveReturnPoint && activeStage === "catalog") {
-      savedCatalog = {
+      savedStageReturn = {
+        stage: "catalog",
         collection: hero.dataset.activeCollection ?? "",
         label: catalogTitle?.textContent?.trim() ?? "",
         scrollTop: getCatalogScrollTop(),
       };
+    } else if (saveReturnPoint && activeStage === "search") {
+      savedStageReturn = {
+        stage: "search",
+        query: searchInput?.value.trim() || activeSearchQuery,
+        products: renderedSearchProducts,
+        fallbackProducts: renderedSearchFallbackProducts,
+        scope: activeSearchScope,
+        scrollTop: getCatalogScrollTop(),
+      };
     } else {
-      savedCatalog = null;
+      savedStageReturn = null;
     }
 
     activeProductHandle = handle;
@@ -1014,17 +1625,28 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   };
 
   const actualCloseProduct = (stripUrl = false) => {
-    const catalogReturn = savedCatalog;
+    const stageReturn = savedStageReturn;
     activeProductHandle = null;
-    savedCatalog = null;
+    savedStageReturn = null;
 
-    if (catalogReturn?.collection) {
+    if (stageReturn?.stage === "catalog" && stageReturn.collection) {
       transitionToStage("catalog", () => {
         if (!hero) return;
-        hero.dataset.activeCollection = catalogReturn.collection;
-        if (catalogTitle) catalogTitle.textContent = catalogReturn.label;
-        setActiveButton(catalogReturn.collection);
-        restoreCatalogScroll(catalogReturn.scrollTop);
+        hero.dataset.activeCollection = stageReturn.collection;
+        if (catalogTitle) catalogTitle.textContent = stageReturn.label;
+        setActiveButton(stageReturn.collection);
+        restoreCatalogScroll(stageReturn.scrollTop);
+      });
+    } else if (stageReturn?.stage === "search" && stageReturn.query) {
+      transitionToStage("search", () => {
+        renderSearchContent(stageReturn.query, stageReturn.products, stageReturn.scrollTop, {
+          scope: stageReturn.scope,
+          fallbackProducts: stageReturn.fallbackProducts,
+        });
+      });
+    } else if (getCurrentSearchParam()?.trim()) {
+      transitionToStage("search", () => {
+        renderSearchContent(getCurrentSearchParam() ?? "", undefined, 0, { scope: getSearchScopeFromUrl() });
       });
     } else {
       closeStage();
@@ -1050,9 +1672,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (activeStage !== "product") return;
 
     activeProductHandle = null;
-    savedCatalog = null;
+    savedStageReturn = null;
     stripProductParamFromUrl();
     deactivatePanel("catalog");
+    deactivatePanel("search");
     catalog?.classList.remove("is-exiting-left");
   };
 
@@ -1110,6 +1733,11 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     resetCatalogScroll();
     returnStencilFromRight();
     delete hero.dataset.activeCollection;
+    activeSearchQuery = "";
+    renderedSearchProducts = [];
+    renderedSearchFallbackProducts = [];
+    updateSearchScopeControls(null);
+    searchStageSequence += 1;
     catalog?.setAttribute("aria-hidden", "true");
     productPanel?.setAttribute("aria-hidden", "true");
     preorder?.setAttribute("aria-hidden", "true");
@@ -1118,11 +1746,21 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     famPanel?.setAttribute("aria-hidden", "true");
     setActiveButton(null);
     activeProductHandle = null;
-    savedCatalog = null;
+    savedStageReturn = null;
     activeStage = "landing";
   };
 
-  const syncProductStageFromUrl = () => {
+  const closeSearchStage = () => {
+    if (activeStage !== "search") return;
+
+    clearPredictiveSearch();
+    closeSearch(true);
+    closeStage();
+    stripSearchParamFromUrl();
+    resetSearchSession();
+  };
+
+  const syncStageFromUrl = () => {
     const handle = getCurrentProductParam();
     if (handle) {
       if (activeStage !== "product" || activeProductHandle !== handle) {
@@ -1131,8 +1769,26 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       return;
     }
 
+    const searchParam = getCurrentSearchParam();
+    if (searchParam?.trim()) {
+      const scope = getSearchScopeFromUrl();
+      if (
+        activeStage !== "search" ||
+        activeSearchQuery !== normalizeSearchText(searchParam) ||
+        activeSearchScope?.collection !== scope?.collection
+      ) {
+        openSearchResults(searchParam, { pushState: false });
+      }
+      return;
+    }
+
     if (activeStage === "product") {
       actualCloseProduct();
+      return;
+    }
+
+    if (activeStage === "search") {
+      restoreSearchSession(false);
     }
   };
 
@@ -1162,6 +1818,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   catalogClose?.addEventListener("click", () => {
     setMenuSectionState(null);
+    if (activeStage === "search") {
+      closeSearchStage();
+      return;
+    }
     closeStage();
   });
   productClose?.addEventListener("click", closeProduct);
@@ -1218,13 +1878,51 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     openProduct(handle, { seedImage: getProductSeedImage(link) });
   });
 
-  window.addEventListener("popstate", syncProductStageFromUrl);
+  window.addEventListener("popstate", syncStageFromUrl);
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape" || activeStage !== "product") return;
-    if (document.querySelector(".cart-drawer")?.classList.contains("is-open")) return;
+    if (isCartOpen()) return;
+    if (search?.classList.contains("is-open") && (document.activeElement === searchInput || searchInput?.value.trim())) return;
 
     event.preventDefault();
     closeProduct();
+  });
+  searchToggle?.addEventListener("click", toggleSearch);
+  searchScopeChip?.addEventListener("click", dropSearchScope);
+  searchAllRow?.addEventListener("click", dropSearchScope);
+  searchInput?.addEventListener("input", updateLiveSearchFromInput);
+  searchInput?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+
+    event.preventDefault();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && search?.classList.contains("is-open")) {
+      event.preventDefault();
+      if (searchInput?.value.trim()) {
+        searchInput.value = "";
+        updateLiveSearchFromInput();
+        search.classList.add("is-open");
+        window.requestAnimationFrame(() => searchInput.focus());
+        return;
+      }
+
+      closeSearch(true);
+      return;
+    }
+
+    if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+    if (hasTextInputFocus() || isCartOpen()) return;
+
+    event.preventDefault();
+    openSearch();
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (!search?.classList.contains("is-open") || !searchInput || searchInput.value.trim()) return;
+    const target = event.target;
+    if (target instanceof Node && search.contains(target)) return;
+
+    closeSearch();
   });
 
   menuSections.forEach((section) => {
@@ -1272,5 +1970,5 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     window.addEventListener("resize", resizePreorderFrame);
   }
   void hydrateLiveMenu();
-  syncProductStageFromUrl();
+  syncStageFromUrl();
 </script>

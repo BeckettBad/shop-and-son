@@ -188,15 +188,106 @@ const setGalleryAspect = (
 ) => {
   if (image?.width && image.height) {
     gallery.style.setProperty("--product-carousel-aspect", `${image.width} / ${image.height}`);
-    return;
+    return image.width / image.height;
   }
 
   if (image?.aspect && Number.isFinite(image.aspect) && image.aspect > 0) {
     gallery.style.setProperty("--product-carousel-aspect", String(image.aspect));
+    return image.aspect;
   }
+
+  return undefined;
 };
 
-const upgradeSeededImage = (image: HTMLImageElement, productImage: ProductDetail["images"][number]) => {
+const setGalleryAspectFromImageElement = (gallery: HTMLElement, image: HTMLImageElement | null | undefined) => {
+  if (!image) return undefined;
+
+  if (image.naturalWidth > 0 && image.naturalHeight > 0) {
+    gallery.style.setProperty("--product-carousel-aspect", `${image.naturalWidth} / ${image.naturalHeight}`);
+    return image.naturalWidth / image.naturalHeight;
+  }
+
+  const width = Number(image.getAttribute("width"));
+  const height = Number(image.getAttribute("height"));
+  if (width > 0 && height > 0) {
+    gallery.style.setProperty("--product-carousel-aspect", `${width} / ${height}`);
+    return width / height;
+  }
+
+  return undefined;
+};
+
+const setCarouselFrameWidth = (
+  gallery: HTMLElement,
+  carousel: HTMLElement,
+  viewport: HTMLElement,
+  aspect: number | undefined,
+) => {
+  if (!aspect || !Number.isFinite(aspect) || aspect <= 0) return;
+
+  const galleryWidth = gallery.getBoundingClientRect().width;
+  if (galleryWidth <= 0) return;
+
+  const maxHeightValue = window.getComputedStyle(viewport).maxHeight;
+  const maxHeight = maxHeightValue.endsWith("px") ? Number.parseFloat(maxHeightValue) : Number.NaN;
+  const frameWidth = Number.isFinite(maxHeight) && maxHeight > 0
+    ? Math.min(galleryWidth, maxHeight * aspect)
+    : galleryWidth;
+
+  carousel.style.setProperty("--product-carousel-frame-width", `${Math.max(1, Math.floor(frameWidth))}px`);
+};
+
+const bindCarouselFrameWidth = (
+  gallery: HTMLElement,
+  carousel: HTMLElement,
+  viewport: HTMLElement,
+  getAspect: () => number | undefined,
+) => {
+  const update = () => setCarouselFrameWidth(gallery, carousel, viewport, getAspect());
+  const resizeObserver = new ResizeObserver(update);
+  resizeObserver.observe(gallery);
+
+  window.addEventListener("resize", update, { passive: true });
+
+  const cleanupObserver = new MutationObserver(() => {
+    if (document.body.contains(gallery)) return;
+    window.removeEventListener("resize", update);
+    resizeObserver.disconnect();
+    cleanupObserver.disconnect();
+  });
+  cleanupObserver.observe(document.body, { childList: true, subtree: true });
+
+  update();
+  window.requestAnimationFrame(update);
+};
+
+const setGalleryAspectOnImageLoad = (
+  gallery: HTMLElement,
+  image: HTMLImageElement | null | undefined,
+  shouldUpdate: () => boolean = () => true,
+  onAspect?: (aspect: number) => void,
+) => {
+  if (!image) return;
+
+  const update = () => {
+    if (!shouldUpdate()) return;
+    const aspect = setGalleryAspectFromImageElement(gallery, image);
+    if (aspect) onAspect?.(aspect);
+  };
+
+  if (image.complete) {
+    update();
+    return;
+  }
+
+  image.addEventListener("load", update, { once: true });
+};
+
+const upgradeSeededImage = (
+  image: HTMLImageElement,
+  productImage: ProductDetail["images"][number],
+  onUpgrade?: () => void,
+) => {
   const loader = new Image();
   loader.decoding = "async";
   if (productImage.srcset) {
@@ -211,6 +302,7 @@ const upgradeSeededImage = (image: HTMLImageElement, productImage: ProductDetail
       image.srcset = productImage.srcset;
       image.sizes = "(max-width: 760px) 54vw, 55vw";
     }
+    onUpgrade?.();
   };
   loader.src = productImage.url;
 };
@@ -245,7 +337,6 @@ const renderSeededProduct = (container: HTMLElement, seedImage: ProductImageSeed
   const gallery = document.createElement("section");
   gallery.className = "product-detail__gallery";
   gallery.setAttribute("aria-label", "product images");
-  setGalleryAspect(gallery, seedImage);
 
   const carousel = document.createElement("div");
   carousel.className = "product-detail__carousel";
@@ -255,6 +346,8 @@ const renderSeededProduct = (container: HTMLElement, seedImage: ProductImageSeed
 
   const track = document.createElement("div");
   track.className = "product-detail__carousel-track";
+
+  let activeAspect: number | undefined;
 
   const slide = document.createElement("div");
   slide.className = "product-detail__carousel-slide is-active";
@@ -269,6 +362,11 @@ const renderSeededProduct = (container: HTMLElement, seedImage: ProductImageSeed
   image.fetchPriority = "high";
   if (seedImage.width) image.width = seedImage.width;
   if (seedImage.height) image.height = seedImage.height;
+  activeAspect = setGalleryAspect(gallery, seedImage) ?? setGalleryAspectFromImageElement(gallery, image);
+  setGalleryAspectOnImageLoad(gallery, image, undefined, (aspect) => {
+    activeAspect = aspect;
+    setCarouselFrameWidth(gallery, carousel, viewport, activeAspect);
+  });
 
   const detail = document.createElement("section");
   detail.className = "product-detail__panel";
@@ -279,6 +377,7 @@ const renderSeededProduct = (container: HTMLElement, seedImage: ProductImageSeed
   viewport.append(track);
   carousel.append(viewport);
   gallery.append(carousel);
+  bindCarouselFrameWidth(gallery, carousel, viewport, () => activeAspect);
 
   container.className = "product-detail__content";
   container.replaceChildren(gallery, detail);
@@ -301,6 +400,7 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
   const slides: HTMLElement[] = [];
   const imageCount = product.images.length;
   let activeIndex = 0;
+  let activeAspect: number | undefined;
   let touchStartX: number | undefined;
   let touchStartY: number | undefined;
 
@@ -318,15 +418,19 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
     image.fetchPriority = index === 0 ? "high" : "auto";
     if (productImage.width) image.width = productImage.width;
     if (productImage.height) image.height = productImage.height;
-    if (index === 0 && productImage.width && productImage.height) {
-      setGalleryAspect(gallery, productImage);
-    }
     if (productImage.srcset && !seedUrl) {
       image.srcset = productImage.srcset;
       image.sizes = "(max-width: 760px) 54vw, 55vw";
     }
     if (seedUrl) {
-      window.requestAnimationFrame(() => upgradeSeededImage(image, productImage));
+      window.requestAnimationFrame(() =>
+        upgradeSeededImage(image, productImage, () => {
+          if (slides[activeIndex] !== slide) return;
+
+          activeAspect = setGalleryAspect(gallery, productImage) ?? setGalleryAspectFromImageElement(gallery, image);
+          setCarouselFrameWidth(gallery, carousel, viewport, activeAspect);
+        }),
+      );
     }
 
     slide.append(image);
@@ -336,6 +440,61 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
 
   viewport.append(track);
   carousel.append(viewport);
+
+  const preloadSlideImage = (index: number) => {
+    const image = slides[index]?.querySelector<HTMLImageElement>(".product-detail__image");
+    preloadCarouselImage(image);
+  };
+
+  const preloadAdjacentImages = () => {
+    if (imageCount < 1) return;
+
+    preloadSlideImage(activeIndex);
+    if (imageCount > 1) {
+      preloadSlideImage((activeIndex + 1) % imageCount);
+      preloadSlideImage((activeIndex - 1 + imageCount) % imageCount);
+    }
+  };
+
+  const syncActiveSlideAspect = () => {
+    const activeSlide = slides[activeIndex];
+    const activeImage = activeSlide?.querySelector<HTMLImageElement>(".product-detail__image");
+    const activeProductImage = product.images[activeIndex];
+
+    activeAspect = setGalleryAspect(gallery, activeProductImage) ?? setGalleryAspectFromImageElement(gallery, activeImage);
+    if (activeAspect) {
+      setCarouselFrameWidth(gallery, carousel, viewport, activeAspect);
+      window.requestAnimationFrame(() => setCarouselFrameWidth(gallery, carousel, viewport, activeAspect));
+      return;
+    }
+
+    setGalleryAspectOnImageLoad(
+      gallery,
+      activeImage,
+      () => slides[activeIndex] === activeSlide,
+      (aspect) => {
+        activeAspect = aspect;
+        setCarouselFrameWidth(gallery, carousel, viewport, activeAspect);
+      },
+    );
+  };
+
+  const setActiveImage = (index: number, counter?: HTMLElement) => {
+    if (imageCount < 1) return;
+
+    activeIndex = (index + imageCount) % imageCount;
+    track.style.transform = `translateX(-${activeIndex * 100}%)`;
+    if (counter) counter.textContent = `${activeIndex + 1} / ${imageCount}`;
+
+    slides.forEach((slide, slideIndex) => {
+      const isActive = slideIndex === activeIndex;
+      slide.classList.toggle("is-active", isActive);
+      slide.setAttribute("aria-hidden", isActive ? "false" : "true");
+    });
+
+    syncActiveSlideAspect();
+    preloadAdjacentImages();
+  };
 
   if (imageCount > 1) {
     const previous = document.createElement("button");
@@ -354,33 +513,8 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
     counter.className = "product-detail__carousel-counter";
     counter.setAttribute("aria-live", "polite");
 
-    const preloadSlideImage = (index: number) => {
-      const image = slides[index]?.querySelector<HTMLImageElement>(".product-detail__image");
-      preloadCarouselImage(image);
-    };
-
-    const preloadAdjacentImages = () => {
-      preloadSlideImage(activeIndex);
-      preloadSlideImage((activeIndex + 1) % imageCount);
-      preloadSlideImage((activeIndex - 1 + imageCount) % imageCount);
-    };
-
-    const setActiveImage = (index: number) => {
-      activeIndex = (index + imageCount) % imageCount;
-      track.style.transform = `translateX(-${activeIndex * 100}%)`;
-      counter.textContent = `${activeIndex + 1} / ${imageCount}`;
-
-      slides.forEach((slide, slideIndex) => {
-        const isActive = slideIndex === activeIndex;
-        slide.classList.toggle("is-active", isActive);
-        slide.setAttribute("aria-hidden", isActive ? "false" : "true");
-      });
-
-      preloadAdjacentImages();
-    };
-
-    previous.addEventListener("click", () => setActiveImage(activeIndex - 1));
-    next.addEventListener("click", () => setActiveImage(activeIndex + 1));
+    previous.addEventListener("click", () => setActiveImage(activeIndex - 1, counter));
+    next.addEventListener("click", () => setActiveImage(activeIndex + 1, counter));
     viewport.addEventListener(
       "touchstart",
       (event) => {
@@ -403,19 +537,19 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
         touchStartY = undefined;
 
         if (Math.abs(deltaX) < 36 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
-        setActiveImage(activeIndex + (deltaX < 0 ? 1 : -1));
+        setActiveImage(activeIndex + (deltaX < 0 ? 1 : -1), counter);
       },
       { passive: true },
     );
 
     carousel.append(previous, next, counter);
-    setActiveImage(0);
+    setActiveImage(0, counter);
   } else {
-    slides[0]?.classList.add("is-active");
-    slides[0]?.setAttribute("aria-hidden", "false");
+    setActiveImage(0);
   }
 
   gallery.append(carousel);
+  bindCarouselFrameWidth(gallery, carousel, viewport, () => activeAspect);
   return gallery;
 };
 
