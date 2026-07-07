@@ -68,10 +68,10 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — Q5 @ f209c23 committed + verified. The neon
-> frame system is now universal: cards 2px / product 3px on desktop, cards
-> 1.5px / product 2px on mobile, all inset overlays (the old mobile outline
-> mechanism is gone). Awaiting operator verify of Q2–Q5.**
+> **ACTIVE SUB-TASK: (none) — Q5b @ 25a93fd committed + verified (mobile
+> cards to 1px hairline). Frame system final state: desktop cards 2px /
+> product 3px; mobile cards 1px / product 2px. Awaiting operator verify of
+> Q2–Q5b.**
 >
 > **Q5 spec.** Make the catalog-card + product-view neon frame system
 > universal across viewports, proportioned for mobile:
@@ -230,6 +230,7 @@ below so Codex has ONE target; everything else in this file is context.
 
 ## Log (Phase Q)
 
+- 2026-07-07 — Q5b mobile card frame 1.5px→1px — 25a93fd — build:green check:green — operator tone-down; one value
 - 2026-07-07 — Q5 mobile neon frame parity — f209c23 — build:green check:green — mobile product outline→inset ::after 2px (glow kept, lightbox suppression ported), mobile cards 1.5px; desktop pixel-identical
 - 2026-07-07 — Q4 catalog card neon frames + 3px product frame — 55d2fb1 — build:green check:green — .product-card__media::after 2px desktop-only, sold-out chip z-index 2, carousel overlay 2px→3px; verified 1440 + mobile 0px
 - 2026-07-07 — Q3b inset neon carousel frame (desktop) — 35f197a — build:green check:green — replaces Q3 outline; 4-edge pixel-verified portrait+landscape, stage+standalone; arrows/lightbox stack intact
