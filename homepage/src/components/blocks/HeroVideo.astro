@@ -434,6 +434,13 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     searchStatus?.replaceChildren();
   };
 
+  const closeMobileSearchForNavigation = () => {
+    if (!mobileQuery.matches || !search?.classList.contains("is-open")) return;
+
+    searchInput?.blur();
+    closeSearch();
+  };
+
   const toggleSearch = () => {
     if (search?.classList.contains("is-open")) {
       closeSearch();
@@ -2033,6 +2040,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     event.preventDefault();
     history.pushState({ product: handle }, "", getHomepageProductUrl(handle));
+    if (activeStage === "search") closeMobileSearchForNavigation();
     openProduct(handle, { seedImage: getProductSeedImage(link) });
   });
 
@@ -2097,6 +2105,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       const isFamSection = section.dataset.fam === "true";
       const isMusicSection = section.dataset.music === "true";
       const isOpen = trigger.getAttribute("aria-expanded") !== "true";
+
+      closeMobileSearchForNavigation();
 
       if (isPreorderSection && isOpen) {
         setMenuSectionState(section);
