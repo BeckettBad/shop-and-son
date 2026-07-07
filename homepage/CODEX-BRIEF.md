@@ -68,7 +68,35 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — PHASE P COMPLETE on `dev`, ready for operator
+> **ACTIVE SUB-TASK: (none) — Q1 committed @ 5308070, reviewed + verified
+> (desktop tree 0/14/28px via --menu-indent, mobile pixel-unchanged), ready
+> for operator verify. Tune by changing --menu-indent in global.css line 714.**
+>
+> **PHASE Q1 spec.** DESKTOP ONLY (the existing desktop media block for the
+> hero menu, where indentation is currently flattened flush-left — see
+> `global.css` ~795-804; mobile keeps its current look, pixel-unchanged).
+> Goal: when a menu folder is open, its contents indent one subtle step per
+> nesting level, signaling the folder tree:
+> - Level 0, no indent: `.hero__menu-header` (CLOTHES / OBJECTS / MUSIC /
+>   & FAM).
+> - Level 1, one step: everything directly inside an open section's
+>   `.hero__menu-panel` — subgroup headers (`.hero__menu-subheader`, e.g.
+>   CATEGORIES, DESIGNERS) AND direct links (`.hero__menu-link--dash`, e.g.
+>   OBJECTS' entries, MUSIC's playlist link).
+> - Level 2, two steps: entries inside `.hero__menu-nested` (SHOP ALL,
+>   JACKETS / OUTERWEAR, designer names, …).
+> Implementation: one CSS variable (e.g. `--menu-indent: 14px`) on the hero
+> menu, levels indent by calc multiples of it, so the operator can tune a
+> single number. Rules must be STRUCTURAL (by the classes above), not
+> per-section, so any future subfolders (e.g. under & FAM) indent
+> automatically. The search-breadcrumb and any catalog/product states of the
+> menu must not shift (scope the rules to the open-menu tree lists only).
+> Keep the existing open/close animations intact. Verify: `npm run build` +
+> `npx astro check` green; at 1440 CLOTHES→CATEGORIES→SHOP ALL shows the
+> stepped tree; OBJECTS and MUSIC level-1 entries indent; mobile (390px)
+> unchanged.
+
+> **PHASE P COMPLETE on `dev`, ready for operator
 > verify. All 7 commits reviewed clean: P1 @ ab0c046, P2 @ 10dc58d, P3 @
 > 75ba18f + 42144bc (CSP is PROD-only; the layout's is:inline
 > clock/overlay/header script was externalized to public/scripts/base.js to
@@ -78,6 +106,10 @@ below so Codex has ONE target; everything else in this file is context.
 > product, add-to-cart, film, and policy flows; /legacy/ 404s; robots.txt
 > ships; badges pin to the bag icon unclipped; hit areas expanded. Do NOT
 > push to main / NO PR until the operator says "ship Phase P".**
+
+## Log (Phase Q)
+
+- 2026-07-07 — Q1 desktop menu tree indent — 5308070 — build:green check:green — one --menu-indent var (14px), levels 0/1/2, structural so future subfolders inherit; verified 1440 + mobile unchanged
 
 ## Log (Phase P)
 
