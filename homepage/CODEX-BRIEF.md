@@ -261,6 +261,10 @@ rows, empty-query behavior.
 
 **CAROUSEL-CONTROLS (one-off, operator-directed 2026-07-06) — a0ca7ec — universal control placement — build:green check:green.** product-view.ts + global.css: frame now derives its aspect (and width, via min(galleryWidth, maxHeight×aspect)) from the ACTIVE slide's image — frame edge == image edge for any asset; arrows inset 16px from the image edges at mid-height, counter 12px in the image's bottom-right; controls not rendered at all when images.length < 2 (incl. seed/loading path); Phase-K viewport-fit intact. VERIFIED matrix: portrait 512×768 + landscape 512×342 both insets 16/16 + counter 12,12 + arrowMidY 0; cross-ratio arrowing holds 16; single-image ufo-tumbler renders zero controls; mobile landscape inset 16; no page scroll. Not pushed.
 
+**PHASE O STATUS: COMPLETE ON DEV (2026-07-07) — 2 commits, verified 380px + desktop-unchanged 1440. NOT pushed.**
+- O-C2 — f3efec6 — mobile tap-to-enlarge lightbox (.product-lightbox: full-bleed paper overlay, contain image, swipe/arrows/counter live inside — verified 1/3→2/3, × AND tap-image dismiss, scroll locked, reduced-motion gated) + neon wash behind the mobile product carousel (::before radial rgba(31,170,46,.055) — barely perceptible per spec). Desktop: no lightbox fires, no wash, layout pixel-unchanged.
+- O-C1 — ccf84cc — mobile menu type scaled: headers 12.5→16.5px, subheaders 14px, nested 12.75px + breathing room; 2-row wrap, 38px clear of the bag, no overflow; desktop 21px/x82 untouched.
+
 ## PHASE O — mobile-first polish (operator 2026-07-07). Everything MOBILE-ONLY (≤760px); desktop pixel-unchanged, verified after each commit at 1440. Two focused commits; judgment granted on sizing/structure.
 
 **O-C1 — bigger mobile menu type.** Scale the WHOLE mobile menu up for
