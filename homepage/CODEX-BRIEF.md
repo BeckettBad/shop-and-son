@@ -68,11 +68,30 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — Q2 @ 817767f, Q3 @ 1fa8189, Q3b @ 35f197a all
-> committed + verified on dev, awaiting operator verify. Q3's outside-outline
-> was clipped by overflow ancestors (operator caught it); Q3b replaced it with
-> an inset ::after border overlay (unclippable, all four edges verified on
-> portrait + landscape, both product contexts).**
+> **ACTIVE SUB-TASK: (none) — Q4 @ 55d2fb1 committed + verified (catalog
+> cards 2px neon frames, product view 3px, mobile clean), awaiting operator
+> verify along with Q2/Q3b.**
+>
+> **Q4 spec.** Two coordinated changes forming a visual hierarchy:
+> 1. Catalog/search cards: apply the Q3b inset-overlay treatment to every
+>    catalogue listing image on desktop — target `.product-card__media`
+>    (ensure `position:relative`), add `::after { content:""; position:
+>    absolute; inset:0; border:2px solid var(--neon-green);
+>    pointer-events:none; }` with z-index above the img but below the
+>    sold-out chip (`.product-card__sold-out`) — check its stacking and keep
+>    the chip on top. Cards are DOM-built in HeroVideo.astro (media class at
+>    ~1273); the pure-CSS overlay needs no JS change. Scope to desktop so the
+>    mobile 2-col cards stay untouched (the catalog grid's mobile block is
+>    ~1109; mirror that split).
+> 2. Individual product view: make its frame slightly more apparent than the
+>    cards — bump the Q3b carousel overlay border from 2px to 3px (both
+>    `.hero__product` and `.product-detail--standalone` desktop contexts).
+>    Mobile's own outline stays 2px, untouched.
+> Verify: build + check green; at 1440 every card in the catalog grid AND in
+> search results shows the 2px neon frame on its image tile (sold-out chip
+> still on top, sold-out opacity treatment intact); an opened product shows
+> the 3px frame reading a step stronger; 390px mobile pixel-unchanged (no
+> card borders, product outline still 2px).**
 >
 > **Q3b spec.** Operator verified Q3 on dev: the outline is invisible on most
 > products and shows only along the bottom on others. Root cause: `outline`
@@ -181,6 +200,7 @@ below so Codex has ONE target; everything else in this file is context.
 
 ## Log (Phase Q)
 
+- 2026-07-07 — Q4 catalog card neon frames + 3px product frame — 55d2fb1 — build:green check:green — .product-card__media::after 2px desktop-only, sold-out chip z-index 2, carousel overlay 2px→3px; verified 1440 + mobile 0px
 - 2026-07-07 — Q3b inset neon carousel frame (desktop) — 35f197a — build:green check:green — replaces Q3 outline; 4-edge pixel-verified portrait+landscape, stage+standalone; arrows/lightbox stack intact
 - 2026-07-07 — Q3 desktop neon carousel border — 1fa8189 — build:green check:green — superseded by Q3b (outline clipped by overflow ancestors)
 - 2026-07-07 — Q2 catalog rows 3-across (desktop) — 817767f — build:green check:green — one grid value + img sizes hint 16vw→22vw; search + more-like-this share the track; mobile 2-col untouched
