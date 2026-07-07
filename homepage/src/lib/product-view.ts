@@ -23,7 +23,6 @@ export interface ProductImageSeed {
   alt?: string;
   width?: number;
   height?: number;
-  aspect?: number;
 }
 
 export interface MountProductViewOptions {
@@ -176,119 +175,13 @@ const getSeedImageUrl = (seedImage: ProductImageSeed | undefined) => {
   return url || undefined;
 };
 
-const setGalleryAspect = (
-  gallery: HTMLElement,
-  image:
-    | {
-        width?: number | null;
-        height?: number | null;
-        aspect?: number;
-      }
-    | undefined,
-) => {
-  if (image?.width && image.height) {
-    gallery.style.setProperty("--product-carousel-aspect", `${image.width} / ${image.height}`);
-    return image.width / image.height;
-  }
-
-  if (image?.aspect && Number.isFinite(image.aspect) && image.aspect > 0) {
-    gallery.style.setProperty("--product-carousel-aspect", String(image.aspect));
-    return image.aspect;
-  }
-
-  return undefined;
-};
-
-const setGalleryAspectFromImageElement = (gallery: HTMLElement, image: HTMLImageElement | null | undefined) => {
-  if (!image) return undefined;
-
-  if (image.naturalWidth > 0 && image.naturalHeight > 0) {
-    gallery.style.setProperty("--product-carousel-aspect", `${image.naturalWidth} / ${image.naturalHeight}`);
-    return image.naturalWidth / image.naturalHeight;
-  }
-
-  const width = Number(image.getAttribute("width"));
-  const height = Number(image.getAttribute("height"));
-  if (width > 0 && height > 0) {
-    gallery.style.setProperty("--product-carousel-aspect", `${width} / ${height}`);
-    return width / height;
-  }
-
-  return undefined;
-};
-
-const setCarouselFrameWidth = (
-  gallery: HTMLElement,
-  carousel: HTMLElement,
-  viewport: HTMLElement,
-  aspect: number | undefined,
-) => {
-  if (!aspect || !Number.isFinite(aspect) || aspect <= 0) return;
-
-  const galleryWidth = gallery.getBoundingClientRect().width;
-  if (galleryWidth <= 0) return;
-
-  const maxHeightValue = window.getComputedStyle(viewport).maxHeight;
-  const maxHeight = maxHeightValue.endsWith("px") ? Number.parseFloat(maxHeightValue) : Number.NaN;
-  const frameWidth = Number.isFinite(maxHeight) && maxHeight > 0
-    ? Math.min(galleryWidth, maxHeight * aspect)
-    : galleryWidth;
-
-  carousel.style.setProperty("--product-carousel-frame-width", `${Math.max(1, Math.floor(frameWidth))}px`);
-};
-
-const bindCarouselFrameWidth = (
-  gallery: HTMLElement,
-  carousel: HTMLElement,
-  viewport: HTMLElement,
-  getAspect: () => number | undefined,
-) => {
-  const update = () => setCarouselFrameWidth(gallery, carousel, viewport, getAspect());
-  const resizeObserver = new ResizeObserver(update);
-  resizeObserver.observe(gallery);
-
-  window.addEventListener("resize", update, { passive: true });
-
-  const cleanupObserver = new MutationObserver(() => {
-    if (document.body.contains(gallery)) return;
-    window.removeEventListener("resize", update);
-    resizeObserver.disconnect();
-    cleanupObserver.disconnect();
-  });
-  cleanupObserver.observe(document.body, { childList: true, subtree: true });
-
-  update();
-  window.requestAnimationFrame(update);
-};
-
-const setGalleryAspectOnImageLoad = (
-  gallery: HTMLElement,
-  image: HTMLImageElement | null | undefined,
-  shouldUpdate: () => boolean = () => true,
-  onAspect?: (aspect: number) => void,
-) => {
-  if (!image) return;
-
-  const update = () => {
-    if (!shouldUpdate()) return;
-    const aspect = setGalleryAspectFromImageElement(gallery, image);
-    if (aspect) onAspect?.(aspect);
-  };
-
-  if (image.complete) {
-    update();
-    return;
-  }
-
-  image.addEventListener("load", update, { once: true });
-};
-
 const upgradeSeededImage = (
   image: HTMLImageElement,
   productImage: ProductDetail["images"][number],
   onUpgrade?: () => void,
 ) => {
   const loader = new Image();
+  loader.crossOrigin = "anonymous";
   loader.decoding = "async";
   if (productImage.srcset) {
     loader.srcset = productImage.srcset;
@@ -297,6 +190,7 @@ const upgradeSeededImage = (
   loader.onload = () => {
     if (!image.isConnected) return;
 
+    image.crossOrigin = "anonymous";
     image.src = productImage.url;
     if (productImage.srcset) {
       image.srcset = productImage.srcset;
@@ -314,6 +208,7 @@ const preloadCarouselImage = (image: HTMLImageElement | null | undefined) => {
   image.loading = "eager";
 
   const loader = new Image();
+  loader.crossOrigin = "anonymous";
   loader.decoding = "async";
   activeCarouselPreloads.add(loader);
   const releaseLoader = () => activeCarouselPreloads.delete(loader);
@@ -328,6 +223,29 @@ const preloadCarouselImage = (image: HTMLImageElement | null | undefined) => {
   }
 
   loader.src = image.currentSrc || image.src;
+};
+
+interface ProductLightbox {
+  overlay: HTMLElement;
+  frame: HTMLElement;
+  image: HTMLImageElement;
+  previous?: HTMLButtonElement;
+  next?: HTMLButtonElement;
+  counter?: HTMLElement;
+}
+
+const setProductLightboxOpen = (isOpen: boolean) => {
+  document.documentElement.classList.toggle("is-product-lightbox-open", isOpen);
+  document.body.classList.toggle("is-product-lightbox-open", isOpen);
+};
+
+const getHistoryStateWithProductLightbox = () => {
+  const state = history.state;
+  if (state && typeof state === "object") {
+    return { ...state, productLightbox: true };
+  }
+
+  return { productLightbox: true };
 };
 
 const renderSeededProduct = (container: HTMLElement, seedImage: ProductImageSeed) => {
@@ -347,14 +265,13 @@ const renderSeededProduct = (container: HTMLElement, seedImage: ProductImageSeed
   const track = document.createElement("div");
   track.className = "product-detail__carousel-track";
 
-  let activeAspect: number | undefined;
-
   const slide = document.createElement("div");
   slide.className = "product-detail__carousel-slide is-active";
   slide.setAttribute("aria-hidden", "false");
 
   const image = document.createElement("img");
   image.className = "product-detail__image";
+  image.crossOrigin = "anonymous";
   image.src = seedUrl;
   image.alt = seedImage.alt ?? "";
   image.decoding = "async";
@@ -362,11 +279,6 @@ const renderSeededProduct = (container: HTMLElement, seedImage: ProductImageSeed
   image.fetchPriority = "high";
   if (seedImage.width) image.width = seedImage.width;
   if (seedImage.height) image.height = seedImage.height;
-  activeAspect = setGalleryAspect(gallery, seedImage) ?? setGalleryAspectFromImageElement(gallery, image);
-  setGalleryAspectOnImageLoad(gallery, image, undefined, (aspect) => {
-    activeAspect = aspect;
-    setCarouselFrameWidth(gallery, carousel, viewport, activeAspect);
-  });
 
   const detail = document.createElement("section");
   detail.className = "product-detail__panel";
@@ -377,7 +289,6 @@ const renderSeededProduct = (container: HTMLElement, seedImage: ProductImageSeed
   viewport.append(track);
   carousel.append(viewport);
   gallery.append(carousel);
-  bindCarouselFrameWidth(gallery, carousel, viewport, () => activeAspect);
 
   container.className = "product-detail__content";
   container.replaceChildren(gallery, detail);
@@ -400,9 +311,35 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
   const slides: HTMLElement[] = [];
   const imageCount = product.images.length;
   let activeIndex = 0;
-  let activeAspect: number | undefined;
+  let carouselCounter: HTMLElement | undefined;
+  let activeLightbox: ProductLightbox | undefined;
   let touchStartX: number | undefined;
   let touchStartY: number | undefined;
+  let didSwipeCarousel = false;
+
+  function updateLightboxImage() {
+    if (!activeLightbox) return;
+
+    const activeSlide = slides[activeIndex];
+    const carouselImage = activeSlide?.querySelector<HTMLImageElement>(".product-detail__image");
+    const productImage = product.images[activeIndex];
+    const srcset = carouselImage?.getAttribute("srcset") || productImage?.srcset || "";
+    const src = carouselImage?.currentSrc || carouselImage?.src || productImage?.url || "";
+
+    activeLightbox.image.crossOrigin = "anonymous";
+    activeLightbox.image.src = src;
+    if (srcset) {
+      activeLightbox.image.srcset = srcset;
+      activeLightbox.image.sizes = "100vw";
+    } else {
+      activeLightbox.image.removeAttribute("srcset");
+      activeLightbox.image.removeAttribute("sizes");
+    }
+    activeLightbox.image.alt = carouselImage?.alt ?? product.title;
+    if (productImage?.width) activeLightbox.image.width = productImage.width;
+    if (productImage?.height) activeLightbox.image.height = productImage.height;
+    if (activeLightbox.counter) activeLightbox.counter.textContent = `${activeIndex + 1} / ${imageCount}`;
+  }
 
   product.images.forEach((productImage, index) => {
     const seedUrl = index === 0 ? getSeedImageUrl(seedImage) : undefined;
@@ -411,6 +348,7 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
 
     const image = document.createElement("img");
     image.className = "product-detail__image";
+    image.crossOrigin = "anonymous";
     image.src = seedUrl ?? productImage.url;
     image.alt = productImage.altText || product.title;
     image.decoding = "async";
@@ -423,14 +361,7 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
       image.sizes = "(max-width: 760px) 54vw, 55vw";
     }
     if (seedUrl) {
-      window.requestAnimationFrame(() =>
-        upgradeSeededImage(image, productImage, () => {
-          if (slides[activeIndex] !== slide) return;
-
-          activeAspect = setGalleryAspect(gallery, productImage) ?? setGalleryAspectFromImageElement(gallery, image);
-          setCarouselFrameWidth(gallery, carousel, viewport, activeAspect);
-        }),
-      );
+      window.requestAnimationFrame(() => upgradeSeededImage(image, productImage, updateLightboxImage));
     }
 
     slide.append(image);
@@ -456,35 +387,11 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
     }
   };
 
-  const syncActiveSlideAspect = () => {
-    const activeSlide = slides[activeIndex];
-    const activeImage = activeSlide?.querySelector<HTMLImageElement>(".product-detail__image");
-    const activeProductImage = product.images[activeIndex];
-
-    activeAspect = setGalleryAspect(gallery, activeProductImage) ?? setGalleryAspectFromImageElement(gallery, activeImage);
-    if (activeAspect) {
-      setCarouselFrameWidth(gallery, carousel, viewport, activeAspect);
-      window.requestAnimationFrame(() => setCarouselFrameWidth(gallery, carousel, viewport, activeAspect));
-      return;
-    }
-
-    setGalleryAspectOnImageLoad(
-      gallery,
-      activeImage,
-      () => slides[activeIndex] === activeSlide,
-      (aspect) => {
-        activeAspect = aspect;
-        setCarouselFrameWidth(gallery, carousel, viewport, activeAspect);
-      },
-    );
-  };
-
-  const setActiveImage = (index: number, counter?: HTMLElement) => {
+  const setActiveImage = (index: number) => {
     if (imageCount < 1) return;
 
     activeIndex = (index + imageCount) % imageCount;
-    track.style.transform = `translateX(-${activeIndex * 100}%)`;
-    if (counter) counter.textContent = `${activeIndex + 1} / ${imageCount}`;
+    if (carouselCounter) carouselCounter.textContent = `${activeIndex + 1} / ${imageCount}`;
 
     slides.forEach((slide, slideIndex) => {
       const isActive = slideIndex === activeIndex;
@@ -492,8 +399,179 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
       slide.setAttribute("aria-hidden", isActive ? "false" : "true");
     });
 
-    syncActiveSlideAspect();
     preloadAdjacentImages();
+    updateLightboxImage();
+  };
+
+  const openLightbox = () => {
+    if (imageCount < 1 || activeLightbox) return;
+
+    const overlay = document.createElement("div");
+    overlay.className = "product-lightbox";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-label", "product image");
+
+    const frame = document.createElement("div");
+    frame.className = "product-lightbox__frame";
+
+    const image = document.createElement("img");
+    image.className = "product-lightbox__image";
+    image.crossOrigin = "anonymous";
+    image.decoding = "async";
+    image.loading = "eager";
+
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "product-lightbox__close";
+    close.setAttribute("aria-label", "close image");
+    close.textContent = "×";
+
+    const cleanupFns: (() => void)[] = [];
+    let lightboxTouchStartX: number | undefined;
+    let lightboxTouchStartY: number | undefined;
+    let didSwipeLightbox = false;
+    let pushedHistoryEntry = false;
+    let isClosed = false;
+
+    const closeLightbox = (restoreHistory = true) => {
+      if (isClosed) return;
+
+      isClosed = true;
+      activeLightbox = undefined;
+      setProductLightboxOpen(false);
+      overlay.classList.remove("is-open");
+      cleanupFns.forEach((cleanup) => cleanup());
+      window.setTimeout(() => overlay.remove(), 180);
+      if (restoreHistory && pushedHistoryEntry) {
+        history.back();
+      }
+    };
+
+    const goToLightboxImage = (index: number) => {
+      setActiveImage(index);
+    };
+
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        closeLightbox();
+        return;
+      }
+      if (event.key === "ArrowLeft" && imageCount > 1) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        goToLightboxImage(activeIndex - 1);
+        return;
+      }
+      if (event.key === "ArrowRight" && imageCount > 1) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        goToLightboxImage(activeIndex + 1);
+      }
+    };
+
+    const handlePopstate = () => {
+      closeLightbox(false);
+    };
+
+    const handleBackdropClick = (event: MouseEvent) => {
+      if (didSwipeLightbox) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target === overlay || !target.closest(".product-lightbox__frame")) {
+        closeLightbox();
+      }
+    };
+
+    const handleTouchStart = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (!touch) return;
+
+      lightboxTouchStartX = touch.clientX;
+      lightboxTouchStartY = touch.clientY;
+    };
+
+    const handleTouchEnd = (event: TouchEvent) => {
+      const touch = event.changedTouches[0];
+      if (!touch || lightboxTouchStartX === undefined || lightboxTouchStartY === undefined) return;
+
+      const deltaX = touch.clientX - lightboxTouchStartX;
+      const deltaY = touch.clientY - lightboxTouchStartY;
+      lightboxTouchStartX = undefined;
+      lightboxTouchStartY = undefined;
+
+      if (Math.abs(deltaX) < 36 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
+
+      didSwipeLightbox = true;
+      window.setTimeout(() => {
+        didSwipeLightbox = false;
+      }, 240);
+      if (imageCount > 1) {
+        goToLightboxImage(activeIndex + (deltaX < 0 ? 1 : -1));
+      }
+    };
+
+    image.addEventListener("click", () => {
+      if (didSwipeLightbox) return;
+      closeLightbox();
+    });
+    close.addEventListener("click", () => closeLightbox());
+    overlay.addEventListener("click", handleBackdropClick);
+    overlay.addEventListener("touchstart", handleTouchStart, { passive: true });
+    overlay.addEventListener("touchend", handleTouchEnd, { passive: true });
+    document.addEventListener("keydown", handleKeydown, true);
+    window.addEventListener("popstate", handlePopstate);
+    cleanupFns.push(
+      () => overlay.removeEventListener("click", handleBackdropClick),
+      () => document.removeEventListener("keydown", handleKeydown, true),
+      () => window.removeEventListener("popstate", handlePopstate),
+    );
+
+    frame.append(image);
+    overlay.append(frame, close);
+
+    const lightbox: ProductLightbox = {
+      overlay,
+      frame,
+      image,
+    };
+
+    if (imageCount > 1) {
+      const previous = document.createElement("button");
+      previous.type = "button";
+      previous.className = "product-lightbox__arrow product-lightbox__arrow--previous";
+      previous.setAttribute("aria-label", "previous image");
+      previous.textContent = "←";
+
+      const next = document.createElement("button");
+      next.type = "button";
+      next.className = "product-lightbox__arrow product-lightbox__arrow--next";
+      next.setAttribute("aria-label", "next image");
+      next.textContent = "→";
+
+      const counter = document.createElement("p");
+      counter.className = "product-lightbox__counter";
+      counter.setAttribute("aria-live", "polite");
+
+      previous.addEventListener("click", () => goToLightboxImage(activeIndex - 1));
+      next.addEventListener("click", () => goToLightboxImage(activeIndex + 1));
+      frame.append(previous, next, counter);
+      lightbox.previous = previous;
+      lightbox.next = next;
+      lightbox.counter = counter;
+    }
+
+    activeLightbox = lightbox;
+    document.body.append(overlay);
+    setProductLightboxOpen(true);
+    updateLightboxImage();
+    if (!history.state?.productLightbox) {
+      history.pushState(getHistoryStateWithProductLightbox(), "", location.href);
+      pushedHistoryEntry = true;
+    }
+    window.requestAnimationFrame(() => overlay.classList.add("is-open"));
   };
 
   if (imageCount > 1) {
@@ -512,9 +590,10 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
     const counter = document.createElement("p");
     counter.className = "product-detail__carousel-counter";
     counter.setAttribute("aria-live", "polite");
+    carouselCounter = counter;
 
-    previous.addEventListener("click", () => setActiveImage(activeIndex - 1, counter));
-    next.addEventListener("click", () => setActiveImage(activeIndex + 1, counter));
+    previous.addEventListener("click", () => setActiveImage(activeIndex - 1));
+    next.addEventListener("click", () => setActiveImage(activeIndex + 1));
     viewport.addEventListener(
       "touchstart",
       (event) => {
@@ -537,19 +616,30 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
         touchStartY = undefined;
 
         if (Math.abs(deltaX) < 36 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
-        setActiveImage(activeIndex + (deltaX < 0 ? 1 : -1), counter);
+        didSwipeCarousel = true;
+        window.setTimeout(() => {
+          didSwipeCarousel = false;
+        }, 240);
+        setActiveImage(activeIndex + (deltaX < 0 ? 1 : -1));
       },
       { passive: true },
     );
 
     carousel.append(previous, next, counter);
-    setActiveImage(0, counter);
+    setActiveImage(0);
   } else {
     setActiveImage(0);
   }
 
+  viewport.addEventListener("click", (event) => {
+    if (didSwipeCarousel) return;
+    const target = event.target;
+    if (!(target instanceof Element) || !target.closest(".product-detail__image")) return;
+
+    openLightbox();
+  });
+
   gallery.append(carousel);
-  bindCarouselFrameWidth(gallery, carousel, viewport, () => activeAspect);
   return gallery;
 };
 

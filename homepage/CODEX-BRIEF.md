@@ -261,6 +261,139 @@ rows, empty-query behavior.
 
 **CAROUSEL-CONTROLS (one-off, operator-directed 2026-07-06) — a0ca7ec — universal control placement — build:green check:green.** product-view.ts + global.css: frame now derives its aspect (and width, via min(galleryWidth, maxHeight×aspect)) from the ACTIVE slide's image — frame edge == image edge for any asset; arrows inset 16px from the image edges at mid-height, counter 12px in the image's bottom-right; controls not rendered at all when images.length < 2 (incl. seed/loading path); Phase-K viewport-fit intact. VERIFIED matrix: portrait 512×768 + landscape 512×342 both insets 16/16 + counter 12,12 + arrowMidY 0; cross-ratio arrowing holds 16; single-image ufo-tumbler renders zero controls; mobile landscape inset 16; no page scroll. Not pushed.
 
+**O-C16 (QUEUED after C15 — operator 2026-07-07): mobile search field must collapse on navigation-away.** After a search has been made on mobile (magnifier green, input populated/open), the search UI currently lingers when the user navigates elsewhere. Collapse it (input closes with its usual animation, magnifier returns to normal ink state; query may remain stored for reopen per O-C9 convention) whenever the user: (a) opens OR collapses a main menu folder (e.g. tapping a section header — the search-from-menu breadcrumb flow from O-C13 still opens search deliberately, that stays; this is about navigating the MENU while search sits open), (b) clicks into a product listing from search results (the input/icon should collapse as the product stage opens — results context returns via the title if they come back). Mobile only; desktop unchanged. Verify at 380: search made → tap a menu header → input+green state gone, menu navigable; search made → tap a result card → product opens with search UI collapsed.
+
+**PHASE O ROUND 5 STATUS: COMPLETE + VERIFIED (2026-07-07). Shipping tonight per operator.**
+- O-C16 — 52b94fa — mobile search collapses on navigation-away (menu-header nav ✓, result-card click ✓ — both verified; O-C13 breadcrumb flow unaffected).
+- O-C15 — c457190 — two-way drawer animation (upward collapse on close; visible mid-close, display:none after animationend; closed geometry unchanged).
+- O-C14 — f4a719c — lightbox backdrop tap/click dismisses like the × (verified mobile + desktop).
+- O-C13 — e9dd5ef — cascade returns on menu retarget; search-from-menu collapses subfolders w/ breadcrumb highlight, non-breadcrumb headers fade (hidden not removed), input clean; title↔input context hand-off verified through Return.
+- O-C12 — bf4cce1 — mobile search unscoped (chip/escape-row/scope logic gone ≤760; desktop scoped system intact).
+
+### PHASE O ROUND 5 (operator 2026-07-07; reconstruction of one truncated sentence confirmed in chat)
+- **O-C12 — mobile search is UNSCOPED:** at ≤760px remove the scope system entirely — no scope chip, no `search all products →` escape row, no scoped filtering; every mobile search runs against all products (title `SEARCH — "q" (n)`). Desktop scoped system unchanged. URL scope param never set from mobile; a scoped deep link opened on mobile degrades gracefully to unscoped (judgment).
+- **O-C13 — icon cascade returns when the menu retargets + search-from-menu flow:** (a) BUG: with a stage open (icons cascaded at the ×), tapping a top menu tab leaves them stuck — they must animate back to the resting stack when a menu section opens over a stage (stage hides state-preserved per MOB-2; icons follow the rest layout). (b) Tapping the magnifier while a menu folder is expanded: the expanded subcategories/panel COLLAPSE upward (animated, the two-way drawer language of O-C15), the section's top tab KEEPS its green highlight as a breadcrumb, and search proceeds exactly like from the clean homepage (rest-position input, no overlay of menu text, unscoped per C12).
+- **O-C14 — lightbox backdrop tap = dismiss:** tapping/clicking anywhere outside the enlarged image asset dismisses identically to the × (returns to the product view as it was). Both views. Keep ×/tap-image/Esc paths.
+- **O-C15 — two-way drawer animation:** closing a folder or subfolder (− → +) animates the panel/nested list collapsing UPWARD (mirror of the .55s downward reveal) instead of snapping — main sections + CATEGORIES/DESIGNERS, both views; requires delaying the display:none until the collapse animation ends (JS animationend or equivalent — do NOT reintroduce the in-flow closed-box bug from J2-C2's first attempt); reduced-motion: instant.
+
+- O-C11 — 3881ce1 — mobile outline suppressed while the lightbox is open (fades out on enlarge, returns on dismiss — verified 2px→hidden→2px at 380). Operator alternative (gone-for-good after first tap) is a one-liner if preferred.
+- O-C10 — cf53e27 — outline scoping: lightbox/enlarged image outline REMOVED universally (both views measured none); desktop product-listing outline REMOVED entirely (enlarge + zoom-in cursor kept); mobile 2px flush outline stays (measured 2px neon at 380).
+- O-C9 — c4185b0 — mobile Return commits the search: input blurs + collapses (keyboard dismissed), results stage + title + scope intact (verified: SEARCH — "VASE" (9) remains, 9 cards); magnifier reopen restores the query; enterkeyhint=search; desktop Enter unchanged.
+
+**PHASE O ROUND 4 STATUS: COMPLETE ON DEV (2026-07-07) — verified with screenshots. NOT pushed.**
+- O-C8 — 3a9b45f — mobile search cascade: rest stack unchanged (bag 24/mag 74); on ×-stage open both icons drop-cascade (bag → mag's old slot above the ×; mag → beside the × at its row); tapping opens the input on its own clean line below the icon row with the scope chip carrying the collection context — ZERO text overlaps measured with input open + scoped query rendering; stage close reverses exactly (24/74 restored). Stage-language easing, reduced-motion safe.
+- O-C7 (rework) — ad8f8e6 — structural frame shrink-wrap (img drives layout; NO aspect math): frame gaps 0,0,0,0 + arrows 16/16 + counter 12,12 measured on ALL of: lizard-brain direct s1+s2, lizard-brain seeded via card click, portrait, vase, desktop lightbox, mobile view, mobile lightbox. First attempt (decoded-pixels re-assert, 8d7e40f) REJECTED by measurement (57px bands, slide-2 asymmetry) and replaced. The rule is structural — future listings self-place controls + outline with no manual edits.
+
+**O-C8 (QUEUED — dispatch after O-C7): mobile search-bar cascade (operator 2026-07-07).**
+PROBLEM: on mobile, opening the magnifier overlays the input across the menu
+header text — visually overwhelming. THE FLOW: (a) REST (no stage open):
+vertical stack unchanged (bag top, magnifier below). (b) When a panel stage
+with an × opens (catalog/search/product — ASSUMPTION: all ×-stages, operator
+may narrow to catalog-only): both icons ANIMATE a drop-down cascade — bag
+slides down into the magnifier's old slot (sitting ABOVE the ×), magnifier
+drops further to sit LEFT of the × on the ×'s row; that spot IS the search
+trigger there — tapping opens the input LEFTWARD along the ×'s row. NO TEXT
+OVERLAY is the hard rule — the MEANS is judgment (operator 2026-07-07): the
+input width cap is ONE option, but the collection title / description /
+designer about-blurb may instead be REMOVED, REORIENTED, truncated, or
+temporarily collapsed/faded while the input is open, so the search isn't
+necessarily cramped — find what reads best so BOTH features coexist
+comfortably (e.g. description fades while typing, or the header reflows).
+Whatever the solution: input edge keeps ≥16px clear of any remaining text,
+and the description returns when the input closes. Screenshot every state. (c) Closing the stage reverses the cascade back to
+the rest stack. Timing/easing: the site's stage language (.55s family,
+subtle stagger like N2); reduced-motion: reposition without slide. ALSO
+verify DESKTOP: opening the search input in every state overlays no text
+(landing + catalog + product at 1440); mobile menu-open (non-stage) state:
+magnifier input must not overlay header text either — if the rest-position
+input would, cap/reposition it similarly. No text crowded or overlaid
+anywhere, both views. ONE commit, build+check green, screenshots at 380 for
+rest/cascade/input-open states.
+
+**PHASE O ROUND 3 STATUS: COMPLETE ON DEV (2026-07-07) — verified. NOT pushed.**
+- O-C6 — 989f746 — DESKTOP port (operator-ordered desktop change): flush 2px neon outline + zoom-in cursor on desktop product carousels (gaps 0,0,0,0 to the image); click → same lightbox (transparent bg, blur(2px) saturate(.62) brightness(1.06) distant treatment), image contains in viewport caps, controls inside at 16px/12,12, Esc/×/click-image dismiss, scroll locked. Mobile regression-checked: C5 behavior intact.
+- O-C5 — e714068 — mobile refinements: outline 1px+3px-offset → 2px FLUSH on the image edge (measured 0-gap all sides); lightbox white wash REMOVED → transparent + blur/desaturate/brightness (site blends behind, distant).
+
+**PHASE O ROUND 2 STATUS: COMPLETE ON DEV (2026-07-07) — verified. NOT pushed.**
+- O-C4 — dfd7514 — universal control frame == rendered image (both dims, active slide, natural-dims fallback, re-assert on slide change + resize) across desktop stage / standalone / mobile view / lightbox. MEASURED: arrows 16px inside at exact mid-height + counter 12,12 inside bottom-right on ALL of: desktop short-asset (vase, cross-slide — the operator's bad case), desktop portrait, desktop landscape, mobile product view, mobile lightbox. Touches desktop intentionally (operator-reported desktop bug).
+- O-C3 — d491bd0 — lightbox scrim now translucent (rgba(255,255,255,.76) + 1.5px blur — site state visible, faded) + 1px neon-green outline (3px offset) on the pressable mobile carousel. Mobile-only.
+
+**O-C6 (QUEUED — dispatch after O-C5 lands): DESKTOP port of the enlarge feature.**
+Operator (2026-07-07): bring the mobile tap-to-enlarge experience to DESKTOP,
+near-identical — this deliberately amends the desktop-unchanged rule for the
+product views. Inherit O-C5's final characteristics exactly: flush neon
+border (var(--neon-green), same weight family) directly on the carousel
+image's edge signaling clickability on BOTH desktop product surfaces (hero
+stage + standalone /product/); click → the same lightbox with the
+transparent "distant" backdrop treatment (no white wash; blur/desaturate of
+the live site behind); universal control mapping inside (frame==image,
+arrows 16px mid-height, counter 12,12 — already universal); × / click-image
+/ Esc dismiss; scroll lock; reduced-motion. RESCALE for desktop: enlarged
+image caps to the viewport generously (e.g. contain within ~92vh/~90vw with
+comfortable margins), controls may scale up slightly if they read small at
+desktop size (judgment); hover cursor:pointer + the site's neon hover
+language on the bordered carousel. Verify 1440: border flush on the image,
+click enlarges, controls inside at the settled margins on short/portrait/
+landscape assets, dismiss paths, backdrop distant; mobile behavior unchanged
+from O-C5.
+
+### PHASE O ROUND 2 (operator 2026-07-07, with desktop screenshot of the vase bad-case)
+
+**O-C3 — lightbox backdrop + tappable-carousel affordance (mobile).**
+(a) The lightbox backdrop is NOT solid paper: the CURRENT site state stays
+visible behind, slightly faded — a translucent scrim (e.g. paper-tone rgba at
+~.72-.8 alpha, judgment; optional slight backdrop-blur if it reads well) so
+focus shifts to the enlarged carousel + its controls. (b) The mobile product
+carousel's tap affordance gets LOUDER: a clearly visible neon-green outline
+around the pressable carousel (site theme — e.g. 1px solid var(--neon-green)
+outline/border with a whisper of the existing wash behind; visible but not
+garish) signaling it can be pressed → pressing enlarges. Mobile only; desktop
+pixel-unchanged.
+
+**O-C4 — UNIVERSAL control mapping: frame == rendered image, everywhere.**
+Operator's screenshot shows the DESKTOP product stage failing for a small/
+short asset (vase 3/3): arrows render completely OUTSIDE the image because
+the carousel frame stays wider than the displayed image when the height cap
+doesn't bind (aspect chain falls through). Build ONE robust system used by
+EVERY control surface (desktop product stage, standalone /product/, mobile
+product view, AND the mobile lightbox): the control frame must equal the
+RENDERED image box in BOTH dimensions for the ACTIVE slide — derive from the
+slide image's natural dims (data dims → naturalWidth/Height on load →
+re-assert on slide change AND window resize; never leave the frame wider or
+taller than the displayed image). Controls keep the settled spec: arrows
+INSIDE the image at mid-height with 16px insets, counter INSIDE bottom-right
+at 12px — correct margins at ANY image ratio (portrait/landscape/square/
+small). In the lightbox, the same system maps to the enlarged image (its own
+frame). Verify the vase case (mokuzai/grid-vase style short asset, slide 3/3)
+on desktop + a portrait + a landscape, and the lightbox on mobile — arrows/
+counter inside the image with correct margins in all of them. This commit MAY
+touch desktop (it fixes the operator-reported desktop bug).
+
+**PHASE O STATUS: COMPLETE ON DEV (2026-07-07) — 2 commits, verified 380px + desktop-unchanged 1440. NOT pushed.**
+- O-C2 — f3efec6 — mobile tap-to-enlarge lightbox (.product-lightbox: full-bleed paper overlay, contain image, swipe/arrows/counter live inside — verified 1/3→2/3, × AND tap-image dismiss, scroll locked, reduced-motion gated) + neon wash behind the mobile product carousel (::before radial rgba(31,170,46,.055) — barely perceptible per spec). Desktop: no lightbox fires, no wash, layout pixel-unchanged.
+- O-C1 — ccf84cc — mobile menu type scaled: headers 12.5→16.5px, subheaders 14px, nested 12.75px + breathing room; 2-row wrap, 38px clear of the bag, no overflow; desktop 21px/x82 untouched.
+
+## PHASE O — mobile-first polish (operator 2026-07-07). Everything MOBILE-ONLY (≤760px); desktop pixel-unchanged, verified after each commit at 1440. Two focused commits; judgment granted on sizing/structure.
+
+**O-C1 — bigger mobile menu type.** Scale the WHOLE mobile menu up for
+comfortable reading/tapping: section headers (currently 12.5px → ~16-17px),
+panel links + subheaders (12px → ~14px), nested designer/category items
+proportionally, with matching breathing room (line-height/margins/taps).
+Keep hierarchy proportions feeling right; header rows must still wrap
+cleanly at 380 clear of the icon stack (retune clearance if the larger type
+needs it); open panel stays full inner width; no horizontal overflow.
+
+**O-C2 — tap-to-enlarge product carousel + faint green backing (mobile).**
+(a) Tapping the product carousel image (in-hero product stage AND standalone
+/product/, shared renderer) enlarges it — judgment: a full-bleed paper-toned
+lightbox overlay fitting the phone (image contain, no crop), swipe + arrows +
+counter still functional inside it, dismissed via a × (site convention) or
+tapping the image again; Esc/back-safe; body scroll locked while open;
+reduced-motion: no zoom animation. (b) On the mobile product view, an
+EXTREMELY subtle neon-green wash/glow behind the carousel — barely
+perceptible (think ~4-6% alpha radial wash or soft box-shadow using
+--neon-green), erring too-subtle. Desktop carousel/layout untouched.
+
 **PHASE N2 STATUS: COMMITTED ON DEV (2026-07-06) — fc7d8ce — verified. NOT pushed.**
 - Animated cart+search pair: desktop order SWAPPED to cart-left/search-right (search takes the corner, 32px inset); desktop cart-hide rules on panel stages RETIRED — pair always visible, sliding over by --hero-icon-stage-clearance on panel-stage entry (.55s ease-in-out, 80ms stagger: search leads in, cart follows; delays invert on exit) sitting 12px clear of the ×; mobile pair stacked vertical, translateY choreography; reduced-motion settles in place. Verified 1440 (rest + catalog: bag visible, pair clear of ×, order correct, hero scroll 0) + 380 (stacked, no overflow). FLAG for operator: pair-to-× gap is 12px — snug; one variable to widen.
 

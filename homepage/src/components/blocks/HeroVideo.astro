@@ -43,7 +43,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
         </svg>
       </button>
       <button class="hero__search-scope-chip" data-search-scope-chip type="button" hidden></button>
-      <input class="hero__search-input" data-search-input type="text" placeholder="search…" aria-label="search products" autocomplete="off" spellcheck="false" />
+      <input class="hero__search-input" data-search-input type="text" placeholder="search…" aria-label="search products" autocomplete="off" spellcheck="false" enterkeyhint="search" />
       <span class="hero__search-status" data-search-status aria-live="polite" aria-atomic="true"></span>
     </div>
   </div>
@@ -393,17 +393,28 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   let searchSessionReturn: SearchSessionReturn | null = null;
   let searchSessionReturnUrl: URL | null = null;
   let searchSessionHasHistoryEntry = false;
+  const sectionCollapseTokens = new WeakMap<HTMLElement, number>();
+  const subgroupCollapseTokens = new WeakMap<HTMLElement, number>();
+  const menuCollapseAnimations = new WeakMap<HTMLElement, Animation>();
 
   const isCartOpen = () => document.querySelector(".cart-drawer")?.classList.contains("is-open") ?? false;
+  const isMobileSearchViewport = () => window.matchMedia("(max-width: 760px)").matches;
+  const getViewportSearchScope = (scope: SearchScope | null) => (isMobileSearchViewport() ? null : scope);
 
   const setSearchResultsExpanded = (isExpanded: boolean) => {
     search?.setAttribute("aria-expanded", String(isExpanded));
   };
 
+  const setSearchOpen = (isOpen: boolean) => {
+    search?.classList.toggle("is-open", isOpen);
+    hero?.classList.toggle("is-search-open", isOpen);
+  };
+
   const openSearch = () => {
     if (!search || !searchInput) return;
 
-    search.classList.add("is-open");
+    collapseMobileMenuForSearch();
+    setSearchOpen(true);
     window.requestAnimationFrame(() => {
       searchInput.focus();
       updateLiveSearchFromInput();
@@ -413,13 +424,21 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const closeSearch = (clearInput = false) => {
     if (!search || !searchInput) return;
 
-    search.classList.remove("is-open");
+    setSearchOpen(false);
     setSearchResultsExpanded(false);
     if (clearInput) {
       searchInput.value = "";
     }
+    clearMenuSearchBreadcrumbs();
     clearPredictiveSearch();
     searchStatus?.replaceChildren();
+  };
+
+  const closeMobileSearchForNavigation = () => {
+    if (!mobileQuery.matches || !search?.classList.contains("is-open")) return;
+
+    searchInput?.blur();
+    closeSearch();
   };
 
   const toggleSearch = () => {
@@ -478,7 +497,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     return Number.POSITIVE_INFINITY;
   };
 
-  const getScopeProducts = (scope: SearchScope | null) => (scope ? (catalogData[scope.collection] ?? []) : searchIndex);
+  const getScopeProducts = (scope: SearchScope | null) => {
+    const viewportScope = getViewportSearchScope(scope);
+    return viewportScope ? (catalogData[viewportScope.collection] ?? []) : searchIndex;
+  };
 
   const getSearchMatches = (query: string, limit = Number.POSITIVE_INFINITY, scope: SearchScope | null = null) => {
     const normalizedQuery = normalizeSearchText(query);
@@ -525,6 +547,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     new Set((catalogData[collection] ?? []).map((product) => product.handle).filter(Boolean));
 
   const schedulePredictiveSearch = (query: string, localProducts: CatalogProduct[], scope: SearchScope | null) => {
+    const viewportScope = getViewportSearchScope(scope);
     const normalizedQuery = normalizeSearchText(query);
     clearPredictiveSearch();
     if (!normalizedQuery) return;
@@ -542,15 +565,15 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
             activeSearchQuery !== normalizedQuery
           ) return;
 
-          if (scope) {
-            const scopeHandles = getCollectionHandleSet(scope.collection);
+          if (viewportScope) {
+            const scopeHandles = getCollectionHandleSet(viewportScope.collection);
             const predictiveScopedProducts = predictiveProducts.filter((product) => scopeHandles.has(product.handle));
             const mergedScopedProducts = mergeSearchResults(localProducts, predictiveScopedProducts);
             const fallbackProducts =
               mergedScopedProducts.length === 0
                 ? mergeSearchResults(getSearchMatches(query), predictiveProducts)
                 : [];
-            renderSearchGrid(query.trim(), mergedScopedProducts, getCatalogScrollTop(), { scope, fallbackProducts });
+            renderSearchGrid(query.trim(), mergedScopedProducts, getCatalogScrollTop(), { scope: viewportScope, fallbackProducts });
             return;
           }
 
@@ -578,11 +601,12 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   const getHomepageSearchUrl = (query: string, scope: SearchScope | null = null) => {
     const url = new URL(location.href);
+    const viewportScope = getViewportSearchScope(scope);
     url.pathname = BASE;
     url.searchParams.delete("product");
     url.searchParams.set("search", query.trim());
-    if (scope?.collection) {
-      url.searchParams.set("scope", scope.collection);
+    if (viewportScope?.collection) {
+      url.searchParams.set("scope", viewportScope.collection);
     } else {
       url.searchParams.delete("scope");
     }
@@ -618,6 +642,14 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     history.replaceState(null, "", url);
   };
 
+  const stripSearchScopeParamFromUrl = () => {
+    const url = new URL(location.href);
+    if (!url.searchParams.has("scope")) return;
+
+    url.searchParams.delete("scope");
+    history.replaceState({ search: getCurrentSearchParam()?.trim() ?? null, scope: null }, "", url);
+  };
+
   const getHandleFromProductHref = (href: string) => {
     try {
       return new URL(href, location.href).searchParams.get("handle");
@@ -636,18 +668,14 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     const seedUrl = image?.currentSrc || image?.src;
     if (!image || !seedUrl) return undefined;
 
-    const cardAspect = Number.parseFloat(card.style.getPropertyValue("--card-aspect"));
     const width = image.naturalWidth || undefined;
     const height = image.naturalHeight || undefined;
-    const naturalAspect = width && height ? width / height : undefined;
-    const aspect = Number.isFinite(cardAspect) && cardAspect > 0 ? cardAspect : naturalAspect;
 
     return {
       url: seedUrl,
       alt: image.alt,
       width,
       height,
-      aspect,
     };
   };
 
@@ -720,6 +748,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     label.trim().replace(/\s+/g, " ").toLocaleUpperCase("en-US");
 
   const getSearchScopeFromCurrentContext = (): SearchScope | null => {
+    if (isMobileSearchViewport()) return null;
+
     if (activeStage === "catalog") {
       const collection = hero?.dataset.activeCollection?.trim() ?? "";
       if (!collection) return null;
@@ -741,6 +771,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   };
 
   const getSearchScopeFromUrl = (): SearchScope | null => {
+    if (isMobileSearchViewport()) return null;
+
     const collection = getCurrentSearchScopeParam()?.trim();
     if (!collection) return null;
 
@@ -853,34 +885,164 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     reconcileObjectsMenuList(objectsSection, liveMenu.objects);
   };
 
-  const setMenuSubgroupState = (button: HTMLButtonElement, isOpen: boolean) => {
-    const group = button.closest(".hero__menu-item--group");
+  const prefersReducedMenuMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const nextMenuCollapseToken = (tokens: WeakMap<HTMLElement, number>, element: HTMLElement) => {
+    const token = (tokens.get(element) ?? 0) + 1;
+    tokens.set(element, token);
+    return token;
+  };
+
+  const isCurrentMenuCollapse = (tokens: WeakMap<HTMLElement, number>, element: HTMLElement, token: number) =>
+    tokens.get(element) === token;
+
+  const setMenuSubgroupExpanded = (button: HTMLButtonElement, isOpen: boolean) => {
     const toggle = button.querySelector(".hero__menu-subtoggle");
-    group?.classList.toggle("is-open", isOpen);
     button.setAttribute("aria-expanded", String(isOpen));
     if (toggle) {
       toggle.textContent = isOpen ? "\u2013" : "+";
     }
   };
 
+  const setMenuSectionExpanded = (section: HTMLElement, isOpen: boolean) => {
+    const trigger = section.querySelector(".hero__menu-header");
+    const toggle = section.querySelector(".hero__menu-toggle");
+    trigger?.setAttribute("aria-expanded", String(isOpen));
+    if (toggle) {
+      toggle.textContent = isOpen ? "\u2013" : "+";
+    }
+  };
+
+  const cancelMenuCollapse = (element: HTMLElement | null | undefined) => {
+    if (!element) return;
+
+    const animation = menuCollapseAnimations.get(element);
+    if (animation) {
+      animation.cancel();
+      menuCollapseAnimations.delete(element);
+    }
+    element.style.removeProperty("overflow");
+  };
+
+  const animateMenuCollapse = async (element: HTMLElement) => {
+    cancelMenuCollapse(element);
+    if (prefersReducedMenuMotion() || element.offsetHeight <= 0) {
+      return;
+    }
+
+    element.style.overflow = "hidden";
+    const animation = element.animate(
+      [
+        { height: `${element.offsetHeight}px`, opacity: 1, transform: "translateY(0)", clipPath: "inset(0 0 0 0)" },
+        { height: "0px", opacity: 0, transform: "translateY(-0.45em)", clipPath: "inset(0 0 100% 0)" },
+      ],
+      { duration: stageDuration, easing: "cubic-bezier(.16,1,.3,1)" },
+    );
+    menuCollapseAnimations.set(element, animation);
+
+    await animation.finished.catch(() => undefined);
+    if (menuCollapseAnimations.get(element) === animation) {
+      menuCollapseAnimations.delete(element);
+      element.style.removeProperty("overflow");
+    }
+  };
+
   const resetMenuSubgroups = (section: HTMLElement) => {
     const sectionSubgroups = Array.from(section.querySelectorAll<HTMLButtonElement>("[data-menu-subgroup]"));
-    sectionSubgroups.forEach((button) => setMenuSubgroupState(button, false));
+    sectionSubgroups.forEach((button) => setMenuSubgroupState(button, false, false));
+  };
+
+  const setMenuSubgroupState = (button: HTMLButtonElement, isOpen: boolean, shouldAnimate = true) => {
+    const group = button.closest<HTMLElement>(".hero__menu-item--group");
+    const nested = group?.querySelector<HTMLElement>(".hero__menu-nested");
+    if (!group) {
+      setMenuSubgroupExpanded(button, isOpen);
+      return;
+    }
+
+    if (isOpen) {
+      nextMenuCollapseToken(subgroupCollapseTokens, group);
+      cancelMenuCollapse(nested);
+      group.classList.add("is-open");
+      setMenuSubgroupExpanded(button, true);
+      return;
+    }
+
+    setMenuSubgroupExpanded(button, false);
+    const token = nextMenuCollapseToken(subgroupCollapseTokens, group);
+    if (!shouldAnimate || prefersReducedMenuMotion() || !group.classList.contains("is-open") || !nested) {
+      cancelMenuCollapse(nested);
+      group.classList.remove("is-open");
+      return;
+    }
+
+    void animateMenuCollapse(nested).then(() => {
+      if (!isCurrentMenuCollapse(subgroupCollapseTokens, group, token)) return;
+      if (button.getAttribute("aria-expanded") === "true") return;
+
+      group.classList.remove("is-open");
+    });
+  };
+
+  const clearMenuSearchBreadcrumbs = () => {
+    menuSections.forEach((section) => section.classList.remove("is-search-breadcrumb"));
+  };
+
+  const collapseMobileMenuForSearch = () => {
+    if (!mobileQuery.matches) return;
+
+    const openSections = menuSections.filter((section) => section.classList.contains("is-open"));
+    if (openSections.length === 0) return;
+
+    openSections.forEach((section) => {
+      section.classList.add("is-search-breadcrumb");
+      closeMenuSection(section, true);
+    });
+  };
+
+  const closeMenuSection = (section: HTMLElement, keepSearchBreadcrumb = false) => {
+    const panel = section.querySelector<HTMLElement>(".hero__menu-panel");
+    setMenuSectionExpanded(section, false);
+
+    const token = nextMenuCollapseToken(sectionCollapseTokens, section);
+    if (!keepSearchBreadcrumb) {
+      section.classList.remove("is-search-breadcrumb");
+    }
+    if (!section.classList.contains("is-open") || !panel || prefersReducedMenuMotion()) {
+      cancelMenuCollapse(panel);
+      resetMenuSubgroups(section);
+      section.classList.remove("is-open");
+      return;
+    }
+
+    section.querySelectorAll<HTMLButtonElement>(".hero__menu-item--group.is-open [data-menu-subgroup]").forEach((button) => {
+      setMenuSubgroupState(button, false);
+    });
+
+    void animateMenuCollapse(panel).then(() => {
+      if (!isCurrentMenuCollapse(sectionCollapseTokens, section, token)) return;
+      const trigger = section.querySelector(".hero__menu-header");
+      if (trigger?.getAttribute("aria-expanded") === "true") return;
+
+      resetMenuSubgroups(section);
+      section.classList.remove("is-open");
+    });
+  };
+
+  const openMenuSection = (section: HTMLElement) => {
+    const panel = section.querySelector<HTMLElement>(".hero__menu-panel");
+    nextMenuCollapseToken(sectionCollapseTokens, section);
+    cancelMenuCollapse(panel);
+    section.classList.add("is-open");
+    setMenuSectionExpanded(section, true);
   };
 
   const setMenuSectionState = (activeSection: HTMLElement | null) => {
+    clearMenuSearchBreadcrumbs();
     menuSections.forEach((section) => {
       const isOpen = section === activeSection;
-      const trigger = section.querySelector(".hero__menu-header");
-      const toggle = section.querySelector(".hero__menu-toggle");
-      section.classList.toggle("is-open", isOpen);
-      trigger?.setAttribute("aria-expanded", String(isOpen));
-      if (toggle) {
-        toggle.textContent = isOpen ? "\u2013" : "+";
-      }
-      if (!isOpen) {
-        resetMenuSubgroups(section);
-      }
+      if (isOpen) openMenuSection(section);
+      else closeMenuSection(section);
     });
   };
 
@@ -1171,12 +1333,13 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   };
 
   const updateSearchScopeControls = (scope: SearchScope | null) => {
-    activeSearchScope = scope;
+    const viewportScope = getViewportSearchScope(scope);
+    activeSearchScope = viewportScope;
 
-    if (scope && searchScopeChip) {
+    if (viewportScope && searchScopeChip) {
       searchScopeChip.hidden = false;
-      searchScopeChip.textContent = `in: ${scope.label.toLocaleLowerCase("en-US")} ×`;
-      searchScopeChip.setAttribute("aria-label", `search all products instead of ${scope.label}`);
+      searchScopeChip.textContent = `in: ${viewportScope.label.toLocaleLowerCase("en-US")} ×`;
+      searchScopeChip.setAttribute("aria-label", `search all products instead of ${viewportScope.label}`);
     } else if (searchScopeChip) {
       searchScopeChip.hidden = true;
       searchScopeChip.textContent = "";
@@ -1184,7 +1347,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     }
 
     if (searchAllRow) {
-      searchAllRow.hidden = !scope;
+      searchAllRow.hidden = !viewportScope;
     }
   };
 
@@ -1213,7 +1376,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   ) => {
     if (!catalogTrack) return;
 
-    const scope = options.scope ?? null;
+    const scope = getViewportSearchScope(options.scope ?? null);
     const fallbackProducts = options.fallbackProducts ?? [];
     renderedSearchProducts = products;
     renderedSearchFallbackProducts = fallbackProducts;
@@ -1282,8 +1445,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   };
 
   const syncLiveSearchUrl = (query: string, scope: SearchScope | null, replaceOnly = false) => {
-    const url = getHomepageSearchUrl(query, scope);
-    const state = { search: query.trim(), scope: scope?.collection ?? null };
+    const viewportScope = getViewportSearchScope(scope);
+    const url = getHomepageSearchUrl(query, viewportScope);
+    const state = { search: query.trim(), scope: viewportScope?.collection ?? null };
     if (replaceOnly || searchSessionHasHistoryEntry || getCurrentSearchParam()?.trim()) {
       history.replaceState(state, "", url);
       searchSessionHasHistoryEntry = true;
@@ -1313,9 +1477,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     const trimmedQuery = query.trim();
     const normalizedQuery = normalizeSearchText(trimmedQuery);
-    const scope = options.scope ?? null;
+    const scope = getViewportSearchScope(options.scope ?? null);
     searchStageSequence += 1;
     activeSearchQuery = normalizedQuery;
+    clearMenuSearchBreadcrumbs();
     delete hero.dataset.activeCollection;
     setActiveButton(null);
 
@@ -1361,7 +1526,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     }
 
     if (keepSearchOpen) {
-      search?.classList.add("is-open");
+      setSearchOpen(true);
       window.requestAnimationFrame(() => searchInput?.focus());
     } else {
       closeSearch(true);
@@ -1382,7 +1547,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       return;
     }
 
-    search?.classList.add("is-open");
+    setSearchOpen(true);
     rememberSearchSessionReturn();
     const scope = getSearchScopeFromCurrentContext();
     syncLiveSearchUrl(query, scope);
@@ -1410,7 +1575,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     syncLiveSearchUrl(query, null, true);
     renderSearchContent(query, undefined, 0, { scope: null });
-    search?.classList.add("is-open");
+    setSearchOpen(true);
     window.requestAnimationFrame(() => searchInput.focus());
   };
 
@@ -1504,8 +1669,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     const trimmedQuery = query.trim();
     if (!trimmedQuery || !hero || !catalog || !catalogTitle || !catalogTrack) return;
 
-    const scope = options.scope ?? (options.pushState === false ? getSearchScopeFromUrl() : getSearchScopeFromCurrentContext());
-    search?.classList.add("is-open");
+    const scope = getViewportSearchScope(options.scope ?? (options.pushState === false ? getSearchScopeFromUrl() : getSearchScopeFromCurrentContext()));
+    setSearchOpen(true);
     if (searchInput) searchInput.value = trimmedQuery;
     rememberSearchSessionReturn();
     if (options.pushState !== false) {
@@ -1771,6 +1936,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     const searchParam = getCurrentSearchParam();
     if (searchParam?.trim()) {
+      if (isMobileSearchViewport()) stripSearchScopeParamFromUrl();
       const scope = getSearchScopeFromUrl();
       if (
         activeStage !== "search" ||
@@ -1811,8 +1977,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   subgroupToggles.forEach((button) => {
     button.addEventListener("click", () => {
-      const group = button.closest(".hero__menu-item--group");
-      setMenuSubgroupState(button, !group?.classList.contains("is-open"));
+      setMenuSubgroupState(button, button.getAttribute("aria-expanded") !== "true");
     });
   });
 
@@ -1875,6 +2040,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     event.preventDefault();
     history.pushState({ product: handle }, "", getHomepageProductUrl(handle));
+    if (activeStage === "search") closeMobileSearchForNavigation();
     openProduct(handle, { seedImage: getProductSeedImage(link) });
   });
 
@@ -1895,6 +2061,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (event.key !== "Enter") return;
 
     event.preventDefault();
+    if (!isMobileSearchViewport() || !searchInput.value.trim()) return;
+
+    searchInput.blur();
+    setSearchOpen(false);
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && search?.classList.contains("is-open")) {
@@ -1902,7 +2072,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       if (searchInput?.value.trim()) {
         searchInput.value = "";
         updateLiveSearchFromInput();
-        search.classList.add("is-open");
+        setSearchOpen(true);
         window.requestAnimationFrame(() => searchInput.focus());
         return;
       }
@@ -1934,7 +2104,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       const isPreorderSection = section.dataset.preorder === "true";
       const isFamSection = section.dataset.fam === "true";
       const isMusicSection = section.dataset.music === "true";
-      const isOpen = !section.classList.contains("is-open");
+      const isOpen = trigger.getAttribute("aria-expanded") !== "true";
+
+      closeMobileSearchForNavigation();
 
       if (isPreorderSection && isOpen) {
         setMenuSectionState(section);
