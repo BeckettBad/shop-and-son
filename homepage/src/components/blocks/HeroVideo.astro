@@ -43,7 +43,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
         </svg>
       </button>
       <button class="hero__search-scope-chip" data-search-scope-chip type="button" hidden></button>
-      <input class="hero__search-input" data-search-input type="text" placeholder="search…" aria-label="search products" autocomplete="off" spellcheck="false" />
+      <input class="hero__search-input" data-search-input type="text" placeholder="search…" aria-label="search products" autocomplete="off" spellcheck="false" enterkeyhint="search" />
       <span class="hero__search-status" data-search-status aria-live="polite" aria-atomic="true"></span>
     </div>
   </div>
@@ -395,6 +395,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   let searchSessionHasHistoryEntry = false;
 
   const isCartOpen = () => document.querySelector(".cart-drawer")?.classList.contains("is-open") ?? false;
+  const isMobileSearchViewport = () => window.matchMedia("(max-width: 760px)").matches;
 
   const setSearchResultsExpanded = (isExpanded: boolean) => {
     search?.setAttribute("aria-expanded", String(isExpanded));
@@ -1896,6 +1897,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (event.key !== "Enter") return;
 
     event.preventDefault();
+    if (!isMobileSearchViewport() || !searchInput.value.trim()) return;
+
+    searchInput.blur();
+    setSearchOpen(false);
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && search?.classList.contains("is-open")) {
