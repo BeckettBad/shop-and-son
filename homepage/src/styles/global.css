@@ -917,9 +917,10 @@ body{
     text-align:center;
   }
   .hero__menu-panel{
-    order:1; flex:0 0 100%;
+    order:1; flex:0 0 calc(100% + 112px);
     display:none; position:static;
-    padding:0.45em 0 0; width:100%; max-width:none;
+    margin-left:-56px; margin-right:-56px;
+    padding:0.45em 0 0; width:calc(100% + 112px); max-width:none;
   }
   .hero__menu-section.is-open .hero__menu-panel{display:block}
   .hero__menu-link{
