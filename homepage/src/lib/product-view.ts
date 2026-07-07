@@ -351,8 +351,9 @@ const setLightboxFrameSize = (
   if (!aspect) return;
 
   const overlayRect = overlay.getBoundingClientRect();
-  const availableWidth = overlayRect.width;
-  const availableHeight = Math.max(1, overlayRect.height - 24);
+  const isDesktopLightbox = !mobileProductLightboxQuery.matches;
+  const availableWidth = isDesktopLightbox ? overlayRect.width * 0.9 : overlayRect.width;
+  const availableHeight = Math.max(1, isDesktopLightbox ? overlayRect.height * 0.92 : overlayRect.height - 24);
   const frameSize = getContainedFrameSize(availableWidth, availableHeight, aspect);
   if (!frameSize) return;
 
@@ -643,7 +644,7 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
   };
 
   const openLightbox = () => {
-    if (!mobileProductLightboxQuery.matches || imageCount < 1 || activeLightbox) return;
+    if (imageCount < 1 || activeLightbox) return;
 
     const overlay = document.createElement("div");
     overlay.className = "product-lightbox";
@@ -719,12 +720,6 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
       closeLightbox(false);
     };
 
-    const handleMobileQueryChange = () => {
-      if (!mobileProductLightboxQuery.matches) {
-        closeLightbox();
-      }
-    };
-
     const handleTouchStart = (event: TouchEvent) => {
       const touch = event.touches[0];
       if (!touch) return;
@@ -764,13 +759,11 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
     document.addEventListener("keydown", handleKeydown, true);
     window.addEventListener("popstate", handlePopstate);
     window.addEventListener("resize", syncLightboxFrame, { passive: true });
-    mobileProductLightboxQuery.addEventListener("change", handleMobileQueryChange);
     cleanupFns.push(
       () => image.removeEventListener("load", syncLightboxFrame),
       () => document.removeEventListener("keydown", handleKeydown, true),
       () => window.removeEventListener("popstate", handlePopstate),
       () => window.removeEventListener("resize", syncLightboxFrame),
-      () => mobileProductLightboxQuery.removeEventListener("change", handleMobileQueryChange),
     );
 
     frame.append(image);
@@ -876,7 +869,7 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
   }
 
   viewport.addEventListener("click", (event) => {
-    if (!mobileProductLightboxQuery.matches || didSwipeCarousel) return;
+    if (didSwipeCarousel) return;
     const target = event.target;
     if (!(target instanceof Element) || !target.closest(".product-detail__image")) return;
 
