@@ -22,6 +22,7 @@ const { title = `${site.brand} — independent design`, landing = false, bare = 
     <title>{title}</title>
     <meta name="generator" content={Astro.generator} />
     <link rel="icon" type="image/svg+xml" href={withBase("/favicon.svg")} />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://cdn.shopify.com; media-src 'self' https://cdn.shopify.com; connect-src 'self' https://shopandson.com; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https://shopandson.com;" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://cdn.shopify.com" crossorigin />
