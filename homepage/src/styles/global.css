@@ -918,6 +918,10 @@ body{
     min-height:22px; max-width:58vw;
     white-space:normal; text-align:right; overflow-wrap:anywhere;
   }
+  .hero__search-scope-chip,
+  .hero__search-all-row{
+    display:none !important;
+  }
   .hero-video.is-catalog .hero__cart,
   .hero-video.is-search .hero__cart,
   .hero-video.is-product .hero__cart,

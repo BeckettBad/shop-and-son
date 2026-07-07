@@ -396,6 +396,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   const isCartOpen = () => document.querySelector(".cart-drawer")?.classList.contains("is-open") ?? false;
   const isMobileSearchViewport = () => window.matchMedia("(max-width: 760px)").matches;
+  const getViewportSearchScope = (scope: SearchScope | null) => (isMobileSearchViewport() ? null : scope);
 
   const setSearchResultsExpanded = (isExpanded: boolean) => {
     search?.setAttribute("aria-expanded", String(isExpanded));
@@ -484,7 +485,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     return Number.POSITIVE_INFINITY;
   };
 
-  const getScopeProducts = (scope: SearchScope | null) => (scope ? (catalogData[scope.collection] ?? []) : searchIndex);
+  const getScopeProducts = (scope: SearchScope | null) => {
+    const viewportScope = getViewportSearchScope(scope);
+    return viewportScope ? (catalogData[viewportScope.collection] ?? []) : searchIndex;
+  };
 
   const getSearchMatches = (query: string, limit = Number.POSITIVE_INFINITY, scope: SearchScope | null = null) => {
     const normalizedQuery = normalizeSearchText(query);
@@ -531,6 +535,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     new Set((catalogData[collection] ?? []).map((product) => product.handle).filter(Boolean));
 
   const schedulePredictiveSearch = (query: string, localProducts: CatalogProduct[], scope: SearchScope | null) => {
+    const viewportScope = getViewportSearchScope(scope);
     const normalizedQuery = normalizeSearchText(query);
     clearPredictiveSearch();
     if (!normalizedQuery) return;
@@ -548,15 +553,15 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
             activeSearchQuery !== normalizedQuery
           ) return;
 
-          if (scope) {
-            const scopeHandles = getCollectionHandleSet(scope.collection);
+          if (viewportScope) {
+            const scopeHandles = getCollectionHandleSet(viewportScope.collection);
             const predictiveScopedProducts = predictiveProducts.filter((product) => scopeHandles.has(product.handle));
             const mergedScopedProducts = mergeSearchResults(localProducts, predictiveScopedProducts);
             const fallbackProducts =
               mergedScopedProducts.length === 0
                 ? mergeSearchResults(getSearchMatches(query), predictiveProducts)
                 : [];
-            renderSearchGrid(query.trim(), mergedScopedProducts, getCatalogScrollTop(), { scope, fallbackProducts });
+            renderSearchGrid(query.trim(), mergedScopedProducts, getCatalogScrollTop(), { scope: viewportScope, fallbackProducts });
             return;
           }
 
@@ -584,11 +589,12 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   const getHomepageSearchUrl = (query: string, scope: SearchScope | null = null) => {
     const url = new URL(location.href);
+    const viewportScope = getViewportSearchScope(scope);
     url.pathname = BASE;
     url.searchParams.delete("product");
     url.searchParams.set("search", query.trim());
-    if (scope?.collection) {
-      url.searchParams.set("scope", scope.collection);
+    if (viewportScope?.collection) {
+      url.searchParams.set("scope", viewportScope.collection);
     } else {
       url.searchParams.delete("scope");
     }
@@ -622,6 +628,14 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     url.searchParams.delete("search");
     url.searchParams.delete("scope");
     history.replaceState(null, "", url);
+  };
+
+  const stripSearchScopeParamFromUrl = () => {
+    const url = new URL(location.href);
+    if (!url.searchParams.has("scope")) return;
+
+    url.searchParams.delete("scope");
+    history.replaceState({ search: getCurrentSearchParam()?.trim() ?? null, scope: null }, "", url);
   };
 
   const getHandleFromProductHref = (href: string) => {
@@ -722,6 +736,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     label.trim().replace(/\s+/g, " ").toLocaleUpperCase("en-US");
 
   const getSearchScopeFromCurrentContext = (): SearchScope | null => {
+    if (isMobileSearchViewport()) return null;
+
     if (activeStage === "catalog") {
       const collection = hero?.dataset.activeCollection?.trim() ?? "";
       if (!collection) return null;
@@ -743,6 +759,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   };
 
   const getSearchScopeFromUrl = (): SearchScope | null => {
+    if (isMobileSearchViewport()) return null;
+
     const collection = getCurrentSearchScopeParam()?.trim();
     if (!collection) return null;
 
@@ -1173,12 +1191,13 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   };
 
   const updateSearchScopeControls = (scope: SearchScope | null) => {
-    activeSearchScope = scope;
+    const viewportScope = getViewportSearchScope(scope);
+    activeSearchScope = viewportScope;
 
-    if (scope && searchScopeChip) {
+    if (viewportScope && searchScopeChip) {
       searchScopeChip.hidden = false;
-      searchScopeChip.textContent = `in: ${scope.label.toLocaleLowerCase("en-US")} ×`;
-      searchScopeChip.setAttribute("aria-label", `search all products instead of ${scope.label}`);
+      searchScopeChip.textContent = `in: ${viewportScope.label.toLocaleLowerCase("en-US")} ×`;
+      searchScopeChip.setAttribute("aria-label", `search all products instead of ${viewportScope.label}`);
     } else if (searchScopeChip) {
       searchScopeChip.hidden = true;
       searchScopeChip.textContent = "";
@@ -1186,7 +1205,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     }
 
     if (searchAllRow) {
-      searchAllRow.hidden = !scope;
+      searchAllRow.hidden = !viewportScope;
     }
   };
 
@@ -1215,7 +1234,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   ) => {
     if (!catalogTrack) return;
 
-    const scope = options.scope ?? null;
+    const scope = getViewportSearchScope(options.scope ?? null);
     const fallbackProducts = options.fallbackProducts ?? [];
     renderedSearchProducts = products;
     renderedSearchFallbackProducts = fallbackProducts;
@@ -1284,8 +1303,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   };
 
   const syncLiveSearchUrl = (query: string, scope: SearchScope | null, replaceOnly = false) => {
-    const url = getHomepageSearchUrl(query, scope);
-    const state = { search: query.trim(), scope: scope?.collection ?? null };
+    const viewportScope = getViewportSearchScope(scope);
+    const url = getHomepageSearchUrl(query, viewportScope);
+    const state = { search: query.trim(), scope: viewportScope?.collection ?? null };
     if (replaceOnly || searchSessionHasHistoryEntry || getCurrentSearchParam()?.trim()) {
       history.replaceState(state, "", url);
       searchSessionHasHistoryEntry = true;
@@ -1315,7 +1335,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     const trimmedQuery = query.trim();
     const normalizedQuery = normalizeSearchText(trimmedQuery);
-    const scope = options.scope ?? null;
+    const scope = getViewportSearchScope(options.scope ?? null);
     searchStageSequence += 1;
     activeSearchQuery = normalizedQuery;
     delete hero.dataset.activeCollection;
@@ -1506,7 +1526,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     const trimmedQuery = query.trim();
     if (!trimmedQuery || !hero || !catalog || !catalogTitle || !catalogTrack) return;
 
-    const scope = options.scope ?? (options.pushState === false ? getSearchScopeFromUrl() : getSearchScopeFromCurrentContext());
+    const scope = getViewportSearchScope(options.scope ?? (options.pushState === false ? getSearchScopeFromUrl() : getSearchScopeFromCurrentContext()));
     setSearchOpen(true);
     if (searchInput) searchInput.value = trimmedQuery;
     rememberSearchSessionReturn();
@@ -1773,6 +1793,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
     const searchParam = getCurrentSearchParam();
     if (searchParam?.trim()) {
+      if (isMobileSearchViewport()) stripSearchScopeParamFromUrl();
       const scope = getSearchScopeFromUrl();
       if (
         activeStage !== "search" ||
