@@ -68,9 +68,81 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — Q1 committed @ 5308070, reviewed + verified
-> (desktop tree 0/14/28px via --menu-indent, mobile pixel-unchanged), ready
-> for operator verify. Tune by changing --menu-indent in global.css line 714.**
+> **ACTIVE SUB-TASK: (none) — Q2 @ 817767f, Q3 @ 1fa8189, Q3b @ 35f197a all
+> committed + verified on dev, awaiting operator verify. Q3's outside-outline
+> was clipped by overflow ancestors (operator caught it); Q3b replaced it with
+> an inset ::after border overlay (unclippable, all four edges verified on
+> portrait + landscape, both product contexts).**
+>
+> **Q3b spec.** Operator verified Q3 on dev: the outline is invisible on most
+> products and shows only along the bottom on others. Root cause: `outline`
+> paints OUTSIDE the border box, and the desktop carousel sits flush against
+> overflow-clipped ancestors, so the outline is clipped wherever the image
+> fills its container (tall images = all edges clipped except any slack side).
+> Replace the desktop treatment with an INSET overlay that cannot be clipped:
+> - Remove the desktop `outline`-based neon rules Q3 added (both
+>   `.hero__product` and `.product-detail--standalone` contexts), including
+>   any now-orphaned glow `::before` desktop rules if they are also clipped
+>   into invisibility — judgment: keep the glow only if it actually renders.
+> - Add, desktop contexts only (`.hero__product .product-detail__carousel`
+>   and `.product-detail--standalone .product-detail__carousel`):
+>   `::after { content:""; position:absolute; inset:0;
+>   border:2px solid var(--neon-green); pointer-events:none; }` with a
+>   z-index just high enough to sit above the image but below the carousel
+>   arrows/counter chips (check their stacking; arrows must stay clickable
+>   and visually above the border line where they overlap it).
+> - The carousel is `position:relative` already (verify; add if a context
+>   lacks it).
+> - Lightbox parity with Q3: while the product lightbox is open the border
+>   must not glow through — carry over the existing suppression state
+>   (border-color transparent under `body.is-product-lightbox-open`), and the
+>   lightbox itself gains no border.
+> - Mobile (≤760px) keeps its current outline+glow exactly as-is.
+> Verify: build + check green; at 1440, opening several products from the
+> catalog (landscape AND tall portrait assets) shows the full 2px neon frame
+> on ALL FOUR edges hugging the image; same on /product/?handle=…; arrows
+> and lightbox still work; 390px mobile unchanged.**
+>
+> **ACTIVE SUB-TASK: PHASE Q2 then Q3 (operator desktop pass, 2026-07-07).
+> Two ordered commits, one dispatch each, Claude reviews between. DESKTOP
+> ONLY — mobile must stay pixel-identical in both. Specs below.**
+>
+> **Q2 spec — catalog rows back to 3-across (desktop).** `.hero__catalog-track`
+> (global.css ~672) is `grid-template-columns:repeat(4,minmax(0,1fr))` on
+> desktop. Change to `repeat(3,minmax(0,1fr))` — the old catalogue dimensions.
+> Cards enlarge automatically (fractional columns). This one grid serves the
+> catalog rail, the search results, and the search "more like this" fallback,
+> which is exactly the operator's intent (every multi-listing catalogue grid
+> on desktop). The mobile override (~1109, `repeat(2,...)`) stays untouched.
+> Before committing, grep the catalog/search JS (HeroVideo.astro, catalog.ts)
+> for any logic coupled to a 4-column count (page-size math, batch/fill
+> counts, "row" calculations) and reconcile with 3 if found — QA found only a
+> generic slice(limit); confirm. Verify: build + check green; at 1440 the
+> catalog and search grids show 3 larger listings per row; at 390 mobile still
+> shows 2.
+>
+> **Q3 spec — neon carousel border on desktop product views.** Mobile already
+> frames the product-detail carousel in neon green (mobile block ~1898:
+> `.product-detail__carousel{outline:2px solid var(--neon-green)}` plus the
+> soft radial glow `::before`). Recreate that same treatment on DESKTOP for
+> every individual product view: the in-page product stage
+> (`.hero__product .product-detail__carousel`) and the standalone page
+> (`/product/`, `.product-detail--standalone`). Notes:
+> - The carousel element is `display:inline-flex; width:fit-content`, so it
+>   already hugs the rendered asset frame — the outline will fit each
+>   product's carousel dimensions automatically, which is the requirement.
+>   Do not fix the width/aspect; the border adapts per product.
+> - Desktop currently kills it explicitly (~1751:
+>   `.hero__product .product-detail__carousel{outline:0; box-shadow:none}`) —
+>   that rule (and any sibling suppressors) is what you're overriding/removing
+>   for the outline; check the lightbox-open state (~1915) still behaves (no
+>   double border or stray glow while the lightbox is up, and the lightbox
+>   itself gains no border).
+> - Same neon (`--neon-green`), same 2px weight and glow as mobile so the
+>   language matches.
+> Verify: build + check green; at 1440 a product opened from the catalog AND
+> /product/?handle=… show the neon-framed carousel hugging the image; sold-out
+> and multi-image products frame correctly; mobile (390px) pixel-unchanged.**
 >
 > **PHASE Q1 spec.** DESKTOP ONLY (the existing desktop media block for the
 > hero menu, where indentation is currently flattened flush-left — see
@@ -109,6 +181,9 @@ below so Codex has ONE target; everything else in this file is context.
 
 ## Log (Phase Q)
 
+- 2026-07-07 — Q3b inset neon carousel frame (desktop) — 35f197a — build:green check:green — replaces Q3 outline; 4-edge pixel-verified portrait+landscape, stage+standalone; arrows/lightbox stack intact
+- 2026-07-07 — Q3 desktop neon carousel border — 1fa8189 — build:green check:green — superseded by Q3b (outline clipped by overflow ancestors)
+- 2026-07-07 — Q2 catalog rows 3-across (desktop) — 817767f — build:green check:green — one grid value + img sizes hint 16vw→22vw; search + more-like-this share the track; mobile 2-col untouched
 - 2026-07-07 — Q1 desktop menu tree indent — 5308070 — build:green check:green — one --menu-indent var (14px), levels 0/1/2, structural so future subfolders inherit; verified 1440 + mobile unchanged
 
 ## Log (Phase P)
