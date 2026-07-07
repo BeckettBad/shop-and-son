@@ -154,16 +154,25 @@ export function sanitizeShopifyHtml(html: string): string {
   if (!html) return "";
 
   const document = new DOMParser().parseFromString(html, "text/html");
-  document.querySelectorAll("script, iframe, object, embed, form").forEach((element) => element.remove());
+  const strippedElements = "script, iframe, object, embed, form, base, meta, link, style";
+  const urlAttributes = new Set(["href", "src", "action", "formaction", "srcset"]);
+  const allowedUrlPrefixes = ["http:", "https:", "mailto:", "tel:", "/", "./", "../", "#", "?"];
+
+  document.querySelectorAll(strippedElements).forEach((element) => element.remove());
   document.body.querySelectorAll("*").forEach((element) => {
-    for (const attribute of Array.from(element.attributes)) {
-      const name = attribute.name.toLowerCase();
-      const value = attribute.value.trim().toLowerCase();
+    for (const attributeName of element.getAttributeNames()) {
+      const name = attributeName.toLowerCase();
       if (name.startsWith("on")) {
-        element.removeAttribute(attribute.name);
+        element.removeAttribute(attributeName);
       }
-      if ((name === "href" || name === "src") && value.startsWith("javascript:")) {
-        element.removeAttribute(attribute.name);
+
+      if (urlAttributes.has(name) || name.endsWith(":href")) {
+        const value = (element.getAttribute(attributeName) ?? "").toLowerCase().replace(/[\x00-\x20]/g, "");
+        const isAllowedUrl =
+          allowedUrlPrefixes.some((prefix) => value.startsWith(prefix)) || !value.includes(":");
+        if (!isAllowedUrl) {
+          element.removeAttribute(attributeName);
+        }
       }
     }
   });
