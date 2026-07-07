@@ -261,6 +261,38 @@ rows, empty-query behavior.
 
 **CAROUSEL-CONTROLS (one-off, operator-directed 2026-07-06) — a0ca7ec — universal control placement — build:green check:green.** product-view.ts + global.css: frame now derives its aspect (and width, via min(galleryWidth, maxHeight×aspect)) from the ACTIVE slide's image — frame edge == image edge for any asset; arrows inset 16px from the image edges at mid-height, counter 12px in the image's bottom-right; controls not rendered at all when images.length < 2 (incl. seed/loading path); Phase-K viewport-fit intact. VERIFIED matrix: portrait 512×768 + landscape 512×342 both insets 16/16 + counter 12,12 + arrowMidY 0; cross-ratio arrowing holds 16; single-image ufo-tumbler renders zero controls; mobile landscape inset 16; no page scroll. Not pushed.
 
+### PHASE O ROUND 2 (operator 2026-07-07, with desktop screenshot of the vase bad-case)
+
+**O-C3 — lightbox backdrop + tappable-carousel affordance (mobile).**
+(a) The lightbox backdrop is NOT solid paper: the CURRENT site state stays
+visible behind, slightly faded — a translucent scrim (e.g. paper-tone rgba at
+~.72-.8 alpha, judgment; optional slight backdrop-blur if it reads well) so
+focus shifts to the enlarged carousel + its controls. (b) The mobile product
+carousel's tap affordance gets LOUDER: a clearly visible neon-green outline
+around the pressable carousel (site theme — e.g. 1px solid var(--neon-green)
+outline/border with a whisper of the existing wash behind; visible but not
+garish) signaling it can be pressed → pressing enlarges. Mobile only; desktop
+pixel-unchanged.
+
+**O-C4 — UNIVERSAL control mapping: frame == rendered image, everywhere.**
+Operator's screenshot shows the DESKTOP product stage failing for a small/
+short asset (vase 3/3): arrows render completely OUTSIDE the image because
+the carousel frame stays wider than the displayed image when the height cap
+doesn't bind (aspect chain falls through). Build ONE robust system used by
+EVERY control surface (desktop product stage, standalone /product/, mobile
+product view, AND the mobile lightbox): the control frame must equal the
+RENDERED image box in BOTH dimensions for the ACTIVE slide — derive from the
+slide image's natural dims (data dims → naturalWidth/Height on load →
+re-assert on slide change AND window resize; never leave the frame wider or
+taller than the displayed image). Controls keep the settled spec: arrows
+INSIDE the image at mid-height with 16px insets, counter INSIDE bottom-right
+at 12px — correct margins at ANY image ratio (portrait/landscape/square/
+small). In the lightbox, the same system maps to the enlarged image (its own
+frame). Verify the vase case (mokuzai/grid-vase style short asset, slide 3/3)
+on desktop + a portrait + a landscape, and the lightbox on mobile — arrows/
+counter inside the image with correct margins in all of them. This commit MAY
+touch desktop (it fixes the operator-reported desktop bug).
+
 **PHASE O STATUS: COMPLETE ON DEV (2026-07-07) — 2 commits, verified 380px + desktop-unchanged 1440. NOT pushed.**
 - O-C2 — f3efec6 — mobile tap-to-enlarge lightbox (.product-lightbox: full-bleed paper overlay, contain image, swipe/arrows/counter live inside — verified 1/3→2/3, × AND tap-image dismiss, scroll locked, reduced-motion gated) + neon wash behind the mobile product carousel (::before radial rgba(31,170,46,.055) — barely perceptible per spec). Desktop: no lightbox fires, no wash, layout pixel-unchanged.
 - O-C1 — ccf84cc — mobile menu type scaled: headers 12.5→16.5px, subheaders 14px, nested 12.75px + breathing room; 2-row wrap, 38px clear of the bag, no overflow; desktop 21px/x82 untouched.
