@@ -352,6 +352,9 @@ body{
 }
 .hero__cart-count[hidden],
 .product-detail__cart-count[hidden]{display:none}
+.product-detail__cart-count{
+  top:-2px; right:-5px;
+}
 .hero-video.is-catalog .hero__cart,
 .hero-video.is-search .hero__cart,
 .hero-video.is-product .hero__cart,
@@ -903,6 +906,9 @@ body{
     transition:transform .55s ease-in-out,opacity .18s ease,visibility 0s;
   }
   .hero__cart svg{width:22px; height:22px}
+  .hero__cart-count{
+    top:2px; right:4px;
+  }
   .hero__search-toggle{
     width:var(--hero-icon-size); height:var(--hero-icon-size);
   }
