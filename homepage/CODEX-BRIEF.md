@@ -289,6 +289,9 @@ unchanged (drawer, live search). prefers-reduced-motion: settle in place
 separate effect. ONE commit, build+check green, verify desktop 1440 +
 mobile 380 across landing/catalog/product/music transitions.
 
+Log:
+- 2026-07-06 — PHASE N2 animated cart+search icon pair — build:green check:green — desktop pair swapped to cart-left/search-right with panel-stage clearance; mobile stack animates vertically; browser geometry verified at 1440×900 and 380×844.
+
 ## PHASE M2 — MOBILE-ONLY pass (operator 2026-07-06; logged M2 — Phase M/film shipped Jul 1)
 
 HARD RULE: every change gated to the mobile sheet (~max-width:760px); desktop

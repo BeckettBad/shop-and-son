@@ -23,28 +23,30 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 // Block 1 — desktop: vertical left menu; mobile: horizontal tabs over fullscreen video.
 ---
 <section class="block hero-video" id="hero">
-  <div class="hero__search" data-search role="combobox" aria-expanded="false" aria-controls="hero-search-results">
-    <button class="hero__search-toggle" data-search-toggle type="button" aria-label="search">
-      <svg class="hero__search-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-        <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" fill="none" stroke-width="1.5" />
-        <path d="M12.5 12.5L17 17" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" />
-      </svg>
+  <div class="hero__icon-pair" data-hero-icon-pair>
+    <button type="button" class="hero__cart" data-cart-toggle aria-label="Cart">
+      <svg focusable="false" class="icon icon-bag" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+        viewBox="0 0 20 20" style="enable-background:new 0 0 24 24;" xml:space="preserve">
+  <path fill="currentColor" d="M17.200012,5.519043h-3.573059V4.60791c0-2-1.626953-3.626953-3.626953-3.626953S6.373047,2.60791,6.373047,4.60791
+    v0.911133H2.799988L1,18.519043h18L17.200012,5.519043z M7.373047,4.60791c0-1.44873,1.178223-2.626953,2.626953-2.626953
+    c1.448242,0,2.626953,1.178223,2.626953,2.626953v0.911133H7.373047V4.60791z M3.671082,6.519043h2.701965v1h1v-1h5.253906v1h1v-1
+    h2.701965l1.523071,11H2.14801L3.671082,6.519043z"/>
+  </svg>
+      <span class="hero__cart-count" data-cart-count hidden></span>
     </button>
-    <button class="hero__search-scope-chip" data-search-scope-chip type="button" hidden></button>
-    <input class="hero__search-input" data-search-input type="text" placeholder="search…" aria-label="search products" autocomplete="off" spellcheck="false" />
-    <span class="hero__search-status" data-search-status aria-live="polite" aria-atomic="true"></span>
-  </div>
 
-  <button type="button" class="hero__cart" data-cart-toggle aria-label="Cart">
-    <svg focusable="false" class="icon icon-bag" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 viewBox="0 0 20 20" style="enable-background:new 0 0 24 24;" xml:space="preserve">
-<path fill="currentColor" d="M17.200012,5.519043h-3.573059V4.60791c0-2-1.626953-3.626953-3.626953-3.626953S6.373047,2.60791,6.373047,4.60791
-	v0.911133H2.799988L1,18.519043h18L17.200012,5.519043z M7.373047,4.60791c0-1.44873,1.178223-2.626953,2.626953-2.626953
-	c1.448242,0,2.626953,1.178223,2.626953,2.626953v0.911133H7.373047V4.60791z M3.671082,6.519043h2.701965v1h1v-1h5.253906v1h1v-1
-	h2.701965l1.523071,11H2.14801L3.671082,6.519043z"/>
-</svg>
-    <span class="hero__cart-count" data-cart-count hidden></span>
-  </button>
+    <div class="hero__search" data-search role="combobox" aria-expanded="false" aria-controls="hero-search-results">
+      <button class="hero__search-toggle" data-search-toggle type="button" aria-label="search">
+        <svg class="hero__search-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+          <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" fill="none" stroke-width="1.5" />
+          <path d="M12.5 12.5L17 17" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" />
+        </svg>
+      </button>
+      <button class="hero__search-scope-chip" data-search-scope-chip type="button" hidden></button>
+      <input class="hero__search-input" data-search-input type="text" placeholder="search…" aria-label="search products" autocomplete="off" spellcheck="false" />
+      <span class="hero__search-status" data-search-status aria-live="polite" aria-atomic="true"></span>
+    </div>
+  </div>
 
   <video
     class="hero-video__media hero-video__media--desktop"
