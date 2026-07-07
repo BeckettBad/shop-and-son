@@ -68,9 +68,39 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — Q4 @ 55d2fb1 committed + verified (catalog
-> cards 2px neon frames, product view 3px, mobile clean), awaiting operator
-> verify along with Q2/Q3b.**
+> **ACTIVE SUB-TASK: (none) — Q5 @ f209c23 committed + verified. The neon
+> frame system is now universal: cards 2px / product 3px on desktop, cards
+> 1.5px / product 2px on mobile, all inset overlays (the old mobile outline
+> mechanism is gone). Awaiting operator verify of Q2–Q5.**
+>
+> **Q5 spec.** Make the catalog-card + product-view neon frame system
+> universal across viewports, proportioned for mobile:
+> 1. Product view (individual listing), mobile: REPLACE the current
+>    `outline:2px solid var(--neon-green)` on `.product-detail__carousel`
+>    (mobile block ~1898) with the same inset overlay used on desktop:
+>    `::after { content:""; position:absolute; inset:0; border:2px solid
+>    var(--neon-green); pointer-events:none; z-index:1 }` — same visible
+>    weight as today (operator wants the current mobile size kept), but
+>    hugging the carousel frame exactly and unclippable. Keep the existing
+>    mobile glow `::before` exactly as-is. Carry over the lightbox
+>    suppression on mobile the same way desktop does (border transparent
+>    while `body.is-product-lightbox-open`; check what the mobile block
+>    currently does with the outline in that state and mirror it for the
+>    overlay). Remove the now-dead outline rules (including the
+>    `transition:outline-color` line) — don't leave both mechanisms active.
+>    Carousel arrows must stay above the border line and clickable (they are
+>    z-index:2 on desktop; verify mobile stacking).
+> 2. Catalog/search cards, mobile: add the `.product-card__media::after`
+>    frame in the mobile block too, at reduced weight for the compact
+>    2-column cards — 1.5px solid var(--neon-green) (judgment range 1-2px,
+>    constraint: the product-view 2px frame must still read a visible step
+>    stronger on a phone). Sold-out chip stays above (z-index parity with
+>    the desktop change).
+> Verify: build + check green; at 390px the catalog grid shows subtle neon
+> frames on every card, an opened product shows the 2px frame hugging the
+> image exactly (no drift from the old outline position), lightbox opens
+> clean with no border bleed, arrows work; at 1440 desktop is pixel-identical
+> to Q4 (3px product, 2px cards).**
 >
 > **Q4 spec.** Two coordinated changes forming a visual hierarchy:
 > 1. Catalog/search cards: apply the Q3b inset-overlay treatment to every
@@ -200,6 +230,7 @@ below so Codex has ONE target; everything else in this file is context.
 
 ## Log (Phase Q)
 
+- 2026-07-07 — Q5 mobile neon frame parity — f209c23 — build:green check:green — mobile product outline→inset ::after 2px (glow kept, lightbox suppression ported), mobile cards 1.5px; desktop pixel-identical
 - 2026-07-07 — Q4 catalog card neon frames + 3px product frame — 55d2fb1 — build:green check:green — .product-card__media::after 2px desktop-only, sold-out chip z-index 2, carousel overlay 2px→3px; verified 1440 + mobile 0px
 - 2026-07-07 — Q3b inset neon carousel frame (desktop) — 35f197a — build:green check:green — replaces Q3 outline; 4-edge pixel-verified portrait+landscape, stage+standalone; arrows/lightbox stack intact
 - 2026-07-07 — Q3 desktop neon carousel border — 1fa8189 — build:green check:green — superseded by Q3b (outline clipped by overflow ancestors)
