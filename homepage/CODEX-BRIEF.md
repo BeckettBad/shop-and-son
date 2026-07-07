@@ -265,6 +265,25 @@ rows, empty-query behavior.
 - O-C4 — dfd7514 — universal control frame == rendered image (both dims, active slide, natural-dims fallback, re-assert on slide change + resize) across desktop stage / standalone / mobile view / lightbox. MEASURED: arrows 16px inside at exact mid-height + counter 12,12 inside bottom-right on ALL of: desktop short-asset (vase, cross-slide — the operator's bad case), desktop portrait, desktop landscape, mobile product view, mobile lightbox. Touches desktop intentionally (operator-reported desktop bug).
 - O-C3 — d491bd0 — lightbox scrim now translucent (rgba(255,255,255,.76) + 1.5px blur — site state visible, faded) + 1px neon-green outline (3px offset) on the pressable mobile carousel. Mobile-only.
 
+**O-C6 (QUEUED — dispatch after O-C5 lands): DESKTOP port of the enlarge feature.**
+Operator (2026-07-07): bring the mobile tap-to-enlarge experience to DESKTOP,
+near-identical — this deliberately amends the desktop-unchanged rule for the
+product views. Inherit O-C5's final characteristics exactly: flush neon
+border (var(--neon-green), same weight family) directly on the carousel
+image's edge signaling clickability on BOTH desktop product surfaces (hero
+stage + standalone /product/); click → the same lightbox with the
+transparent "distant" backdrop treatment (no white wash; blur/desaturate of
+the live site behind); universal control mapping inside (frame==image,
+arrows 16px mid-height, counter 12,12 — already universal); × / click-image
+/ Esc dismiss; scroll lock; reduced-motion. RESCALE for desktop: enlarged
+image caps to the viewport generously (e.g. contain within ~92vh/~90vw with
+comfortable margins), controls may scale up slightly if they read small at
+desktop size (judgment); hover cursor:pointer + the site's neon hover
+language on the bordered carousel. Verify 1440: border flush on the image,
+click enlarges, controls inside at the settled margins on short/portrait/
+landscape assets, dismiss paths, backdrop distant; mobile behavior unchanged
+from O-C5.
+
 ### PHASE O ROUND 2 (operator 2026-07-07, with desktop screenshot of the vase bad-case)
 
 **O-C3 — lightbox backdrop + tappable-carousel affordance (mobile).**
