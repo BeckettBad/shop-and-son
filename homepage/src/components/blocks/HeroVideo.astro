@@ -393,6 +393,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   let searchSessionReturn: SearchSessionReturn | null = null;
   let searchSessionReturnUrl: URL | null = null;
   let searchSessionHasHistoryEntry = false;
+  let menuCollapseSequence = 0;
 
   const isCartOpen = () => document.querySelector(".cart-drawer")?.classList.contains("is-open") ?? false;
   const isMobileSearchViewport = () => window.matchMedia("(max-width: 760px)").matches;
@@ -410,6 +411,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const openSearch = () => {
     if (!search || !searchInput) return;
 
+    collapseMobileMenuForSearch();
     setSearchOpen(true);
     window.requestAnimationFrame(() => {
       searchInput.focus();
@@ -425,6 +427,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (clearInput) {
       searchInput.value = "";
     }
+    clearMenuSearchBreadcrumbs();
     clearPredictiveSearch();
     searchStatus?.replaceChildren();
   };
@@ -883,12 +886,66 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     }
   };
 
+  const clearMenuSearchBreadcrumbs = () => {
+    menuSections.forEach((section) => section.classList.remove("is-search-breadcrumb"));
+  };
+
+  const animateMenuCollapse = async (element: HTMLElement) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || element.offsetHeight <= 0) {
+      return;
+    }
+
+    element.style.overflow = "hidden";
+    const animation = element.animate(
+      [
+        { height: `${element.offsetHeight}px`, opacity: 1, transform: "translateY(0)", clipPath: "inset(0 0 0 0)" },
+        { height: "0px", opacity: 0, transform: "translateY(-0.45em)", clipPath: "inset(0 0 100% 0)" },
+      ],
+      { duration: stageDuration, easing: "cubic-bezier(.16,1,.3,1)" },
+    );
+
+    await animation.finished.catch(() => undefined);
+    element.style.removeProperty("overflow");
+  };
+
+  const collapseMobileMenuForSearch = () => {
+    if (!mobileQuery.matches) return;
+
+    const openSections = menuSections.filter((section) => section.classList.contains("is-open"));
+    if (openSections.length === 0) return;
+
+    const collapseSequence = ++menuCollapseSequence;
+    openSections.forEach((section) => {
+      const panel = section.querySelector<HTMLElement>(".hero__menu-panel");
+      const trigger = section.querySelector(".hero__menu-header");
+      const toggle = section.querySelector(".hero__menu-toggle");
+      const openSubgroups = Array.from(
+        section.querySelectorAll<HTMLElement>(".hero__menu-item--group.is-open .hero__menu-nested"),
+      );
+
+      section.classList.add("is-search-breadcrumb");
+      const animations = [...openSubgroups, ...(panel ? [panel] : [])].map(animateMenuCollapse);
+      void Promise.all(animations).then(() => {
+        if (collapseSequence !== menuCollapseSequence) return;
+
+        resetMenuSubgroups(section);
+        section.classList.remove("is-open");
+        trigger?.setAttribute("aria-expanded", "false");
+        if (toggle) {
+          toggle.textContent = "+";
+        }
+      });
+    });
+  };
+
   const resetMenuSubgroups = (section: HTMLElement) => {
     const sectionSubgroups = Array.from(section.querySelectorAll<HTMLButtonElement>("[data-menu-subgroup]"));
     sectionSubgroups.forEach((button) => setMenuSubgroupState(button, false));
   };
 
   const setMenuSectionState = (activeSection: HTMLElement | null) => {
+    menuCollapseSequence += 1;
+    clearMenuSearchBreadcrumbs();
     menuSections.forEach((section) => {
       const isOpen = section === activeSection;
       const trigger = section.querySelector(".hero__menu-header");
@@ -1338,6 +1395,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     const scope = getViewportSearchScope(options.scope ?? null);
     searchStageSequence += 1;
     activeSearchQuery = normalizedQuery;
+    clearMenuSearchBreadcrumbs();
     delete hero.dataset.activeCollection;
     setActiveButton(null);
 
