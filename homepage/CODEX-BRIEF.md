@@ -261,6 +261,9 @@ rows, empty-query behavior.
 
 **CAROUSEL-CONTROLS (one-off, operator-directed 2026-07-06) — a0ca7ec — universal control placement — build:green check:green.** product-view.ts + global.css: frame now derives its aspect (and width, via min(galleryWidth, maxHeight×aspect)) from the ACTIVE slide's image — frame edge == image edge for any asset; arrows inset 16px from the image edges at mid-height, counter 12px in the image's bottom-right; controls not rendered at all when images.length < 2 (incl. seed/loading path); Phase-K viewport-fit intact. VERIFIED matrix: portrait 512×768 + landscape 512×342 both insets 16/16 + counter 12,12 + arrowMidY 0; cross-ratio arrowing holds 16; single-image ufo-tumbler renders zero controls; mobile landscape inset 16; no page scroll. Not pushed.
 
+**PHASE N2 STATUS: COMMITTED ON DEV (2026-07-06) — fc7d8ce — verified. NOT pushed.**
+- Animated cart+search pair: desktop order SWAPPED to cart-left/search-right (search takes the corner, 32px inset); desktop cart-hide rules on panel stages RETIRED — pair always visible, sliding over by --hero-icon-stage-clearance on panel-stage entry (.55s ease-in-out, 80ms stagger: search leads in, cart follows; delays invert on exit) sitting 12px clear of the ×; mobile pair stacked vertical, translateY choreography; reduced-motion settles in place. Verified 1440 (rest + catalog: bag visible, pair clear of ×, order correct, hero scroll 0) + 380 (stacked, no overflow). FLAG for operator: pair-to-× gap is 12px — snug; one variable to widen.
+
 **PHASE M2 STATUS: COMPLETE ON DEV (2026-07-06) — 4 commits + 2 fixes, all verified 380px + desktop 1440. NOT pushed.**
 - M2-C1 — a8a133d — mobile headers cluster on top (display:contents + order), open panel below; desktop column untouched (82px line verified).
 - M2-C2 — 10de952 — stencil fades under expanded non-stage sections (mobile), restores on collapse; stage-exit transform preserved.
