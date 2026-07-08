@@ -36,11 +36,34 @@ if (nowPlayingRoot) {
   let renderedProgress;
   const desktopQuery = window.matchMedia("(min-width: 761px)");
 
+  const getSpotifyTrackHref = (trackUrl) => {
+    try {
+      const url = new URL(trackUrl);
+      const isSpotifyHost = url.hostname === "open.spotify.com" || url.hostname.endsWith(".spotify.com");
+
+      return url.protocol === "https:" && isSpotifyHost ? url.href : "";
+    } catch {
+      return "";
+    }
+  };
+
+  const getAlbumArtSrc = (artUrl) => {
+    try {
+      const url = new URL(artUrl);
+      const isSpotifyCdnHost = url.hostname === "i.scdn.co" || url.hostname.endsWith(".scdn.co");
+
+      return url.protocol === "https:" && isSpotifyCdnHost ? url.href : "";
+    } catch {
+      return "";
+    }
+  };
+
   const setMenuLinkState = (trackUrl) => {
     if (!menuLink) return;
 
-    if (trackUrl) {
-      menuLink.href = trackUrl;
+    const spotifyUrl = trackUrl ? getSpotifyTrackHref(trackUrl) : "";
+    if (spotifyUrl) {
+      menuLink.href = spotifyUrl;
       menuLink.dataset.nowPlayingLive = "true";
       menuLink.setAttribute("aria-disabled", "false");
       return;
@@ -204,14 +227,14 @@ if (nowPlayingRoot) {
       return;
     }
 
-    try {
-      const spotifyUrl = new URL(trackUrl).href;
-      link.href = spotifyUrl;
-      setMenuLinkState(spotifyUrl);
-    } catch {
+    const spotifyUrl = getSpotifyTrackHref(trackUrl);
+    if (!spotifyUrl) {
       renderEmptyState();
       return;
     }
+
+    link.href = spotifyUrl;
+    setMenuLinkState(spotifyUrl);
 
     nowPlayingRoot.dataset.nowPlayingState = "live";
     separator.hidden = false;
@@ -224,8 +247,9 @@ if (nowPlayingRoot) {
     artist.textContent = artistText;
     album.textContent = typeof track.album === "string" ? track.album : "";
 
-    if (typeof track.art === "string" && track.art) {
-      art.src = track.art;
+    const albumArtSrc = typeof track.art === "string" && track.art ? getAlbumArtSrc(track.art) : "";
+    if (albumArtSrc) {
+      art.src = albumArtSrc;
       art.hidden = false;
     } else {
       art.removeAttribute("src");
@@ -258,7 +282,7 @@ if (nowPlayingRoot) {
     abortController = new AbortController();
 
     try {
-      const response = await fetch(nowPlayingUrl, {
+      const response = await fetch(nowPlayingEndpoint, {
         cache: "no-store",
         signal: abortController.signal,
       });
