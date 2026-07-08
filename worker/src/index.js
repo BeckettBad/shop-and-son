@@ -279,7 +279,14 @@ function parseAllowedDevices(value) {
 }
 
 function normalizeDevice(value) {
-  return String(value || '').trim().toLowerCase();
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    // Fold curly/typographic apostrophes to a straight one so a device named
+    // "Beckett's" matches regardless of which glyph Spotify (or the config)
+    // uses. Without this, a straight-vs-curly mismatch silently gates the
+    // feature off (audit 2026-07-08, M4).
+    .replace(/[‘’ʼ′]/g, "'");
 }
 
 async function readToggle(env) {
