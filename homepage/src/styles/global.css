@@ -783,6 +783,12 @@ body{
   .hero__menu-link[data-shop-all]:hover{
     color:var(--neon-green);
   }
+  a.hero__menu-link[data-now-playing-menu-item][data-now-playing-live="false"]:hover,
+  a.hero__menu-link[data-now-playing-menu-item]:not([href]):hover{
+    color:inherit;
+    text-decoration:none;
+    cursor:default;
+  }
 }
 @media(min-width:761px){
   .hero__overlay{

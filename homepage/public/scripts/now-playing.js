@@ -13,6 +13,7 @@ if (nowPlayingRoot) {
   const hero = nowPlayingRoot.closest(".hero-video");
   const dj = hero?.querySelector(".hero__dj");
   const link = nowPlayingRoot.querySelector("[data-now-playing-link]");
+  const menuLink = hero?.querySelector("[data-now-playing-menu-item]");
   const art = nowPlayingRoot.querySelector("[data-now-playing-art]");
   const title = nowPlayingRoot.querySelector("[data-now-playing-title]");
   const separator = nowPlayingRoot.querySelector("[data-now-playing-separator]");
@@ -33,6 +34,22 @@ if (nowPlayingRoot) {
   let isRunning = false;
   let isFetching = false;
   let renderedProgress;
+  const desktopQuery = window.matchMedia("(min-width: 761px)");
+
+  const setMenuLinkState = (trackUrl) => {
+    if (!menuLink) return;
+
+    if (trackUrl) {
+      menuLink.href = trackUrl;
+      menuLink.dataset.nowPlayingLive = "true";
+      menuLink.setAttribute("aria-disabled", "false");
+      return;
+    }
+
+    menuLink.removeAttribute("href");
+    menuLink.dataset.nowPlayingLive = "false";
+    menuLink.setAttribute("aria-disabled", "true");
+  };
 
   const clearHeartbeat = () => {
     if (!heartbeatTimer) return;
@@ -54,6 +71,7 @@ if (nowPlayingRoot) {
 
   const hideNowPlaying = () => {
     nowPlayingRoot.hidden = true;
+    setMenuLinkState();
     renderedProgress = undefined;
     clearTrackEndTimer();
     stopProgress();
@@ -146,6 +164,7 @@ if (nowPlayingRoot) {
     stopProgress();
     renderedProgress = undefined;
     nowPlayingRoot.dataset.nowPlayingState = "empty";
+    setMenuLinkState();
     link?.removeAttribute("href");
     title.textContent = "nothing playing right now";
     separator.hidden = true;
@@ -186,7 +205,9 @@ if (nowPlayingRoot) {
     }
 
     try {
-      link.href = new URL(trackUrl).href;
+      const spotifyUrl = new URL(trackUrl).href;
+      link.href = spotifyUrl;
+      setMenuLinkState(spotifyUrl);
     } catch {
       renderEmptyState();
       return;
@@ -288,5 +309,11 @@ if (nowPlayingRoot) {
     if (!renderedProgress || nowPlayingRoot.hidden) return;
     startProgress();
   });
+  menuLink?.addEventListener("click", (event) => {
+    if (!desktopQuery.matches || menuLink.dataset.nowPlayingLive !== "true" || !menuLink.href) {
+      event.preventDefault();
+    }
+  });
+  setMenuLinkState();
   sync();
 }

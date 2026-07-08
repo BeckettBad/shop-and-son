@@ -179,13 +179,15 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
                             {item.label}{item.suffix ?? ""}
                           </button>
                         ) : item.nowPlaying ? (
-                          <button
-                            type="button"
+                          <a
                             class="hero__menu-link hero__menu-link--dash"
+                            target="_blank"
+                            rel="noopener"
+                            aria-disabled="true"
                             data-now-playing-menu-item
                           >
                             {item.label}{item.suffix ?? ""}
-                          </button>
+                          </a>
                         ) : item.href ? (
                           <a
                             class="hero__menu-link hero__menu-link--dash"

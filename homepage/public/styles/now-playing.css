@@ -67,6 +67,9 @@
   border:1px solid #000;
   background:#fff;
 }
+.hero__now-playing-art[hidden]{
+  display:none;
+}
 .hero__now-playing-copy{
   display:block;
   min-width:0;
@@ -113,6 +116,15 @@
 @keyframes nowPlayingPulse{
   0%,100%{opacity:.34; transform:scale(.82)}
   45%{opacity:1; transform:scale(1)}
+}
+@media(min-width:761px){
+  .hero__now-playing{
+    top:clamp(102px,16vh,150px);
+    right:clamp(-390px,-26vw,-260px);
+    left:auto;
+    bottom:auto;
+    transform:none;
+  }
 }
 @media(max-width:760px){
   .hero__now-playing{
