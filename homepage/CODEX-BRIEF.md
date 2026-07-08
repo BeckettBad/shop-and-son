@@ -71,12 +71,67 @@ below so Codex has ONE target; everything else in this file is context.
 > **ACTIVE SUB-TASK: PHASE R POLISH (operator review, 2026-07-08) — three
 > ordered commits R7/R8/R9, one dispatch each, Claude reviews between. Do NOT
 > push until operator says "ship". Full spec in "PHASE R POLISH" below.
-> Status: (none) — PHASE R POLISH COMPLETE on dev (unpushed). R7 @ 4337a82
-> (menu item neon: mobile-while-open + desktop hover), R8 @ d56cd40 (desktop
-> card 331x159 right-middle ~41%, bigger art), R9 @ 3329d7d (mobile top
-> header reads −+neon inside a collection via is-current, sub-lists
-> collapsed, desktop unchanged). All verified. Whole Phase R (R1–R9) awaits
-> operator review + "ship".**
+> Status: (none) — PHASE R POLISH 2 COMPLETE on dev (unpushed). R10 @ 2a70034
+> (menu header unhighlights instantly on folder switch, both viewports; panel
+> slides via is-collapsing; reopen-mid-collapse clean), R11 @ 3e92c2a (desktop
+> now-playing card nudged left 120px, rightGap 43→163). Whole Phase R (R1–R11)
+> awaits operator review + "ship".**
+
+---
+
+## Log (Phase R polish 2)
+
+- 2026-07-08 — R11 desktop card nudge left — 3e92c2a — build:green check:green — right margin ~43px→~163px (moved 120px toward booth); size/vertical unchanged
+- 2026-07-08 — R10 instant menu collapse — 2a70034 — build:green check:green — is-open removed immediately + is-collapsing keeps panel sliding; header black/+ within ~110ms both viewports; subgroups too; reopen-mid-collapse clean
+
+## PHASE R POLISH 2 — menu collapse snappiness + desktop nudge (2026-07-08)
+
+Same hard rules: work on `dev`; never merge; build + check green before each;
+one focused commit each prefixed `R<n>:`.
+
+### R10 — collapse the menu header state instantly (both viewports)
+Bug (regression, both mobile + desktop): when a section/subgroup is open and the
+user opens a DIFFERENT main folder, the old one's neon highlight + open look
+persist for the WHOLE 550ms slide-out and slightly after, instead of clearing at
+once. Root cause: `closeMenuSection` (`HeroVideo.astro` ~1079) and the subgroup
+collapse (~1047) remove the `is-open` class only in the animation's `.then()`
+(after `stageDuration`=550ms), and the neon (`global.css:722`
+`.hero__menu-section.is-open > .hero__menu-header`) + the open glyph are keyed to
+`is-open`. So the header stays lit the whole animation.
+Fix — decouple the header's open appearance from the panel slide:
+- On collapse, remove `is-open` IMMEDIATELY (so neon clears + the toggle glyph
+  flips to `+` at once via the existing `aria-expanded` sync), and add a
+  transient class (e.g. `is-collapsing`) to the section so the panel stays
+  displayed while the WAAPI height animation runs; remove `is-collapsing` in
+  the animation's `.then()` (replacing the current `is-open` removal there).
+- Apply the SAME pattern to the subgroup collapse (the `.hero__menu-item--group`
+  nested panel) so CATEGORIES/DESIGNERS unhighlight instantly too.
+- CSS: wherever the panel is shown via `.is-open .hero__menu-panel{display:…}`
+  (global.css ~730, ~809, ~1025) and the nested-group panel, add a matching
+  `.is-collapsing …` (and group `.is-collapsing`) selector so the panel/nested
+  stays visible during the slide. Keep the neon rule (722) and the group
+  subheader neon keyed to `.is-open` ONLY, so dropping `is-open` clears neon
+  immediately. Do NOT change the `is-current` rules (R9 mobile in-collection
+  cue is intended to persist).
+- Preserve the collapse-token logic: reopening a section mid-collapse must
+  cancel the animation + `is-collapsing` and restore `is-open` cleanly (no
+  stuck panels).
+- Reduced-motion path already collapses instantly — keep it working.
+- Done when: build + check green; at 1440 AND 390, opening a folder then
+  clicking a different main folder flips the old header to `+` and removes its
+  neon IMMEDIATELY (no 550ms lag) while its panel still slides closed smoothly;
+  same for subgroups; reopening mid-collapse works; R9's mobile in-collection
+  neon still behaves.
+
+### R11 — nudge the desktop now-playing card left ~1.25in (~120px)
+Operator: the R8 card is still too far right. Move it LEFT by ~120px (1.25in at
+96px/in), toward the DJ booth. Desktop only (`≥761px`): increase the card's
+right offset by ~120px (current right margin is ~`clamp(36px,3vw,54px)`≈43px →
+new ≈160px). Keep size/vertical position from R8. Operator will fine-tune again.
+Done when: build+check green; at 1440 the card's right gap is ~150–170px (was
+~43); size + vertical center unchanged; mobile byte-identical.
+
+---
 
 ---
 
