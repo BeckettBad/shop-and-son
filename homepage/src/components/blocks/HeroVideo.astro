@@ -346,6 +346,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   }
 
   const BASE = import.meta.env.BASE_URL ?? "/";
+  const mobileNowPlayingCollapsingClass = "is-now-playing-collapsing";
   const hero = document.querySelector<HTMLElement>(".hero-video");
   const stencil = hero?.querySelector<HTMLElement>(".hero__stencil");
   const dj = hero?.querySelector<HTMLElement>(".hero__dj");
@@ -391,6 +392,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   let filmHasStarted = false;
   let stencilReturnCleanup: (() => void) | undefined;
   let stageCleanup: ReturnType<typeof window.setTimeout> | undefined;
+  let mobileNowPlayingCollapseCleanup: ReturnType<typeof window.setTimeout> | undefined;
   type HeroStage = "landing" | "catalog" | "search" | "product" | "preorder" | "music" | "film" | "fam";
   type PanelStage = "catalog" | "search" | "product" | "preorder" | "music" | "film" | "fam";
   interface SavedCatalogReturn {
@@ -1204,6 +1206,27 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     setMobileNowPlayingOpen(true);
   };
 
+  const clearMobileNowPlayingCollapse = () => {
+    if (mobileNowPlayingCollapseCleanup) {
+      window.clearTimeout(mobileNowPlayingCollapseCleanup);
+      mobileNowPlayingCollapseCleanup = undefined;
+    }
+    hero?.classList.remove(mobileNowPlayingCollapsingClass);
+  };
+
+  const collapseMobileNowPlayingToLanding = () => {
+    if (!hero) return;
+
+    clearMobileNowPlayingCollapse();
+    hero.classList.add(mobileNowPlayingCollapsingClass);
+    if (nowPlayingClose) nowPlayingClose.hidden = true;
+    setMobileNowPlayingOpen(false);
+    mobileNowPlayingCollapseCleanup = window.setTimeout(() => {
+      hero.classList.remove(mobileNowPlayingCollapsingClass);
+      mobileNowPlayingCollapseCleanup = undefined;
+    }, stageDuration + 80);
+  };
+
   const ensureMobileNowPlayingClose = () => {
     if (!nowPlayingRoot || nowPlayingClose || !mobileQuery.matches) return;
 
@@ -1217,7 +1240,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     nowPlayingRoot.prepend(nowPlayingClose);
   };
 
-  const clearStageCleanup = () => {
+  const clearStageCleanup = (options: { preserveMobileNowPlayingOpen?: boolean } = {}) => {
     if (stageCleanup) {
       window.clearTimeout(stageCleanup);
       stageCleanup = undefined;
@@ -1229,7 +1252,10 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     filmPanel?.classList.remove("is-exiting-left");
     famPanel?.classList.remove("is-exiting-left");
     setMusicSettled(false);
-    setMobileNowPlayingOpen(false);
+    if (!options.preserveMobileNowPlayingOpen) {
+      clearMobileNowPlayingCollapse();
+      setMobileNowPlayingOpen(false);
+    }
   };
 
   const clearStencilReturn = () => {
@@ -2037,10 +2063,17 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     updateFilmMute();
   };
 
-  const closeStage = () => {
+  const closeStage = (options: { collapseMobileNowPlaying?: boolean } = {}) => {
     if (!hero) return;
 
-    clearStageCleanup();
+    const shouldCollapseMobileNowPlaying =
+      options.collapseMobileNowPlaying === true &&
+      mobileQuery.matches &&
+      activeStage === "music" &&
+      hero.classList.contains("is-now-playing-open");
+
+    clearStageCleanup({ preserveMobileNowPlayingOpen: shouldCollapseMobileNowPlaying });
+    if (shouldCollapseMobileNowPlaying) collapseMobileNowPlayingToLanding();
     filmVideo?.pause();
     resetFilmMute();
     updateFilmPlayback();
@@ -2058,7 +2091,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     dj?.setAttribute("aria-hidden", "true");
     filmPanel?.setAttribute("aria-hidden", "true");
     famPanel?.setAttribute("aria-hidden", "true");
-    setMobileNowPlayingOpen(false);
+    if (!shouldCollapseMobileNowPlaying) setMobileNowPlayingOpen(false);
     setActiveButton(null);
     activeProductHandle = null;
     savedStageReturn = null;
@@ -2262,13 +2295,11 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
       const isFamSection = section.dataset.fam === "true";
       const isMusicSection = section.dataset.music === "true";
       const isOpen = trigger.getAttribute("aria-expanded") !== "true";
+      const collapseMobileNowPlaying = Boolean(
+        isMusicSection && !isOpen && mobileQuery.matches && hero?.classList.contains("is-now-playing-open"),
+      );
 
       closeMobileSearchForNavigation();
-
-      if (isMusicSection && !isOpen && mobileQuery.matches && hero?.classList.contains("is-now-playing-open")) {
-        closeMobileNowPlaying();
-        return;
-      }
 
       if (isPreorderSection && isOpen) {
         setMenuSectionState(section);
@@ -2290,7 +2321,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
 
       setMenuSectionState(isOpen ? section : null);
       if (!mobileQuery.matches || !isOpen) {
-        closeStage();
+        closeStage({ collapseMobileNowPlaying });
       }
     });
   });
