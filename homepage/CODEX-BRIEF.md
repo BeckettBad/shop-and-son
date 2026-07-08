@@ -68,22 +68,90 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: PHASE R — MUSIC-SECTION REDESIGN (operator markup,
-> 2026-07-08), reworks the now-playing feature from R1–R3. THREE ordered
-> commits R4/R5/R6, one dispatch each, Claude reviews between. Do NOT push
-> until operator says "ship". Full spec in "PHASE R REDESIGN" below. Status:
-> (none) — PHASE R REDESIGN COMPLETE on dev (NOT pushed; no push/PR until
-> operator says "ship"). R4 @ 504ceec (menu item + box removed + quiet empty
-> state + URL hardening), R5 @ 34f88c2 (desktop relocated upper-right + menu
-> link active-when-live + empty art frame hidden), R6 @ 4886093 (mobile
-> click-in stage + × back + re-tap MUSIC + reduced-motion), R6b @ 96ef9fd
-> (fix: DJ booth now slides fully off-left via animation:none). All verified:
-> desktop live+empty at 1440 (block upper-right, menu link toggles), mobile at
-> 390 (booth slides off, panel centered, both return paths), desktop
-> byte-stable across mobile commits, zero console errors. Whole Phase R still
-> awaits operator review + "ship". Worker deploy/handshake done; Mac is a temp
-> allowed test device (strip before go-live). Operator may fine-tune the
-> desktop upper-right position + mobile panel size.**
+> **ACTIVE SUB-TASK: PHASE R POLISH (operator review, 2026-07-08) — three
+> ordered commits R7/R8/R9, one dispatch each, Claude reviews between. Do NOT
+> push until operator says "ship". Full spec in "PHASE R POLISH" below.
+> Status: (none) — PHASE R POLISH COMPLETE on dev (unpushed). R7 @ 4337a82
+> (menu item neon: mobile-while-open + desktop hover), R8 @ d56cd40 (desktop
+> card 331x159 right-middle ~41%, bigger art), R9 @ 3329d7d (mobile top
+> header reads −+neon inside a collection via is-current, sub-lists
+> collapsed, desktop unchanged). All verified. Whole Phase R (R1–R9) awaits
+> operator review + "ship".**
+
+---
+
+## Log (Phase R polish)
+
+- 2026-07-08 — R9 mobile menu is-current — 3329d7d — build:green check:green — section holding active collection shows −+neon on mobile (sub-lists stay collapsed); desktop untouched
+- 2026-07-08 — R8 desktop card enlarge+lower — d56cd40 — build:green check:green — 331x159 ~2:1, right margin ~43px, vertical center ~41%
+- 2026-07-08 — R7 menu item neon — 4337a82 — build:green check:green — mobile green while panel open; desktop hover/active only
+
+## PHASE R POLISH — now-playing highlight, desktop placement, mobile menu state (2026-07-08)
+
+Operator review of the redesign. Same hard rules: work on `dev`; never merge;
+`npm run build` + `npx astro check` green before each; one focused commit each
+prefixed `R<n>:`; feature dormant when `PUBLIC_NOW_PLAYING_URL` unset.
+
+**Operator decisions:** desktop NOW PLAYING highlight = hover/press only (it's
+an external link, no persistent state). Mobile in-collection menu = top header
+only (flip the section to `−` + neon; keep sub-lists collapsed for catalogue
+room).
+
+### R7 — NOW PLAYING · IN STORE menu item neon highlight
+Make the new menu item highlight neon green like the other subfolders, per the
+two decisions:
+- Mobile (`≤760px`): while the mobile now-playing panel is open
+  (`is-now-playing-open`), the `[data-now-playing-menu-item]` shows neon green
+  (var(--neon-green)) — the "you're in this subfolder" active state, matching
+  how an open section/subgroup reads. Returns to normal when the panel closes.
+- Desktop (`≥761px`): hover/press only — the item gets the same neon hover +
+  `:active` treatment as the site's other menu links (it currently may render
+  inert-styled when idle from R5; ensure hover/active still flash neon). No
+  persistent green.
+- Don't disturb R5's live/inert href logic; this is styling only.
+- Done when: build+check green; at 390px opening the now-playing panel turns
+  the menu item neon and closing it clears it; at 1440 the item flashes neon on
+  hover/press only; empty vs live unaffected.
+
+### R8 — desktop now-playing placement: lower + enlarged (match the markup)
+The R5 block sits too high (top ~198px on a 900-tall viewport, ~22%). The
+operator's original markup put it as a taller box on the RIGHT, centered around
+the upper-middle. Reposition + resize on desktop only (`≥761px`):
+- Move it DOWN so the block's vertical center is roughly 40% of the viewport
+  height (was ~24%) — clear below the cart/search icons, sitting in the
+  right-middle like the markup's black rectangle.
+- Enlarge it: it is currently a wide-short strip (~430×74). Make it a taller,
+  more substantial card (target roughly 300–340px wide × ~140–160px tall, ~2:1)
+  with LARGER album art and comfortably larger type, still in the site's style.
+  Keep it right-aligned within the stage with a comfortable right margin (not
+  hugging the very edge).
+- Exact numbers are operator-tunable after review — land it in the
+  right-middle, clearly bigger. Mobile unchanged (this is desktop-only CSS).
+- Done when: build+check green; at 1440 the live block is a larger ~2:1 card in
+  the right-middle (not up under the icons); empty state matches the new
+  size/position; 390px mobile byte-identical.
+
+### R9 — mobile menu state: top header reflects the open collection
+Bug: on mobile, opening a collection (e.g. tapping SHOP ALL) collapses the
+parent section so its header wrongly reads `CLOTHES +`. Desktop is correct and
+must stay unchanged. Fix (mobile `≤760px`), "top header only" per operator:
+- When a collection is active (`hero.dataset.activeCollection` set) on mobile,
+  the section that CONTAINS that collection shows its header as `CLOTHES −` in
+  neon green — the current-section cue — even though its sub-lists stay
+  collapsed (so the catalogue keeps its room).
+- Likely mechanism: the `+`/`−` glyph and neon color are driven by `is-open`
+  today; decouple by adding an `is-current` (or similar) class to the section
+  that holds the active collection, and make the header show `−` + neon when
+  the section is `is-open` OR `is-current`. Set/clear `is-current` wherever
+  `activeCollection` is set/cleared. Keep the sub-list panel collapsed on mobile
+  in the `is-current`-but-not-`is-open` case.
+- Desktop behavior must not change (desktop already shows the full open branch).
+- Done when: build+check green; at 390px, tapping SHOP ALL (or any category)
+  leaves the parent section header reading `−` + neon while the catalogue shows;
+  leaving the collection clears it; the correct section is marked when switching
+  between CLOTHES/OBJECTS collections; desktop 1440 unchanged.
+
+---
 
 ---
 
