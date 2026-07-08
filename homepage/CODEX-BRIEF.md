@@ -58,28 +58,100 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 > **Phases G–J are SHIPPED** (merged `dev → main` @ `012f918`, live). Do not re-do
 > any of them; their brief text lives in this file's git history + the sections below.
 
-**Status:** ready for Codex — Phase P (production hardening, from the 2026-07-07
-pre-launch QA + security sweep; report at repo root `SITE-QA-2026-07-07.md`,
-deliberately untracked). Phases through O are SHIPPED; the J2/K/L/M/N sections
-below are history, not instruction.
+**Status:** ready for Codex — Phase S (functionality-sweep fixes, from the
+2026-07-08 3-agent audit; report at repo root
+`SITE-FUNCTIONALITY-SWEEP-2026-07-08.md`, untracked). Phase R is complete and
+shipping; every section below is history, not instruction.
 
 **DISPATCH PROTOCOL — one sub-task per `./dispatch-codex.sh` run, one commit
 each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: PHASE R POLISH (operator review, 2026-07-08) — three
-> ordered commits R7/R8/R9, one dispatch each, Claude reviews between. Do NOT
-> push until operator says "ship". Full spec in "PHASE R POLISH" below.
-> Status: (none) — PHASE R COMPLETE + SECURITY-PASSED, SHIPPING. R15 @ ef95cc8
-> (fetch normalized /now endpoint [ship-blocker], track-link https+spotify.com
-> allowlist, album-art i.scdn.co host-check) — all verified. Worker fixes
-> applied direct (constant-time secret compare, worker/.gitignore). 3-agent
-> security+functionality audit: no criticals; operator TODOs = Cloudflare
-> rate-limit on /toggle, rotate client secret (chat-exposed), remove Mac test
-> device on deploy. Whole Phase R (R1–R15) shipping to main per operator.**
+> **ACTIVE SUB-TASK: PHASE S — functionality-sweep fixes (audit, 2026-07-08).
+> One commit `S1:` to `homepage/public/scripts/now-playing.js` only, one
+> dispatch. Do NOT push until operator says "ship". Full spec in "PHASE S" below.
+> Status: ready for Codex.
+> Context: Phase R DONE + SECURITY-PASSED @ ef95cc8, shipping to main per
+> operator. Standing operator TODOs from that pass (not Codex work): Cloudflare
+> rate-limit on /toggle, rotate the chat-exposed client secret, remove the Mac
+> test device from ALLOWED_DEVICES on deploy. The worker apostrophe-normalize
+> (audit M4) is applied direct by Claude, out of homepage scope — NOT in S1.**
 
 ---
+
+## PHASE S — functionality-sweep fixes (audit, 2026-07-08)
+
+Three fixes to `homepage/public/scripts/now-playing.js`, ONE commit `S1:`. Scope
+is that single file. Build + check green. Do not touch the worker, `wrangler.toml`,
+`Music.astro`, or anything else. Source: `SITE-FUNCTIONALITY-SWEEP-2026-07-08.md`
+(M1, M2, plus the scdn low).
+
+### S1 (all three, one commit)
+
+1. **BUG (medium, M1): store-hours gate silently fails on iOS Safari.**
+   `getEasternHour()` (~line 103) does
+   `new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }))`.
+   On iOS 16.4+ Safari / JavaScriptCore the localized time string uses a narrow
+   no-break space (U+202F) before AM/PM that `Date` refuses to parse, so it
+   returns `Invalid Date` → `getHours()` is `NaN` → `isStoreOpen()` is false and
+   the track never shows during open hours for the in-store iPad and every iPhone
+   visitor. Fix: compute the hour with `Intl.DateTimeFormat(...).formatToParts`,
+   which never round-trips through string parsing. Example:
+   ```js
+   const getEasternHour = () => {
+     const parts = new Intl.DateTimeFormat("en-US", {
+       timeZone: "America/New_York",
+       hour: "numeric",
+       hour12: false,
+     }).formatToParts(new Date());
+     const hour = Number(parts.find((p) => p.type === "hour")?.value);
+     return Number.isFinite(hour) ? hour % 24 : Number.NaN;
+   };
+   ```
+   `% 24` guards the "24" some ICU builds emit at midnight; returning `NaN` on
+   failure keeps `isStoreOpen()` failing closed exactly as today.
+   **Done when:** the hours gate no longer parses a `Date` from a localized
+   string, and `isStoreOpen()` returns the correct open/closed result on WebKit.
+
+2. **BUG (medium, M2): freshness + progress depend on the visitor's wall clock.**
+   `isFresh()` (~line 129) compares `Date.now()` against the worker's `fetchedAt`,
+   and `getProgressRatio()` / `scheduleTrackEndCheck()` (~lines 139, 179) compute
+   elapsed as `Date.now() - fetchedAtMs`. A visitor whose device clock is more
+   than `staleAfterMs` (45s) fast sees a genuinely-playing track rejected as stale
+   ("nothing playing"), and any skew warps the progress bar. Fix: anchor both to a
+   LOCAL receipt timestamp captured when the payload is rendered, not the server's
+   clock.
+   - In `renderNowPlaying`, capture `const receivedAtMs = Date.now();` and store it
+     on `renderedProgress` in place of `fetchedAtMs` (rename the field to
+     `receivedAtMs`). Keep `progressMs` clamped as it is.
+   - `getProgressRatio()` and `scheduleTrackEndCheck()` compute elapsed as
+     `Date.now() - renderedProgress.receivedAtMs`.
+   - For the render-time freshness guard, keep validating that `fetchedAt` parses
+     to a finite number (reject garbage payloads via `getFetchedAtMs`), but drop
+     the `Date.now() - fetchedAtMs <= staleAfterMs` wall-clock comparison — the
+     payload was just fetched, so it is fresh at receipt. If `staleAfterMs` is then
+     unused, remove it.
+   Residual drift is bounded by the worker's 8s `/now` cache, which is acceptable
+   and far better than unbounded clock skew.
+   **Done when:** neither freshness nor progress math reads the server `fetchedAt`
+   as an offset against `Date.now()`; a device clock set 5 min fast still shows a
+   playing track and a sane progress bar.
+
+3. **LOW (scdn CSP match): tighten album-art host to `i.scdn.co`.**
+   `getAlbumArtSrc()` (~line 53) accepts any `*.scdn.co`, but CSP `img-src`
+   (`Base.astro:31`) allows only `https://i.scdn.co`, so art from any other scdn
+   subdomain passes the JS check and is then blocked by CSP (broken image). Since
+   the worker only ever surfaces single-track art (served from `i.scdn.co`),
+   tighten the JS host check to `url.hostname === "i.scdn.co"` so JS and CSP agree.
+   Leave the track-link host check (`getSpotifyTrackHref`) unchanged.
+   **Done when:** `getAlbumArtSrc` returns `""` for any host other than
+   `i.scdn.co`.
+
+**Risks / review focus:** M2 is a small refactor of the progress/freshness path —
+review that `renderedProgress` is read consistently everywhere after the field
+rename, and that the reduced-motion and track-end timers still behave. Confirm
+`npm run build` and `npx astro check` both green.
 
 ## Log (Phase R security/correctness)
 
