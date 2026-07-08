@@ -210,13 +210,9 @@
     pointer-events:auto;
     transition:transform .55s ease-in-out,opacity .55s ease-in-out,visibility 0s;
   }
-  .hero-video.is-music.is-now-playing-collapsing .hero__dj{
-    opacity:0;
-    visibility:hidden;
-    transition:none;
-  }
   .hero-video.is-now-playing-collapsing .dj-cutout-image,
   .hero-video.is-now-playing-collapsing .music-notes-layer{
+    animation:none;
     transform:translateX(calc(-50vw - 100%));
   }
   .hero-video.is-now-playing-collapsing .hero__now-playing:not([hidden]){
