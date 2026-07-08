@@ -342,7 +342,22 @@ function secretMatches(request, url, expectedSecret) {
   }
 
   const providedSecret = getProvidedSecret(request, url);
-  return providedSecret !== '' && providedSecret === expectedSecret;
+  return providedSecret !== '' && constantTimeEquals(providedSecret, expectedSecret);
+}
+
+// Constant-time string compare so the toggle secret can't be recovered via a
+// timing side channel (paired with a Cloudflare rate-limit rule on /toggle).
+function constantTimeEquals(a, b) {
+  const enc = new TextEncoder();
+  const ab = enc.encode(a);
+  const bb = enc.encode(b);
+  // Compare against a fixed-length digest so length itself isn't a timing leak.
+  const target = bb.length === ab.length ? bb : ab;
+  let mismatch = ab.length ^ bb.length;
+  for (let i = 0; i < ab.length; i++) {
+    mismatch |= ab[i] ^ target[i];
+  }
+  return mismatch === 0;
 }
 
 function getProvidedSecret(request, url) {
