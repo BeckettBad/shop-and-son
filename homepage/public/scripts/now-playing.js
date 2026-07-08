@@ -24,7 +24,6 @@ if (nowPlayingRoot) {
   const pulse = nowPlayingRoot.querySelector(".hero__now-playing-pulse");
   const spotify = nowPlayingRoot.querySelector(".hero__now-playing-spotify");
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const staleAfterMs = 45_000;
   const heartbeatMs = 25_000;
   const trackEndPadMs = 1_500;
   let heartbeatTimer;
@@ -50,9 +49,8 @@ if (nowPlayingRoot) {
   const getAlbumArtSrc = (artUrl) => {
     try {
       const url = new URL(artUrl);
-      const isSpotifyCdnHost = url.hostname === "i.scdn.co" || url.hostname.endsWith(".scdn.co");
 
-      return url.protocol === "https:" && isSpotifyCdnHost ? url.href : "";
+      return url.protocol === "https:" && url.hostname === "i.scdn.co" ? url.href : "";
     } catch {
       return "";
     }
@@ -101,8 +99,14 @@ if (nowPlayingRoot) {
   };
 
   const getEasternHour = () => {
-    const easternTime = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
-    return easternTime.getHours();
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      hour: "numeric",
+      hour12: false,
+    }).formatToParts(new Date());
+    const hour = Number(parts.find((part) => part.type === "hour")?.value);
+
+    return Number.isFinite(hour) ? hour % 24 : Number.NaN;
   };
 
   const isStoreOpen = () => {
@@ -126,7 +130,7 @@ if (nowPlayingRoot) {
     return Date.parse(value);
   };
 
-  const isFresh = (fetchedAtMs) => Number.isFinite(fetchedAtMs) && Date.now() - fetchedAtMs <= staleAfterMs;
+  const hasValidFetchedAt = (fetchedAtMs) => Number.isFinite(fetchedAtMs);
 
   const getArtistText = (artistsValue) => {
     if (Array.isArray(artistsValue)) return artistsValue.filter(Boolean).join(", ");
@@ -136,7 +140,7 @@ if (nowPlayingRoot) {
   const getProgressRatio = () => {
     if (!renderedProgress || renderedProgress.durationMs <= 0) return 0;
 
-    const elapsedMs = Math.max(0, Date.now() - renderedProgress.fetchedAtMs);
+    const elapsedMs = Math.max(0, Date.now() - renderedProgress.receivedAtMs);
     const currentMs = Math.min(renderedProgress.durationMs, renderedProgress.progressMs + elapsedMs);
     return Math.max(0, Math.min(1, currentMs / renderedProgress.durationMs));
   };
@@ -176,7 +180,7 @@ if (nowPlayingRoot) {
     clearTrackEndTimer();
     if (!renderedProgress || renderedProgress.durationMs <= 0 || !shouldRun()) return;
 
-    const elapsedMs = Math.max(0, Date.now() - renderedProgress.fetchedAtMs);
+    const elapsedMs = Math.max(0, Date.now() - renderedProgress.receivedAtMs);
     const currentMs = Math.min(renderedProgress.durationMs, renderedProgress.progressMs + elapsedMs);
     const delayMs = Math.max(trackEndPadMs, renderedProgress.durationMs - currentMs + trackEndPadMs);
     trackEndTimer = window.setTimeout(fetchNowPlaying, Math.min(delayMs, 2_147_483_647));
@@ -207,6 +211,7 @@ if (nowPlayingRoot) {
   const renderNowPlaying = (payload) => {
     const track = payload?.track;
     const fetchedAtMs = getFetchedAtMs(payload?.fetchedAt);
+    const receivedAtMs = Date.now();
     const trackUrl = typeof track?.url === "string" ? track.url : "";
     const trackName = typeof track?.name === "string" ? track.name : "";
     const artistText = getArtistText(track?.artists);
@@ -215,7 +220,7 @@ if (nowPlayingRoot) {
 
     if (
       payload?.show !== true ||
-      !isFresh(fetchedAtMs) ||
+      !hasValidFetchedAt(fetchedAtMs) ||
       !trackUrl ||
       !trackName ||
       !artistText ||
@@ -258,7 +263,7 @@ if (nowPlayingRoot) {
 
     renderedProgress = {
       durationMs,
-      fetchedAtMs,
+      receivedAtMs,
       progressMs: Math.max(0, Math.min(durationMs, progressMs)),
     };
     nowPlayingRoot.hidden = false;
