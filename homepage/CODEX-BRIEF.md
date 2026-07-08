@@ -71,13 +71,62 @@ below so Codex has ONE target; everything else in this file is context.
 > **ACTIVE SUB-TASK: PHASE R POLISH (operator review, 2026-07-08) — three
 > ordered commits R7/R8/R9, one dispatch each, Claude reviews between. Do NOT
 > push until operator says "ship". Full spec in "PHASE R POLISH" below.
-> Status: (none) — PHASE R POLISH 4 COMPLETE on dev (unpushed). R14 @ 8bcf6dd
-> + R14b @ a83db74 + R14c @ 440815f: on mobile, one tap on the MUSIC header
-> collapses the whole folder to the landing stencil even from inside the
-> now-playing feature; booth stays invisible (visibility:hidden) so no flash,
-> now-playing slides off, stencil returns; in-panel × still returns to booth;
-> desktop unchanged. Verified (booth hidden every frame, reopen restores).
-> Whole Phase R (R1–R14c) awaits operator review + "ship".**
+> Status: (none) — PHASE R COMPLETE + SECURITY-PASSED, SHIPPING. R15 @ ef95cc8
+> (fetch normalized /now endpoint [ship-blocker], track-link https+spotify.com
+> allowlist, album-art i.scdn.co host-check) — all verified. Worker fixes
+> applied direct (constant-time secret compare, worker/.gitignore). 3-agent
+> security+functionality audit: no criticals; operator TODOs = Cloudflare
+> rate-limit on /toggle, rotate client secret (chat-exposed), remove Mac test
+> device on deploy. Whole Phase R (R1–R15) shipping to main per operator.**
+
+---
+
+## Log (Phase R security/correctness)
+
+- 2026-07-08 — R15 now-playing hardening — ef95cc8 — build:green check:green — fetch nowPlayingEndpoint (base-URL ship-blocker fixed, verified hits /now), track-link href allowlist (https+spotify.com, rejects javascript:/evil), album-art i.scdn.co host-check
+- 2026-07-08 — worker security (direct, not Codex) — constant-time TOGGLE_SECRET compare + worker/.gitignore (blocks .dev.vars/.wrangler); syntax-checked
+
+## PHASE R SECURITY/CORRECTNESS — pre-ship fixes (audit, 2026-07-08)
+
+Three fixes to `homepage/public/scripts/now-playing.js` from the pre-ship
+security + functionality audits. One commit `R15:`. Build + check green.
+
+### R15 (all three, one commit)
+1. **CORRECTNESS (ship-blocker): fetch the normalized endpoint, not the raw
+   URL.** The script computes `nowPlayingEndpoint = new URL(nowPlayingUrl).origin + "/now"`
+   (~line 8) but the actual `fetch()` (~line 261) uses the raw `nowPlayingUrl`.
+   The production `PUBLIC_NOW_PLAYING_URL` is the worker BASE url (no `/now`), so
+   the live site currently fetches the root → 404 → always "nothing playing."
+   Fix: `fetch(nowPlayingEndpoint, …)` at ~line 261 (keep `cache:"no-store"` +
+   the AbortController signal). `.env.example` documents the base-URL form; this
+   makes it actually work. CSP `connect-src` already allows the origin.
+2. **SECURITY (medium): allowlist the track-link scheme/host before assigning
+   href.** `track.url` is assigned to the card `<a>` href (~line 209) and the
+   menu-item `<a>` href via `setMenuLinkState` (~line 43). Today the only guard
+   is `new URL(trackUrl)` not throwing — which permits `javascript:` (blocked by
+   prod CSP but NOT in dev) and, worse, ANY `https://evil…` origin (a one-click
+   phishing/open-redirect link that CSP does NOT prevent). Fix: after parsing,
+   require `u.protocol === "https:"` AND the host is Spotify
+   (`u.hostname === "open.spotify.com"` or ends with `.spotify.com`); if it
+   fails, `renderEmptyState(); return;` (do not set either href). Apply so BOTH
+   the card link and the menu link only ever receive a validated Spotify https
+   URL.
+3. **DEFENSE-IN-DEPTH (low): host-check the album art before `img.src`.**
+   `track.art` is assigned to `art.src` (~line 227) with no check; prod CSP
+   restricts `img-src` to `i.scdn.co` but dev has no CSP. Fix: only set
+   `art.src` when `track.art` parses as an `https:` URL whose host is
+   `i.scdn.co` (or ends with `.scdn.co`); otherwise leave the art hidden (don't
+   fail the whole render — art is optional, unlike the link).
+
+- **Done when:** build + check green; with `PUBLIC_NOW_PLAYING_URL` set to the
+  BASE worker url (no /now) the site fetches `…/now` and renders live/empty
+  correctly (was broken); a payload with `url:"javascript:alert(1)"` or
+  `url:"https://evil.test/x"` yields the empty state and sets NO href on either
+  anchor; a valid `https://open.spotify.com/track/…` still links normally; a
+  non-scdn art URL is not loaded but a valid track still renders; dormancy
+  (env unset) unchanged.
+
+---
 
 ## Log (Phase R polish 4)
 
