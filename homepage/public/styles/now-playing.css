@@ -137,11 +137,14 @@
   .hero__dj .music-notes-layer{
     transition:transform .55s ease-in-out;
   }
+  .hero-video.is-now-playing-open.is-music.is-settled .dj-cutout-image,
   .hero-video.is-now-playing-open .dj-cutout-image{
     animation:none;
     transform:translateX(calc(-50vw - 100%));
   }
+  .hero-video.is-now-playing-open.is-music.is-settled .music-notes-layer,
   .hero-video.is-now-playing-open .music-notes-layer{
+    animation:none;
     transform:translateX(calc(-50vw - 100%));
   }
   .hero__now-playing{
