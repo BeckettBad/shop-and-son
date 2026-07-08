@@ -2263,7 +2263,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
       }
 
       setMenuSectionState(isOpen ? section : null);
-      if (!mobileQuery.matches) {
+      if (!mobileQuery.matches || !isOpen) {
         closeStage();
       }
     });
