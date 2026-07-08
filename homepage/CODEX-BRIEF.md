@@ -68,13 +68,131 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — PHASE R COMPLETE on dev (NOT pushed, per
-> operator instruction: no push/PR until "ship"). R1 @ 908081b (worker),
-> R2 @ ed78afa (site display, dormant until PUBLIC_NOW_PLAYING_URL is set),
-> R3 @ 332b9ea (catalogue frames removed, product frames kept). Verified:
-> builds green, dormancy byte-proven, zero console errors, frames correct
-> both viewports. Worker deploy + handshake are operator steps (see
-> worker/README.md).**
+> **ACTIVE SUB-TASK: PHASE R — MUSIC-SECTION REDESIGN (operator markup,
+> 2026-07-08), reworks the now-playing feature from R1–R3. THREE ordered
+> commits R4/R5/R6, one dispatch each, Claude reviews between. Do NOT push
+> until operator says "ship". Full spec in "PHASE R REDESIGN" below. Status:
+> (none) — PHASE R REDESIGN COMPLETE on dev (NOT pushed; no push/PR until
+> operator says "ship"). R4 @ 504ceec (menu item + box removed + quiet empty
+> state + URL hardening), R5 @ 34f88c2 (desktop relocated upper-right + menu
+> link active-when-live + empty art frame hidden), R6 @ 4886093 (mobile
+> click-in stage + × back + re-tap MUSIC + reduced-motion), R6b @ 96ef9fd
+> (fix: DJ booth now slides fully off-left via animation:none). All verified:
+> desktop live+empty at 1440 (block upper-right, menu link toggles), mobile at
+> 390 (booth slides off, panel centered, both return paths), desktop
+> byte-stable across mobile commits, zero console errors. Whole Phase R still
+> awaits operator review + "ship". Worker deploy/handshake done; Mac is a temp
+> allowed test device (strip before go-live). Operator may fine-tune the
+> desktop upper-right position + mobile panel size.**
+
+---
+
+## Log (Phase R redesign)
+
+- 2026-07-08 — R6b mobile DJ slide-off fix — 96ef9fd — build:green check:green — animation:none lets the translate win over idle-sway; booth clears left edge, panel centered
+- 2026-07-08 — R6 mobile click-in stage — 4886093 — build:green check:green — default hides now-playing; menu item slides DJ off-left + now-playing in from right; × back + re-tap MUSIC; .55s ease-in-out; reduced-motion instant
+- 2026-07-08 — R5 desktop relocate + menu link — 34f88c2 — build:green check:green — block upper-right; menu item opens current song when live, inert when idle; empty art frame hidden
+- 2026-07-08 — R4 foundation — 504ceec — build:green check:green — NOW PLAYING·IN STORE menu item (dormant-gated), secondary playlist box removed both viewports, quiet 'nothing playing right now' empty state, fetch URL hardened to origin+/now
+
+## PHASE R REDESIGN — music section (operator markup, 2026-07-08)
+
+Reworks the now-playing feature (R1–R3) per an operator markup of the MUSIC
+stage. The worker (R1) is untouched. Honesty gate from R2 stays intact — never
+show a stale/old song. Everything reuses the site's existing fonts, sizes, and
+animation timing/easing. **Hard rules per commit:** work on `dev`; never merge;
+`npm run build` + `npx astro check` green before each; one focused commit each,
+prefixed `R<n>:`; the feature stays dormant when `PUBLIC_NOW_PLAYING_URL` is
+unset (byte-identical MUSIC stage).
+
+**Decisions locked by the operator:**
+- New MUSIC dropdown: below `& SON OFFICIAL PLAYLIST`, add a second item
+  `NOW PLAYING · IN STORE`.
+- Empty state (nothing genuinely playing — store closed, paused, toggle off,
+  device gated, stale, or worker error): show a quiet "nothing playing right
+  now" state in the site's voice. Do NOT hide the feature; never show an old
+  song.
+- Remove the secondary "hear it in store? follow the whole rotation" playlist
+  box on BOTH viewports (the playlist stays reachable via the
+  `& SON OFFICIAL PLAYLIST` menu item).
+- Mobile return from the enlarged now-playing: BOTH a back/close control AND
+  re-tapping the MUSIC header return to the DJ booth.
+
+### R4 — foundation: menu item, remove playlist box, quiet empty state, URL hardening
+Both viewports; structural.
+- `src/data/content.ts`: in the `heroMenu` MUSIC section (`music: true`,
+  currently one item `& SON OFFICIAL PLAYLIST`), add a second item directly
+  below it labelled `NOW PLAYING · IN STORE`. It is NOT a plain external link —
+  mark it with a flag (e.g. add `nowPlaying?: boolean` to the
+  `HeroMenuSubItem` type and set `nowPlaying: true`) so markup/JS can target
+  it; its click behavior is wired in R5 (desktop) and R6 (mobile).
+- `HeroVideo.astro`: remove the secondary "hear it in store? follow the whole
+  rotation" playlist box from the now-playing block markup (both viewports).
+  Keep the now-playing card itself. The playlist link now lives only in the
+  menu item.
+- `public/scripts/now-playing.js`: replace the current "hide when not live"
+  behavior with the quiet empty state. When the gate is NOT satisfied
+  (show:false / stale / store closed / fetch error), render the
+  `NOW PLAYING · IN STORE` label plus a mono "nothing playing right now" line
+  (site voice) instead of hiding the block. When live+fresh, render the song
+  exactly as today (art, title — artist, progress bar, live pulse). The block
+  still only exists within the MUSIC stage (desktop) / the clicked-in panel
+  (mobile, R6).
+- URL hardening (fixes an operator-facing footgun): build the fetch target as
+  `new URL(nowPlayingUrl).origin + "/now"` so `PUBLIC_NOW_PLAYING_URL` can be
+  the plain worker base URL (e.g. `https://…workers.dev`) OR a full `…/now`
+  URL — both resolve. Update `.env.example` to document it as the worker's
+  base URL. (CSP origin derivation in Base.astro already uses `.origin` —
+  leave it.)
+- **Done when:** build + check green; env UNSET → MUSIC stage byte-identical to
+  pre-R4 (dormant); env set (dev) → block shows a song when live and "nothing
+  playing right now" when not, secondary box gone, new menu item present;
+  fetch works whether the env var has `/now` or not.
+
+### R5 — desktop: relocate the block + wire the menu link
+Desktop only (`≥761px`); do not change mobile.
+- Move the now-playing block from its current bottom-center-right spot to the
+  UPPER-RIGHT of the MUSIC stage: right-aligned, upper third, comfortable
+  margin from the top and right edges, clear of the cart/search icons and the
+  DJ figure. Keep the block's existing styling and size (do not enlarge).
+  Exact position is operator-tunable after review — land it cleanly in the
+  upper-right.
+- Wire the desktop `NOW PLAYING · IN STORE` menu item: when a live song is
+  showing, it is an active link opening the current track's Spotify URL in a
+  new tab (`target=_blank rel=noopener`), mirroring the block's own link —
+  clicking the menu item does what clicking the block does. Keep its href in
+  sync as the track updates. When not live (empty state), the menu item is
+  inert: no navigation, default cursor, no hover underline.
+- Also (shared polish, applies both viewports — R4 left it): in the empty
+  state, hide the album-art FRAME element too (not just the img), so the quiet
+  state is only the `NOW PLAYING · IN STORE` label + "nothing playing right
+  now" line, with no empty bordered square. This is a small `now-playing.js`/
+  css tweak; keep it minimal.
+- **Done when:** build + check green; at 1440 a live song sits upper-right and
+  the menu item opens that song; with nothing playing the block shows just the
+  label + "nothing playing right now" (no empty art box) and the menu item is
+  inert; mobile unchanged (byte-check the mobile block).
+
+### R6 — mobile: click-in now-playing stage
+Mobile only (`≤760px`); do not change desktop.
+- Default mobile MUSIC view shows ONLY the DJ booth + notes (no now-playing
+  block by default — it is removed from the default stage).
+- Tapping the `NOW PLAYING · IN STORE` menu item animates the DJ booth
+  figurine OFF-screen to the LEFT and animates the now-playing panel IN from
+  the RIGHT to center, enlarged to sit as the primary screen feature (fit the
+  mobile viewport with the site's standard margins). Use the site's existing
+  transition timing/easing (match the menu-drawer / stage transitions in
+  global.css). The panel shows the live song enlarged, or the "nothing playing
+  right now" empty state.
+- Return to the DJ booth by EITHER (a) a back/close control in the site's
+  style (× or ← back, matching the product/film close controls) OR (b)
+  re-tapping the MUSIC header — both reverse the animation (now-playing slides
+  out right, DJ booth slides back in from left).
+- `prefers-reduced-motion`: no slide — swap instantly, consistent with the
+  site's other reduced-motion handling.
+- **Done when:** build + check green; at 390px default MUSIC shows only the DJ
+  booth; tapping the menu item slides DJ out / now-playing in enlarged; BOTH
+  the back control and re-tapping MUSIC return to the booth; reduced-motion
+  swaps without sliding; desktop unchanged (byte-check desktop block).
 
 ---
 
