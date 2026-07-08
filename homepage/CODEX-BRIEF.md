@@ -68,10 +68,131 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — PHASE Q SHIPPED LIVE 2026-07-07 (PR #15,
-> deploy green, live CSS verified). Q1 indent shipped earlier via PR #13.
-> Final frame hierarchy: desktop cards 2px / product 3px; mobile cards 1px /
-> product 2px; catalog 3-across desktop / 2-across mobile.**
+> **ACTIVE SUB-TASK: (none) — PHASE R COMPLETE on dev (NOT pushed, per
+> operator instruction: no push/PR until "ship"). R1 @ 908081b (worker),
+> R2 @ ed78afa (site display, dormant until PUBLIC_NOW_PLAYING_URL is set),
+> R3 @ 332b9ea (catalogue frames removed, product frames kept). Verified:
+> builds green, dormancy byte-proven, zero console errors, frames correct
+> both viewports. Worker deploy + handshake are operator steps (see
+> worker/README.md).**
+
+---
+
+## PHASE R — now playing in store (operator intent notes, 2026-07-07)
+
+The store's Spotify (hello@shopandson.com, Premium) plays the shop speakers
+via "Benjamin's iPad" (Bluetooth → speakers, so Spotify reports the iPad as
+the playing device). A visitor opening the MUSIC stage sees the song playing
+in the store right now — live, clickable, honest. Operator notes are intent,
+not spec: make reasonable calls, keep the site's editorial voice.
+
+**Hard rules for all three commits:** work on `dev`; never merge; from
+`homepage/`, `npm run build` + `npx astro check` green before each commit;
+one focused commit each, prefixed `R<n>:`. R1 creates a NEW top-level folder
+`worker/` at the REPO ROOT (sibling of `homepage/`) — this is explicitly
+authorized by the operator for R1 only; R2/R3 stay inside `homepage/`.
+The site deploy must NEVER depend on the worker: env unset → site identical
+to today.
+
+### R1 — the messenger (Cloudflare Worker, repo root `worker/`)
+Self-contained folder: `worker/wrangler.toml`, `worker/src/index.js` (module
+worker, vanilla JS), `worker/scripts/authorize.mjs`, `worker/README.md`.
+Free tier only (one KV namespace for persistence).
+
+- Config: `SPOTIFY_CLIENT_ID` var = `8890a3933d484ade825a44278a8f5792`;
+  secrets (NEVER in the repo, set via `wrangler secret put`):
+  `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_REFRESH_TOKEN`, `TOGGLE_SECRET`.
+  `ALLOWED_DEVICES` var, comma-separated, initial value `Benjamin's iPad`
+  (matching case-insensitive, trimmed).
+- Spotify: refresh-token flow (Authorization Code, no PKCE needed server-side;
+  access token cached in-isolate until expiry, one retry on 401). Use ONLY
+  `GET /v1/me/player` (Get Playback State — survived the Feb 2026 Development
+  Mode cuts and includes the playing device). Scope: `user-read-playback-state`.
+- `GET /now` (public, CORS `*`, always 200 JSON, ~8s in-isolate cache):
+  show the track ONLY when ALL of: toggle on (KV) · `is_playing` ·
+  `currently_playing_type === "track"` · `item` present and not
+  `item.is_local` · `device.name` in ALLOWED_DEVICES. Then:
+  `{show:true, track:{name, artists, album, art, url}, progressMs,
+  durationMs, fetchedAt}`. EVERY other case — podcasts, ads, local files,
+  paused, idle, no device, gated device (phone), toggle off, Spotify error,
+  auth dead — returns `{show:false}` (optional private `reason` field is
+  fine). Never a non-200, never an error shape. Remote-controlling playback
+  from a phone keeps device = iPad and must keep working (no logic keyed to
+  the controlling device).
+- `GET|POST /toggle?state=on|off&secret=…` (accept both methods so an iOS
+  Shortcut stays trivial; also accept header auth): checks `TOGGLE_SECRET`,
+  writes KV, returns `{toggle:"on"|"off"}`; bad secret → 403. Missing state →
+  return current value.
+- `GET /status` (public, no secrets): `{auth:"ok"|"error", toggle,
+  allowedDevices, lastSpotifyOkAt, lastShowAt}` — enough for the operator to
+  spot a revoked authorization at a glance (KV-stamped, throttled writes).
+- `worker/scripts/authorize.mjs`: one-time local handshake — starts an http
+  server on `127.0.0.1:8888/callback` (the registered redirect URI), prints
+  the authorize URL (scope `user-read-playback-state`), exchanges the code
+  (client id + secret prompted via env/stdin, never persisted), prints the
+  refresh token for `wrangler secret put SPOTIFY_REFRESH_TOKEN`.
+- `worker/README.md`: deploy steps (wrangler login/KV create/secrets/deploy),
+  handshake steps while logged into the store account, iOS Shortcut wiring
+  for the toggle (iPad + optionally phone), updating ALLOWED_DEVICES if the
+  iPad is renamed/replaced, re-auth steps when the connection dies, and a
+  test-day checklist: skip, pause, play from a phone (must vanish), remote-
+  control from phone (must stay), toggle off/on, closing time — site checked
+  through each.
+- No file anywhere may contain the client secret, a refresh token, or a
+  toggle secret value. Build/check for `homepage/` still green (R1 touches
+  nothing inside homepage/, but run them anyway to prove it).
+
+### R2 — the site display (MUSIC stage, inside homepage/)
+- Env: `PUBLIC_NOW_PLAYING_URL` (worker origin). UNSET today and stays unset
+  in this commit: with it unset the built site must be byte-equivalent to
+  today's MUSIC stage (no visible markup, no network calls, no console
+  noise). Document it in `homepage/.env.example`.
+- Placement: the live MUSIC stage is the `.hero__dj` panel in
+  `HeroVideo.astro` (~line 81, DJ cutout + notes). There is NO live
+  now-playing markup — the old editorial block exists only in
+  `src/data/content.ts` (`music.nowPlaying`, label "NOW PLAYING · IN STORE")
+  and the retired `Music.astro`; reuse that label string from content.ts,
+  build the block into the dj panel in the stage's own style.
+- The block, editorial not glossy: mono uppercase label · song — artist ·
+  thin hairline progress bar ticking in real time (local tick between
+  heartbeats from progressMs + elapsed, clamped to duration) · small album
+  art with the site's 1px ink border · Spotify's mark small and monochrome
+  (inline SVG) · the whole block one `<a>` (target=_blank rel=noopener) to
+  the track URL. Beside it, the existing official-playlist link (URL already
+  in content.ts nav/music data) with the line "hear it in store? follow the
+  whole rotation." Neon green appears EXACTLY once: a small live pulse dot,
+  shown only when the answer is fresh. `prefers-reduced-motion`: bar static,
+  no pulse.
+- Honesty gate, all client-side, in order: store OPEN (reuse the existing
+  hours source — body `data-open-hour`/`data-close-hour` written by
+  Base.astro from site.hours, same America/New_York math as
+  public/scripts/base.js — do NOT duplicate the hours values) AND worker
+  says show:true AND fetchedAt fresh (stale > ~45s = not fresh). Any failure
+  → the block hides entirely and the stage looks exactly as today. An old
+  song must NEVER render as now playing.
+- Freshness without user action: fetch when the MUSIC stage opens; heartbeat
+  every ~25s only while the stage is open AND the tab visible
+  (visibilitychange-aware, immediate re-check on tab return); one extra
+  check scheduled at expected track end (+~1.5s) so changes land moments
+  after the room hears them; every timer cleared on stage close / tab
+  hidden.
+- CSP (Base.astro meta, PROD only — added in Phase P): append the worker
+  origin to `connect-src` ONLY when `PUBLIC_NOW_PLAYING_URL` is set at build
+  time (derive origin from the env var); add `https://i.scdn.co` to
+  `img-src` unconditionally now (Spotify album art CDN, harmless while
+  unused). With env unset the connect-src stays exactly as shipped.
+- Keep it vanilla (no deps), scoped to the music stage script lifecycle.
+
+### R3 — outline revision (inside homepage/, separate commit)
+Remove the neon frame from CATALOGUE product listings on BOTH desktop and
+mobile: delete the `.product-card__media::after` frame rules added by Q4
+(desktop min-width block) and Q5/Q5b (mobile block, 1px). Revert the
+`.product-card__sold-out` z-index bump if it was only there for the frame.
+INDIVIDUAL product listings keep their frames exactly as-is (desktop 3px,
+mobile 2px inset overlays, glow, lightbox suppression — untouched). No other
+outline/highlight changes anywhere.
+
+---
 >
 > **Q5 spec.** Make the catalog-card + product-view neon frame system
 > universal across viewports, proportioned for mobile:
@@ -227,6 +348,12 @@ below so Codex has ONE target; everything else in this file is context.
 > product, add-to-cart, film, and policy flows; /legacy/ 404s; robots.txt
 > ships; badges pin to the bag icon unclipped; hit areas expanded. Do NOT
 > push to main / NO PR until the operator says "ship Phase P".**
+
+## Log (Phase R)
+
+- 2026-07-07 — R3 catalogue frames removed (both viewports) — 332b9ea — build:green check:green — product frames untouched (3px/2px), sold-out z reverted
+- 2026-07-07 — R2 music now-playing display — ed78afa — build:green check:green — dormant with env unset (dj subtree byte-identical, no script ref, no console calls); hours gate reuses body data attrs; CSP gains worker origin only when env set, img-src +i.scdn.co
+- 2026-07-07 — R1 now-playing worker (repo root worker/) — 908081b — build:green check:green — /now /toggle /status, fail-closed toggle, device gate, refresh-token flow, handshake script + README; no secrets in repo
 
 ## Log (Phase Q)
 
