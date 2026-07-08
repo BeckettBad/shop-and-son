@@ -20,7 +20,6 @@ const catalogData: Record<string, CatalogProduct[]> = Object.fromEntries(catalog
 const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
 const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
-const officialPlaylist = heroMenu.find((section) => section.music)?.items.find((item) => item.href);
 
 // Block 1 — desktop: vertical left menu; mobile: horizontal tabs over fullscreen video.
 ---
@@ -133,7 +132,7 @@ const officialPlaylist = heroMenu.find((section) => section.music)?.items.find((
               <span class="hero__now-playing-copy">
                 <span class="hero__now-playing-track">
                   <span data-now-playing-title></span>
-                  <span aria-hidden="true"> — </span>
+                  <span data-now-playing-separator aria-hidden="true"> — </span>
                   <span data-now-playing-artist></span>
                 </span>
                 <span class="hero__now-playing-album" data-now-playing-album></span>
@@ -143,13 +142,6 @@ const officialPlaylist = heroMenu.find((section) => section.music)?.items.find((
               <span data-now-playing-progress></span>
             </span>
           </a>
-          {
-            officialPlaylist?.href && (
-              <a class="hero__now-playing-playlist" href={officialPlaylist.href} target="_blank" rel="noopener">
-                hear it in store? follow the whole rotation.
-              </a>
-            )
-          }
         </div>
       )
     }
@@ -174,7 +166,7 @@ const officialPlaylist = heroMenu.find((section) => section.music)?.items.find((
                 <ul class="hero__menu-panel">
                   {
                     section.items.map((item) => (
-                      <li class={`hero__menu-item${item.children && item.children.length > 0 ? " hero__menu-item--group" : ""}`}>
+                      (!item.nowPlaying || nowPlayingUrl) && <li class={`hero__menu-item${item.children && item.children.length > 0 ? " hero__menu-item--group" : ""}`}>
                         {item.collection ? (
                           <button
                             type="button"
@@ -183,6 +175,14 @@ const officialPlaylist = heroMenu.find((section) => section.music)?.items.find((
                             data-collection={item.collection}
                             data-collection-label={item.collectionLabel ?? item.label}
                             aria-pressed="false"
+                          >
+                            {item.label}{item.suffix ?? ""}
+                          </button>
+                        ) : item.nowPlaying ? (
+                          <button
+                            type="button"
+                            class="hero__menu-link hero__menu-link--dash"
+                            data-now-playing-menu-item
                           >
                             {item.label}{item.suffix ?? ""}
                           </button>

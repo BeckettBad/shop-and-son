@@ -10,8 +10,7 @@
   pointer-events:auto;
   transform:translateX(-2%);
 }
-.hero__now-playing-card,
-.hero__now-playing-playlist{
+.hero__now-playing-card{
   color:#000;
   background:rgba(255,255,255,.92);
   border:1px solid #000;
@@ -105,14 +104,11 @@
   transform:scaleX(0);
   transform-origin:left center;
 }
-.hero__now-playing-playlist{
-  display:flex;
-  align-items:center;
-  flex:0 0 118px;
-  padding:9px;
-  font-family:var(--mono);
-  font-size:10px;
-  line-height:1.25;
+.hero__now-playing[data-now-playing-state="empty"] .hero__now-playing-main{
+  display:block;
+}
+.hero__now-playing[data-now-playing-state="empty"] .hero__now-playing-track{
+  white-space:normal;
 }
 @keyframes nowPlayingPulse{
   0%,100%{opacity:.34; transform:scale(.82)}
@@ -137,11 +133,6 @@
   .hero__now-playing-art{
     width:44px;
     height:44px;
-  }
-  .hero__now-playing-playlist{
-    flex-basis:auto;
-    width:max-content;
-    max-width:100%;
   }
 }
 @media(prefers-reduced-motion:reduce){

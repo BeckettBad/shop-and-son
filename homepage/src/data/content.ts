@@ -112,6 +112,7 @@ export interface HeroMenuSubItem {
   href?: string;
   collection?: string;
   collectionLabel?: string;
+  nowPlaying?: boolean;
   /** Appended after label (e.g. "CATEGORIES |"). */
   suffix?: string;
   children?: HeroMenuNestedItem[];
@@ -202,6 +203,7 @@ export const heroMenu: HeroMenuSection[] = [
     music: true,
     items: [
       { label: "& SON OFFICIAL PLAYLIST", href: "https://open.spotify.com/playlist/6MD3a8wIY0582I3iWIngqE" },
+      { label: "NOW PLAYING · IN STORE", nowPlaying: true },
     ],
   },
   {
