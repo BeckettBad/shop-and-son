@@ -1,5 +1,5 @@
 ---
-import { heroMenu } from "../../data/content.ts";
+import { heroMenu, music as musicContent } from "../../data/content.ts";
 import { getCatalogProducts, type CatalogProduct } from "../../lib/catalog";
 import { withBase } from "../../lib/url.ts";
 
@@ -19,6 +19,8 @@ const catalogEntries = await Promise.all(
 const catalogData: Record<string, CatalogProduct[]> = Object.fromEntries(catalogEntries);
 const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
 const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
+const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
+const officialPlaylist = heroMenu.find((section) => section.music)?.items.find((item) => item.href);
 
 // Block 1 — desktop: vertical left menu; mobile: horizontal tabs over fullscreen video.
 ---
@@ -113,7 +115,44 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
           <path d="M10 5v15a4 4 0 1 1-1.7-3.3V7l13-2v13.5a4 4 0 1 1-1.7-3.2V6.6z" />
         </svg>
       </span>
-    </span>
+    </span>{
+      nowPlayingUrl && (
+        <div class="hero__now-playing" data-now-playing data-now-playing-url={nowPlayingUrl} hidden>
+          <a class="hero__now-playing-card" data-now-playing-link href="#" target="_blank" rel="noopener">
+            <span class="hero__now-playing-topline">
+              <span class="hero__now-playing-pulse" aria-hidden="true"></span>
+              <span>{musicContent.nowPlaying.label}</span>
+              <span class="hero__now-playing-spotify" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M12 1.8A10.2 10.2 0 1 0 12 22.2 10.2 10.2 0 0 0 12 1.8Zm4.68 14.71a.64.64 0 0 1-.88.21c-2.4-1.47-5.43-1.8-8.99-.98a.64.64 0 1 1-.29-1.25c3.9-.89 7.25-.51 9.95 1.14.3.18.39.57.21.88Zm1.25-2.78a.78.78 0 0 1-1.07.26c-2.75-1.69-6.95-2.18-10.2-1.19a.78.78 0 0 1-.45-1.5c3.7-1.12 8.32-.58 11.46 1.34.37.22.48.71.26 1.09Zm.11-2.9c-3.3-1.96-8.74-2.14-11.89-1.18a.94.94 0 1 1-.55-1.8c3.62-1.1 9.62-.89 13.4 1.35a.94.94 0 0 1-.96 1.63Z" />
+                </svg>
+              </span>
+            </span>
+            <span class="hero__now-playing-main">
+              <img class="hero__now-playing-art" data-now-playing-art alt="" />
+              <span class="hero__now-playing-copy">
+                <span class="hero__now-playing-track">
+                  <span data-now-playing-title></span>
+                  <span aria-hidden="true"> — </span>
+                  <span data-now-playing-artist></span>
+                </span>
+                <span class="hero__now-playing-album" data-now-playing-album></span>
+              </span>
+            </span>
+            <span class="hero__now-playing-progress" aria-hidden="true">
+              <span data-now-playing-progress></span>
+            </span>
+          </a>
+          {
+            officialPlaylist?.href && (
+              <a class="hero__now-playing-playlist" href={officialPlaylist.href} target="_blank" rel="noopener">
+                hear it in store? follow the whole rotation.
+              </a>
+            )
+          }
+        </div>
+      )
+    }
   </div>
 
   <nav class="hero__overlay" aria-label="Site sections">
@@ -285,6 +324,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   <script is:inline type="application/json" id="catalog-data" set:html={catalogDataJson}></script>
 </section>
+{nowPlayingUrl && <script is:inline type="module" src={withBase("/scripts/now-playing.js")}></script>}
 
 <script>
   import { getLiveHeroMenu, type LiveHeroMenuEntry } from "../../lib/menu";
