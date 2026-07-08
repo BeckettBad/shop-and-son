@@ -123,7 +123,7 @@
 @media(min-width:761px){
   .hero__now-playing{
     --now-playing-width:clamp(300px,23vw,340px);
-    --now-playing-right:clamp(36px,3vw,54px);
+    --now-playing-right:clamp(156px,calc(3vw + 120px),174px);
     top:calc(50% - 10vh - 75px);
     left:calc(50vw + 50% - var(--now-playing-width) - var(--now-playing-right));
     right:auto;
