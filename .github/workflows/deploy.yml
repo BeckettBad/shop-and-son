@@ -40,6 +40,9 @@ jobs:
         env:
           PUBLIC_SHOPIFY_STORE_DOMAIN: ${{ vars.PUBLIC_SHOPIFY_STORE_DOMAIN }}
           PUBLIC_SHOPIFY_STOREFRONT_API_TOKEN: ${{ vars.PUBLIC_SHOPIFY_STOREFRONT_API_TOKEN }}
+          # Now-playing worker base URL. Unset → the MUSIC "now playing" feature
+          # stays dormant (site byte-identical). Set as a repo Actions Variable.
+          PUBLIC_NOW_PLAYING_URL: ${{ vars.PUBLIC_NOW_PLAYING_URL }}
         run: |
           cd homepage
           npm ci
