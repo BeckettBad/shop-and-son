@@ -71,11 +71,66 @@ below so Codex has ONE target; everything else in this file is context.
 > **ACTIVE SUB-TASK: PHASE R POLISH (operator review, 2026-07-08) — three
 > ordered commits R7/R8/R9, one dispatch each, Claude reviews between. Do NOT
 > push until operator says "ship". Full spec in "PHASE R POLISH" below.
-> Status: (none) — PHASE R POLISH 3 COMPLETE on dev (unpushed). R12 @ d8e947f
-> (mobile section collapse returns to landing stencil), R13 @ 58a7cf8 (collapse
-> end-flash/residual gap fixed via fill:forwards + zeroed padding/margins;
-> reopen restores fully; sections + subgroups, both viewports). All verified.
-> Whole Phase R (R1–R13) awaits operator review + "ship".**
+> Status: (none) — PHASE R POLISH 4 COMPLETE on dev (unpushed). R14 @ 8bcf6dd
+> + R14b @ a83db74 + R14c @ 440815f: on mobile, one tap on the MUSIC header
+> collapses the whole folder to the landing stencil even from inside the
+> now-playing feature; booth stays invisible (visibility:hidden) so no flash,
+> now-playing slides off, stencil returns; in-panel × still returns to booth;
+> desktop unchanged. Verified (booth hidden every frame, reopen restores).
+> Whole Phase R (R1–R14c) awaits operator review + "ship".**
+
+## Log (Phase R polish 4)
+
+- 2026-07-08 — R14c hide booth during now-playing collapse — 440815f — build:green check:green — visibility:hidden on booth elements (position-independent) fixes the slide-across; booth invisible all frames, verified
+- 2026-07-08 — R14b booth-flash attempt (superseded by R14c) — a83db74 — build:green check:green — animation:none was insufficient (is-music removed mid-collapse shifts booth reference)
+- 2026-07-08 — R14 mobile MUSIC collapse to landing — 8bcf6dd — build:green check:green — removed the re-tap-returns-to-booth special case; MUSIC header now collapses whole folder to stencil; × still returns to booth
+
+## PHASE R POLISH 4 — mobile MUSIC collapse from now-playing (2026-07-08)
+
+---
+
+## PHASE R POLISH 4 — mobile MUSIC collapse from now-playing (2026-07-08)
+
+Same hard rules: `dev`; never merge; build+check green; one commit `R14:`.
+
+### R14 — one tap on MUSIC collapses the whole folder to landing, coherently
+Operator: on mobile, when a user is INSIDE the now-playing feature and taps the
+main MUSIC header to collapse, it currently just pops back to the DJ booth (the
+now-playing gets unselected) — wrong. It should collapse the ENTIRE MUSIC folder
+in ONE tap and return to the landing stencil, regardless of whether the user is
+viewing the now-playing panel or the booth.
+- Root cause: the section-header click handler (`HeroVideo.astro` ~2268) has a
+  mobile special case:
+  `if (isMusicSection && !isOpen && mobileQuery.matches && hero.classList.contains("is-now-playing-open")) { closeMobileNowPlaying(); return; }`
+  — this intercepts the MUSIC-collapse tap and only closes the now-playing
+  panel (back to booth). REMOVE this special case so the tap falls through to
+  the normal collapse (`setMenuSectionState(null)` + `closeStage()`), which
+  already closes now-playing (`setMobileNowPlayingOpen(false)`) and returns the
+  stencil (`returnStencilFromRight()`). This supersedes R6's "re-tap MUSIC
+  returns to booth" — now MUSIC header = collapse-all-to-landing.
+- Keep the in-panel `×` back control returning to the booth (that stays the
+  "back within the feature" affordance; only the MAIN MUSIC header changes).
+- ANIMATION COHERENCE (the important part): animate whatever asset the user is
+  currently viewing off-screen in the site's established exit direction, then
+  animate the stencil back on — with NO intermediate booth flash:
+  - From the now-playing panel: the now-playing panel animates OFF-screen
+    (match the site's stage-exit direction; it entered from the right) while
+    the stencil returns from the right; the DJ booth must NOT slide back in
+    mid-transition. Note: `closeStage()`'s `setMobileNowPlayingOpen(false)`
+    today would let the booth slide back from the left — suppress that during a
+    collapse-to-landing so only the now-playing exits + stencil enters.
+  - From the booth view: only the booth animates off + stencil in (existing
+    behavior — keep it coherent).
+- Desktop unaffected (the special case is mobile-gated; desktop MUSIC collapse
+  already returns to landing).
+- Done when: build+check green; at 390px, from the now-playing panel ONE tap on
+  MUSIC collapses the whole section → now-playing slides off + stencil animates
+  in (no booth flash, now-playing not left selected, lands on the resting
+  stencil); from the booth view one tap → booth off + stencil in; the in-panel
+  × still returns to the booth; MUSIC reopen still works; desktop 1440
+  unchanged.
+
+---
 
 ---
 
