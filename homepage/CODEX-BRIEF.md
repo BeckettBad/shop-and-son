@@ -68,10 +68,539 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — Q5b @ 25a93fd committed + verified (mobile
-> cards to 1px hairline). Frame system final state: desktop cards 2px /
-> product 3px; mobile cards 1px / product 2px. Awaiting operator verify of
-> Q2–Q5b.**
+> **ACTIVE SUB-TASK: PHASE R POLISH (operator review, 2026-07-08) — three
+> ordered commits R7/R8/R9, one dispatch each, Claude reviews between. Do NOT
+> push until operator says "ship". Full spec in "PHASE R POLISH" below.
+> Status: (none) — PHASE R COMPLETE + SECURITY-PASSED, SHIPPING. R15 @ ef95cc8
+> (fetch normalized /now endpoint [ship-blocker], track-link https+spotify.com
+> allowlist, album-art i.scdn.co host-check) — all verified. Worker fixes
+> applied direct (constant-time secret compare, worker/.gitignore). 3-agent
+> security+functionality audit: no criticals; operator TODOs = Cloudflare
+> rate-limit on /toggle, rotate client secret (chat-exposed), remove Mac test
+> device on deploy. Whole Phase R (R1–R15) shipping to main per operator.**
+
+---
+
+## Log (Phase R security/correctness)
+
+- 2026-07-08 — R15 now-playing hardening — ef95cc8 — build:green check:green — fetch nowPlayingEndpoint (base-URL ship-blocker fixed, verified hits /now), track-link href allowlist (https+spotify.com, rejects javascript:/evil), album-art i.scdn.co host-check
+- 2026-07-08 — worker security (direct, not Codex) — constant-time TOGGLE_SECRET compare + worker/.gitignore (blocks .dev.vars/.wrangler); syntax-checked
+
+## PHASE R SECURITY/CORRECTNESS — pre-ship fixes (audit, 2026-07-08)
+
+Three fixes to `homepage/public/scripts/now-playing.js` from the pre-ship
+security + functionality audits. One commit `R15:`. Build + check green.
+
+### R15 (all three, one commit)
+1. **CORRECTNESS (ship-blocker): fetch the normalized endpoint, not the raw
+   URL.** The script computes `nowPlayingEndpoint = new URL(nowPlayingUrl).origin + "/now"`
+   (~line 8) but the actual `fetch()` (~line 261) uses the raw `nowPlayingUrl`.
+   The production `PUBLIC_NOW_PLAYING_URL` is the worker BASE url (no `/now`), so
+   the live site currently fetches the root → 404 → always "nothing playing."
+   Fix: `fetch(nowPlayingEndpoint, …)` at ~line 261 (keep `cache:"no-store"` +
+   the AbortController signal). `.env.example` documents the base-URL form; this
+   makes it actually work. CSP `connect-src` already allows the origin.
+2. **SECURITY (medium): allowlist the track-link scheme/host before assigning
+   href.** `track.url` is assigned to the card `<a>` href (~line 209) and the
+   menu-item `<a>` href via `setMenuLinkState` (~line 43). Today the only guard
+   is `new URL(trackUrl)` not throwing — which permits `javascript:` (blocked by
+   prod CSP but NOT in dev) and, worse, ANY `https://evil…` origin (a one-click
+   phishing/open-redirect link that CSP does NOT prevent). Fix: after parsing,
+   require `u.protocol === "https:"` AND the host is Spotify
+   (`u.hostname === "open.spotify.com"` or ends with `.spotify.com`); if it
+   fails, `renderEmptyState(); return;` (do not set either href). Apply so BOTH
+   the card link and the menu link only ever receive a validated Spotify https
+   URL.
+3. **DEFENSE-IN-DEPTH (low): host-check the album art before `img.src`.**
+   `track.art` is assigned to `art.src` (~line 227) with no check; prod CSP
+   restricts `img-src` to `i.scdn.co` but dev has no CSP. Fix: only set
+   `art.src` when `track.art` parses as an `https:` URL whose host is
+   `i.scdn.co` (or ends with `.scdn.co`); otherwise leave the art hidden (don't
+   fail the whole render — art is optional, unlike the link).
+
+- **Done when:** build + check green; with `PUBLIC_NOW_PLAYING_URL` set to the
+  BASE worker url (no /now) the site fetches `…/now` and renders live/empty
+  correctly (was broken); a payload with `url:"javascript:alert(1)"` or
+  `url:"https://evil.test/x"` yields the empty state and sets NO href on either
+  anchor; a valid `https://open.spotify.com/track/…` still links normally; a
+  non-scdn art URL is not loaded but a valid track still renders; dormancy
+  (env unset) unchanged.
+
+---
+
+## Log (Phase R polish 4)
+
+- 2026-07-08 — R14c hide booth during now-playing collapse — 440815f — build:green check:green — visibility:hidden on booth elements (position-independent) fixes the slide-across; booth invisible all frames, verified
+- 2026-07-08 — R14b booth-flash attempt (superseded by R14c) — a83db74 — build:green check:green — animation:none was insufficient (is-music removed mid-collapse shifts booth reference)
+- 2026-07-08 — R14 mobile MUSIC collapse to landing — 8bcf6dd — build:green check:green — removed the re-tap-returns-to-booth special case; MUSIC header now collapses whole folder to stencil; × still returns to booth
+
+## PHASE R POLISH 4 — mobile MUSIC collapse from now-playing (2026-07-08)
+
+---
+
+## PHASE R POLISH 4 — mobile MUSIC collapse from now-playing (2026-07-08)
+
+Same hard rules: `dev`; never merge; build+check green; one commit `R14:`.
+
+### R14 — one tap on MUSIC collapses the whole folder to landing, coherently
+Operator: on mobile, when a user is INSIDE the now-playing feature and taps the
+main MUSIC header to collapse, it currently just pops back to the DJ booth (the
+now-playing gets unselected) — wrong. It should collapse the ENTIRE MUSIC folder
+in ONE tap and return to the landing stencil, regardless of whether the user is
+viewing the now-playing panel or the booth.
+- Root cause: the section-header click handler (`HeroVideo.astro` ~2268) has a
+  mobile special case:
+  `if (isMusicSection && !isOpen && mobileQuery.matches && hero.classList.contains("is-now-playing-open")) { closeMobileNowPlaying(); return; }`
+  — this intercepts the MUSIC-collapse tap and only closes the now-playing
+  panel (back to booth). REMOVE this special case so the tap falls through to
+  the normal collapse (`setMenuSectionState(null)` + `closeStage()`), which
+  already closes now-playing (`setMobileNowPlayingOpen(false)`) and returns the
+  stencil (`returnStencilFromRight()`). This supersedes R6's "re-tap MUSIC
+  returns to booth" — now MUSIC header = collapse-all-to-landing.
+- Keep the in-panel `×` back control returning to the booth (that stays the
+  "back within the feature" affordance; only the MAIN MUSIC header changes).
+- ANIMATION COHERENCE (the important part): animate whatever asset the user is
+  currently viewing off-screen in the site's established exit direction, then
+  animate the stencil back on — with NO intermediate booth flash:
+  - From the now-playing panel: the now-playing panel animates OFF-screen
+    (match the site's stage-exit direction; it entered from the right) while
+    the stencil returns from the right; the DJ booth must NOT slide back in
+    mid-transition. Note: `closeStage()`'s `setMobileNowPlayingOpen(false)`
+    today would let the booth slide back from the left — suppress that during a
+    collapse-to-landing so only the now-playing exits + stencil enters.
+  - From the booth view: only the booth animates off + stencil in (existing
+    behavior — keep it coherent).
+- Desktop unaffected (the special case is mobile-gated; desktop MUSIC collapse
+  already returns to landing).
+- Done when: build+check green; at 390px, from the now-playing panel ONE tap on
+  MUSIC collapses the whole section → now-playing slides off + stencil animates
+  in (no booth flash, now-playing not left selected, lands on the resting
+  stencil); from the booth view one tap → booth off + stencil in; the in-panel
+  × still returns to the booth; MUSIC reopen still works; desktop 1440
+  unchanged.
+
+---
+
+---
+
+## Log (Phase R polish 3)
+
+- 2026-07-08 — R13 collapse end-flash fix — 58a7cf8 — build:green check:green — fill:forwards + animate height/padding/margins to 0; no end-flash or residual gap; reopen restores (cancel filled anim); sections+subgroups, 1440+390 verified
+- 2026-07-08 — R12 mobile stage reset on collapse — d8e947f — build:green check:green — closeStage() now also runs on mobile when closing a section; & FAM/MUSIC collapse returns to landing stencil
+
+## PHASE R POLISH 3 — mobile stage reset + collapse-animation glitch (2026-07-08)
+
+Same hard rules: `dev`; never merge; build + check green each; one focused
+commit each prefixed `R<n>:`.
+
+### R12 — mobile: collapsing a main folder returns to the resting stencil
+Bug (mobile only): when a section that owns a stage is opened (& FAM → tattoo
+stage, MUSIC → DJ booth, PREORDER), then collapsed by tapping its header again,
+the STAGE content stays on screen instead of returning to the landing stencil.
+Desktop is correct. Root cause: in the section-header click handler
+(`HeroVideo.astro` ~2266) the closing branch runs
+`setMenuSectionState(isOpen ? section : null); if (!mobileQuery.matches) { closeStage(); }`
+— `closeStage()` (returns to landing) is gated to desktop only, so mobile never
+resets the stage on collapse.
+- Fix: also call `closeStage()` on mobile when the section is being CLOSED
+  (i.e. when `isOpen` is false). Simplest: `if (!mobileQuery.matches || !isOpen) closeStage();`.
+- Leave the early-return branches untouched (opening MUSIC/FAM/PREORDER, and the
+  mobile now-playing-close case). Don't touch the mobile collection-open path
+  (the `[data-shop-all]` handler) or desktop behavior.
+- Done when: build+check green; at 390px opening & FAM (tattoo rolls in) then
+  tapping & FAM again returns to the landing stencil (no leftover fam content);
+  same for MUSIC (booth) and any stage-owning section; desktop 1440 unchanged;
+  mobile collection open/close + now-playing still work.
+
+### R13 — fix the collapse-animation flash / residual spacing (both viewports + subgroups)
+Bug (after R10, both viewports; sections AND subgroups like CATEGORIES/
+DESIGNERS): right at the end of a folder collapse there's a brief "weird
+spacing" — the panel flashes back toward full height / leaves a gap just before
+it disappears. Root cause in `animateMenuCollapse` (`HeroVideo.astro` ~1003):
+the WAAPI height animation has NO `fill` mode, so when it finishes the element
+reverts to its natural height (still `display:block` under `is-collapsing`) for
+the frame(s) before the `.then()` removes `is-collapsing`; and the panel's
+top padding (`.hero__menu-panel{padding:0.35em 0 0}`) isn't collapsed, leaving
+residual height during the slide.
+- Fix so the collapse ends cleanly with no flash and no leftover gap:
+  - Hold the fully-collapsed end state (e.g. `fill:"forwards"`/`"both"` on the
+    animation, or commit the end styles) so it never reverts to full height
+    before hiding. CRITICAL: keep the `menuCollapseAnimations` bookkeeping
+    correct so a filled animation is still cancelled on reopen — reopening a
+    collapsed section must restore full height (no stuck-collapsed panel).
+    (Note today's `animateMenuCollapse` deletes the animation from the map
+    after `finished`; a filled animation must remain cancellable by
+    `cancelMenuCollapse` on the next open.)
+  - Ensure the panel collapses to truly zero visible height — account for the
+    `0.35em` top padding (animate/zero it too, or include it) so no residual
+    gap remains during or after the slide.
+- Reduced-motion path (instant collapse) must stay correct.
+- Applies to both the section panel and the subgroup nested list (same
+  function).
+- Done when: build+check green; at 1440 AND 390, collapsing a section OR a
+  subgroup (CATEGORIES/DESIGNERS) slides smoothly to nothing with NO end-flash
+  and NO residual spacing; reopening a just-collapsed folder restores it fully
+  (not stuck collapsed); mid-collapse reopen still clean (R10).
+
+---
+
+---
+
+## Log (Phase R polish 2)
+
+- 2026-07-08 — R11 desktop card nudge left — 3e92c2a — build:green check:green — right margin ~43px→~163px (moved 120px toward booth); size/vertical unchanged
+- 2026-07-08 — R10 instant menu collapse — 2a70034 — build:green check:green — is-open removed immediately + is-collapsing keeps panel sliding; header black/+ within ~110ms both viewports; subgroups too; reopen-mid-collapse clean
+
+## PHASE R POLISH 2 — menu collapse snappiness + desktop nudge (2026-07-08)
+
+Same hard rules: work on `dev`; never merge; build + check green before each;
+one focused commit each prefixed `R<n>:`.
+
+### R10 — collapse the menu header state instantly (both viewports)
+Bug (regression, both mobile + desktop): when a section/subgroup is open and the
+user opens a DIFFERENT main folder, the old one's neon highlight + open look
+persist for the WHOLE 550ms slide-out and slightly after, instead of clearing at
+once. Root cause: `closeMenuSection` (`HeroVideo.astro` ~1079) and the subgroup
+collapse (~1047) remove the `is-open` class only in the animation's `.then()`
+(after `stageDuration`=550ms), and the neon (`global.css:722`
+`.hero__menu-section.is-open > .hero__menu-header`) + the open glyph are keyed to
+`is-open`. So the header stays lit the whole animation.
+Fix — decouple the header's open appearance from the panel slide:
+- On collapse, remove `is-open` IMMEDIATELY (so neon clears + the toggle glyph
+  flips to `+` at once via the existing `aria-expanded` sync), and add a
+  transient class (e.g. `is-collapsing`) to the section so the panel stays
+  displayed while the WAAPI height animation runs; remove `is-collapsing` in
+  the animation's `.then()` (replacing the current `is-open` removal there).
+- Apply the SAME pattern to the subgroup collapse (the `.hero__menu-item--group`
+  nested panel) so CATEGORIES/DESIGNERS unhighlight instantly too.
+- CSS: wherever the panel is shown via `.is-open .hero__menu-panel{display:…}`
+  (global.css ~730, ~809, ~1025) and the nested-group panel, add a matching
+  `.is-collapsing …` (and group `.is-collapsing`) selector so the panel/nested
+  stays visible during the slide. Keep the neon rule (722) and the group
+  subheader neon keyed to `.is-open` ONLY, so dropping `is-open` clears neon
+  immediately. Do NOT change the `is-current` rules (R9 mobile in-collection
+  cue is intended to persist).
+- Preserve the collapse-token logic: reopening a section mid-collapse must
+  cancel the animation + `is-collapsing` and restore `is-open` cleanly (no
+  stuck panels).
+- Reduced-motion path already collapses instantly — keep it working.
+- Done when: build + check green; at 1440 AND 390, opening a folder then
+  clicking a different main folder flips the old header to `+` and removes its
+  neon IMMEDIATELY (no 550ms lag) while its panel still slides closed smoothly;
+  same for subgroups; reopening mid-collapse works; R9's mobile in-collection
+  neon still behaves.
+
+### R11 — nudge the desktop now-playing card left ~1.25in (~120px)
+Operator: the R8 card is still too far right. Move it LEFT by ~120px (1.25in at
+96px/in), toward the DJ booth. Desktop only (`≥761px`): increase the card's
+right offset by ~120px (current right margin is ~`clamp(36px,3vw,54px)`≈43px →
+new ≈160px). Keep size/vertical position from R8. Operator will fine-tune again.
+Done when: build+check green; at 1440 the card's right gap is ~150–170px (was
+~43); size + vertical center unchanged; mobile byte-identical.
+
+---
+
+---
+
+## Log (Phase R polish)
+
+- 2026-07-08 — R9 mobile menu is-current — 3329d7d — build:green check:green — section holding active collection shows −+neon on mobile (sub-lists stay collapsed); desktop untouched
+- 2026-07-08 — R8 desktop card enlarge+lower — d56cd40 — build:green check:green — 331x159 ~2:1, right margin ~43px, vertical center ~41%
+- 2026-07-08 — R7 menu item neon — 4337a82 — build:green check:green — mobile green while panel open; desktop hover/active only
+
+## PHASE R POLISH — now-playing highlight, desktop placement, mobile menu state (2026-07-08)
+
+Operator review of the redesign. Same hard rules: work on `dev`; never merge;
+`npm run build` + `npx astro check` green before each; one focused commit each
+prefixed `R<n>:`; feature dormant when `PUBLIC_NOW_PLAYING_URL` unset.
+
+**Operator decisions:** desktop NOW PLAYING highlight = hover/press only (it's
+an external link, no persistent state). Mobile in-collection menu = top header
+only (flip the section to `−` + neon; keep sub-lists collapsed for catalogue
+room).
+
+### R7 — NOW PLAYING · IN STORE menu item neon highlight
+Make the new menu item highlight neon green like the other subfolders, per the
+two decisions:
+- Mobile (`≤760px`): while the mobile now-playing panel is open
+  (`is-now-playing-open`), the `[data-now-playing-menu-item]` shows neon green
+  (var(--neon-green)) — the "you're in this subfolder" active state, matching
+  how an open section/subgroup reads. Returns to normal when the panel closes.
+- Desktop (`≥761px`): hover/press only — the item gets the same neon hover +
+  `:active` treatment as the site's other menu links (it currently may render
+  inert-styled when idle from R5; ensure hover/active still flash neon). No
+  persistent green.
+- Don't disturb R5's live/inert href logic; this is styling only.
+- Done when: build+check green; at 390px opening the now-playing panel turns
+  the menu item neon and closing it clears it; at 1440 the item flashes neon on
+  hover/press only; empty vs live unaffected.
+
+### R8 — desktop now-playing placement: lower + enlarged (match the markup)
+The R5 block sits too high (top ~198px on a 900-tall viewport, ~22%). The
+operator's original markup put it as a taller box on the RIGHT, centered around
+the upper-middle. Reposition + resize on desktop only (`≥761px`):
+- Move it DOWN so the block's vertical center is roughly 40% of the viewport
+  height (was ~24%) — clear below the cart/search icons, sitting in the
+  right-middle like the markup's black rectangle.
+- Enlarge it: it is currently a wide-short strip (~430×74). Make it a taller,
+  more substantial card (target roughly 300–340px wide × ~140–160px tall, ~2:1)
+  with LARGER album art and comfortably larger type, still in the site's style.
+  Keep it right-aligned within the stage with a comfortable right margin (not
+  hugging the very edge).
+- Exact numbers are operator-tunable after review — land it in the
+  right-middle, clearly bigger. Mobile unchanged (this is desktop-only CSS).
+- Done when: build+check green; at 1440 the live block is a larger ~2:1 card in
+  the right-middle (not up under the icons); empty state matches the new
+  size/position; 390px mobile byte-identical.
+
+### R9 — mobile menu state: top header reflects the open collection
+Bug: on mobile, opening a collection (e.g. tapping SHOP ALL) collapses the
+parent section so its header wrongly reads `CLOTHES +`. Desktop is correct and
+must stay unchanged. Fix (mobile `≤760px`), "top header only" per operator:
+- When a collection is active (`hero.dataset.activeCollection` set) on mobile,
+  the section that CONTAINS that collection shows its header as `CLOTHES −` in
+  neon green — the current-section cue — even though its sub-lists stay
+  collapsed (so the catalogue keeps its room).
+- Likely mechanism: the `+`/`−` glyph and neon color are driven by `is-open`
+  today; decouple by adding an `is-current` (or similar) class to the section
+  that holds the active collection, and make the header show `−` + neon when
+  the section is `is-open` OR `is-current`. Set/clear `is-current` wherever
+  `activeCollection` is set/cleared. Keep the sub-list panel collapsed on mobile
+  in the `is-current`-but-not-`is-open` case.
+- Desktop behavior must not change (desktop already shows the full open branch).
+- Done when: build+check green; at 390px, tapping SHOP ALL (or any category)
+  leaves the parent section header reading `−` + neon while the catalogue shows;
+  leaving the collection clears it; the correct section is marked when switching
+  between CLOTHES/OBJECTS collections; desktop 1440 unchanged.
+
+---
+
+---
+
+## Log (Phase R redesign)
+
+- 2026-07-08 — R6b mobile DJ slide-off fix — 96ef9fd — build:green check:green — animation:none lets the translate win over idle-sway; booth clears left edge, panel centered
+- 2026-07-08 — R6 mobile click-in stage — 4886093 — build:green check:green — default hides now-playing; menu item slides DJ off-left + now-playing in from right; × back + re-tap MUSIC; .55s ease-in-out; reduced-motion instant
+- 2026-07-08 — R5 desktop relocate + menu link — 34f88c2 — build:green check:green — block upper-right; menu item opens current song when live, inert when idle; empty art frame hidden
+- 2026-07-08 — R4 foundation — 504ceec — build:green check:green — NOW PLAYING·IN STORE menu item (dormant-gated), secondary playlist box removed both viewports, quiet 'nothing playing right now' empty state, fetch URL hardened to origin+/now
+
+## PHASE R REDESIGN — music section (operator markup, 2026-07-08)
+
+Reworks the now-playing feature (R1–R3) per an operator markup of the MUSIC
+stage. The worker (R1) is untouched. Honesty gate from R2 stays intact — never
+show a stale/old song. Everything reuses the site's existing fonts, sizes, and
+animation timing/easing. **Hard rules per commit:** work on `dev`; never merge;
+`npm run build` + `npx astro check` green before each; one focused commit each,
+prefixed `R<n>:`; the feature stays dormant when `PUBLIC_NOW_PLAYING_URL` is
+unset (byte-identical MUSIC stage).
+
+**Decisions locked by the operator:**
+- New MUSIC dropdown: below `& SON OFFICIAL PLAYLIST`, add a second item
+  `NOW PLAYING · IN STORE`.
+- Empty state (nothing genuinely playing — store closed, paused, toggle off,
+  device gated, stale, or worker error): show a quiet "nothing playing right
+  now" state in the site's voice. Do NOT hide the feature; never show an old
+  song.
+- Remove the secondary "hear it in store? follow the whole rotation" playlist
+  box on BOTH viewports (the playlist stays reachable via the
+  `& SON OFFICIAL PLAYLIST` menu item).
+- Mobile return from the enlarged now-playing: BOTH a back/close control AND
+  re-tapping the MUSIC header return to the DJ booth.
+
+### R4 — foundation: menu item, remove playlist box, quiet empty state, URL hardening
+Both viewports; structural.
+- `src/data/content.ts`: in the `heroMenu` MUSIC section (`music: true`,
+  currently one item `& SON OFFICIAL PLAYLIST`), add a second item directly
+  below it labelled `NOW PLAYING · IN STORE`. It is NOT a plain external link —
+  mark it with a flag (e.g. add `nowPlaying?: boolean` to the
+  `HeroMenuSubItem` type and set `nowPlaying: true`) so markup/JS can target
+  it; its click behavior is wired in R5 (desktop) and R6 (mobile).
+- `HeroVideo.astro`: remove the secondary "hear it in store? follow the whole
+  rotation" playlist box from the now-playing block markup (both viewports).
+  Keep the now-playing card itself. The playlist link now lives only in the
+  menu item.
+- `public/scripts/now-playing.js`: replace the current "hide when not live"
+  behavior with the quiet empty state. When the gate is NOT satisfied
+  (show:false / stale / store closed / fetch error), render the
+  `NOW PLAYING · IN STORE` label plus a mono "nothing playing right now" line
+  (site voice) instead of hiding the block. When live+fresh, render the song
+  exactly as today (art, title — artist, progress bar, live pulse). The block
+  still only exists within the MUSIC stage (desktop) / the clicked-in panel
+  (mobile, R6).
+- URL hardening (fixes an operator-facing footgun): build the fetch target as
+  `new URL(nowPlayingUrl).origin + "/now"` so `PUBLIC_NOW_PLAYING_URL` can be
+  the plain worker base URL (e.g. `https://…workers.dev`) OR a full `…/now`
+  URL — both resolve. Update `.env.example` to document it as the worker's
+  base URL. (CSP origin derivation in Base.astro already uses `.origin` —
+  leave it.)
+- **Done when:** build + check green; env UNSET → MUSIC stage byte-identical to
+  pre-R4 (dormant); env set (dev) → block shows a song when live and "nothing
+  playing right now" when not, secondary box gone, new menu item present;
+  fetch works whether the env var has `/now` or not.
+
+### R5 — desktop: relocate the block + wire the menu link
+Desktop only (`≥761px`); do not change mobile.
+- Move the now-playing block from its current bottom-center-right spot to the
+  UPPER-RIGHT of the MUSIC stage: right-aligned, upper third, comfortable
+  margin from the top and right edges, clear of the cart/search icons and the
+  DJ figure. Keep the block's existing styling and size (do not enlarge).
+  Exact position is operator-tunable after review — land it cleanly in the
+  upper-right.
+- Wire the desktop `NOW PLAYING · IN STORE` menu item: when a live song is
+  showing, it is an active link opening the current track's Spotify URL in a
+  new tab (`target=_blank rel=noopener`), mirroring the block's own link —
+  clicking the menu item does what clicking the block does. Keep its href in
+  sync as the track updates. When not live (empty state), the menu item is
+  inert: no navigation, default cursor, no hover underline.
+- Also (shared polish, applies both viewports — R4 left it): in the empty
+  state, hide the album-art FRAME element too (not just the img), so the quiet
+  state is only the `NOW PLAYING · IN STORE` label + "nothing playing right
+  now" line, with no empty bordered square. This is a small `now-playing.js`/
+  css tweak; keep it minimal.
+- **Done when:** build + check green; at 1440 a live song sits upper-right and
+  the menu item opens that song; with nothing playing the block shows just the
+  label + "nothing playing right now" (no empty art box) and the menu item is
+  inert; mobile unchanged (byte-check the mobile block).
+
+### R6 — mobile: click-in now-playing stage
+Mobile only (`≤760px`); do not change desktop.
+- Default mobile MUSIC view shows ONLY the DJ booth + notes (no now-playing
+  block by default — it is removed from the default stage).
+- Tapping the `NOW PLAYING · IN STORE` menu item animates the DJ booth
+  figurine OFF-screen to the LEFT and animates the now-playing panel IN from
+  the RIGHT to center, enlarged to sit as the primary screen feature (fit the
+  mobile viewport with the site's standard margins). Use the site's existing
+  transition timing/easing (match the menu-drawer / stage transitions in
+  global.css). The panel shows the live song enlarged, or the "nothing playing
+  right now" empty state.
+- Return to the DJ booth by EITHER (a) a back/close control in the site's
+  style (× or ← back, matching the product/film close controls) OR (b)
+  re-tapping the MUSIC header — both reverse the animation (now-playing slides
+  out right, DJ booth slides back in from left).
+- `prefers-reduced-motion`: no slide — swap instantly, consistent with the
+  site's other reduced-motion handling.
+- **Done when:** build + check green; at 390px default MUSIC shows only the DJ
+  booth; tapping the menu item slides DJ out / now-playing in enlarged; BOTH
+  the back control and re-tapping MUSIC return to the booth; reduced-motion
+  swaps without sliding; desktop unchanged (byte-check desktop block).
+
+---
+
+## PHASE R — now playing in store (operator intent notes, 2026-07-07)
+
+The store's Spotify (hello@shopandson.com, Premium) plays the shop speakers
+via "Benjamin's iPad" (Bluetooth → speakers, so Spotify reports the iPad as
+the playing device). A visitor opening the MUSIC stage sees the song playing
+in the store right now — live, clickable, honest. Operator notes are intent,
+not spec: make reasonable calls, keep the site's editorial voice.
+
+**Hard rules for all three commits:** work on `dev`; never merge; from
+`homepage/`, `npm run build` + `npx astro check` green before each commit;
+one focused commit each, prefixed `R<n>:`. R1 creates a NEW top-level folder
+`worker/` at the REPO ROOT (sibling of `homepage/`) — this is explicitly
+authorized by the operator for R1 only; R2/R3 stay inside `homepage/`.
+The site deploy must NEVER depend on the worker: env unset → site identical
+to today.
+
+### R1 — the messenger (Cloudflare Worker, repo root `worker/`)
+Self-contained folder: `worker/wrangler.toml`, `worker/src/index.js` (module
+worker, vanilla JS), `worker/scripts/authorize.mjs`, `worker/README.md`.
+Free tier only (one KV namespace for persistence).
+
+- Config: `SPOTIFY_CLIENT_ID` var = `8890a3933d484ade825a44278a8f5792`;
+  secrets (NEVER in the repo, set via `wrangler secret put`):
+  `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_REFRESH_TOKEN`, `TOGGLE_SECRET`.
+  `ALLOWED_DEVICES` var, comma-separated, initial value `Benjamin's iPad`
+  (matching case-insensitive, trimmed).
+- Spotify: refresh-token flow (Authorization Code, no PKCE needed server-side;
+  access token cached in-isolate until expiry, one retry on 401). Use ONLY
+  `GET /v1/me/player` (Get Playback State — survived the Feb 2026 Development
+  Mode cuts and includes the playing device). Scope: `user-read-playback-state`.
+- `GET /now` (public, CORS `*`, always 200 JSON, ~8s in-isolate cache):
+  show the track ONLY when ALL of: toggle on (KV) · `is_playing` ·
+  `currently_playing_type === "track"` · `item` present and not
+  `item.is_local` · `device.name` in ALLOWED_DEVICES. Then:
+  `{show:true, track:{name, artists, album, art, url}, progressMs,
+  durationMs, fetchedAt}`. EVERY other case — podcasts, ads, local files,
+  paused, idle, no device, gated device (phone), toggle off, Spotify error,
+  auth dead — returns `{show:false}` (optional private `reason` field is
+  fine). Never a non-200, never an error shape. Remote-controlling playback
+  from a phone keeps device = iPad and must keep working (no logic keyed to
+  the controlling device).
+- `GET|POST /toggle?state=on|off&secret=…` (accept both methods so an iOS
+  Shortcut stays trivial; also accept header auth): checks `TOGGLE_SECRET`,
+  writes KV, returns `{toggle:"on"|"off"}`; bad secret → 403. Missing state →
+  return current value.
+- `GET /status` (public, no secrets): `{auth:"ok"|"error", toggle,
+  allowedDevices, lastSpotifyOkAt, lastShowAt}` — enough for the operator to
+  spot a revoked authorization at a glance (KV-stamped, throttled writes).
+- `worker/scripts/authorize.mjs`: one-time local handshake — starts an http
+  server on `127.0.0.1:8888/callback` (the registered redirect URI), prints
+  the authorize URL (scope `user-read-playback-state`), exchanges the code
+  (client id + secret prompted via env/stdin, never persisted), prints the
+  refresh token for `wrangler secret put SPOTIFY_REFRESH_TOKEN`.
+- `worker/README.md`: deploy steps (wrangler login/KV create/secrets/deploy),
+  handshake steps while logged into the store account, iOS Shortcut wiring
+  for the toggle (iPad + optionally phone), updating ALLOWED_DEVICES if the
+  iPad is renamed/replaced, re-auth steps when the connection dies, and a
+  test-day checklist: skip, pause, play from a phone (must vanish), remote-
+  control from phone (must stay), toggle off/on, closing time — site checked
+  through each.
+- No file anywhere may contain the client secret, a refresh token, or a
+  toggle secret value. Build/check for `homepage/` still green (R1 touches
+  nothing inside homepage/, but run them anyway to prove it).
+
+### R2 — the site display (MUSIC stage, inside homepage/)
+- Env: `PUBLIC_NOW_PLAYING_URL` (worker origin). UNSET today and stays unset
+  in this commit: with it unset the built site must be byte-equivalent to
+  today's MUSIC stage (no visible markup, no network calls, no console
+  noise). Document it in `homepage/.env.example`.
+- Placement: the live MUSIC stage is the `.hero__dj` panel in
+  `HeroVideo.astro` (~line 81, DJ cutout + notes). There is NO live
+  now-playing markup — the old editorial block exists only in
+  `src/data/content.ts` (`music.nowPlaying`, label "NOW PLAYING · IN STORE")
+  and the retired `Music.astro`; reuse that label string from content.ts,
+  build the block into the dj panel in the stage's own style.
+- The block, editorial not glossy: mono uppercase label · song — artist ·
+  thin hairline progress bar ticking in real time (local tick between
+  heartbeats from progressMs + elapsed, clamped to duration) · small album
+  art with the site's 1px ink border · Spotify's mark small and monochrome
+  (inline SVG) · the whole block one `<a>` (target=_blank rel=noopener) to
+  the track URL. Beside it, the existing official-playlist link (URL already
+  in content.ts nav/music data) with the line "hear it in store? follow the
+  whole rotation." Neon green appears EXACTLY once: a small live pulse dot,
+  shown only when the answer is fresh. `prefers-reduced-motion`: bar static,
+  no pulse.
+- Honesty gate, all client-side, in order: store OPEN (reuse the existing
+  hours source — body `data-open-hour`/`data-close-hour` written by
+  Base.astro from site.hours, same America/New_York math as
+  public/scripts/base.js — do NOT duplicate the hours values) AND worker
+  says show:true AND fetchedAt fresh (stale > ~45s = not fresh). Any failure
+  → the block hides entirely and the stage looks exactly as today. An old
+  song must NEVER render as now playing.
+- Freshness without user action: fetch when the MUSIC stage opens; heartbeat
+  every ~25s only while the stage is open AND the tab visible
+  (visibilitychange-aware, immediate re-check on tab return); one extra
+  check scheduled at expected track end (+~1.5s) so changes land moments
+  after the room hears them; every timer cleared on stage close / tab
+  hidden.
+- CSP (Base.astro meta, PROD only — added in Phase P): append the worker
+  origin to `connect-src` ONLY when `PUBLIC_NOW_PLAYING_URL` is set at build
+  time (derive origin from the env var); add `https://i.scdn.co` to
+  `img-src` unconditionally now (Spotify album art CDN, harmless while
+  unused). With env unset the connect-src stays exactly as shipped.
+- Keep it vanilla (no deps), scoped to the music stage script lifecycle.
+
+### R3 — outline revision (inside homepage/, separate commit)
+Remove the neon frame from CATALOGUE product listings on BOTH desktop and
+mobile: delete the `.product-card__media::after` frame rules added by Q4
+(desktop min-width block) and Q5/Q5b (mobile block, 1px). Revert the
+`.product-card__sold-out` z-index bump if it was only there for the frame.
+INDIVIDUAL product listings keep their frames exactly as-is (desktop 3px,
+mobile 2px inset overlays, glow, lightbox suppression — untouched). No other
+outline/highlight changes anywhere.
+
+---
 >
 > **Q5 spec.** Make the catalog-card + product-view neon frame system
 > universal across viewports, proportioned for mobile:
@@ -227,6 +756,12 @@ below so Codex has ONE target; everything else in this file is context.
 > product, add-to-cart, film, and policy flows; /legacy/ 404s; robots.txt
 > ships; badges pin to the bag icon unclipped; hit areas expanded. Do NOT
 > push to main / NO PR until the operator says "ship Phase P".**
+
+## Log (Phase R)
+
+- 2026-07-07 — R3 catalogue frames removed (both viewports) — 332b9ea — build:green check:green — product frames untouched (3px/2px), sold-out z reverted
+- 2026-07-07 — R2 music now-playing display — ed78afa — build:green check:green — dormant with env unset (dj subtree byte-identical, no script ref, no console calls); hours gate reuses body data attrs; CSP gains worker origin only when env set, img-src +i.scdn.co
+- 2026-07-07 — R1 now-playing worker (repo root worker/) — 908081b — build:green check:green — /now /toggle /status, fail-closed toggle, device gate, refresh-token flow, handshake script + README; no secrets in repo
 
 ## Log (Phase Q)
 

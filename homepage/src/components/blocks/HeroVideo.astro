@@ -1,5 +1,5 @@
 ---
-import { heroMenu } from "../../data/content.ts";
+import { heroMenu, music as musicContent } from "../../data/content.ts";
 import { getCatalogProducts, type CatalogProduct } from "../../lib/catalog";
 import { withBase } from "../../lib/url.ts";
 
@@ -19,6 +19,7 @@ const catalogEntries = await Promise.all(
 const catalogData: Record<string, CatalogProduct[]> = Object.fromEntries(catalogEntries);
 const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
 const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
+const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
 
 // Block 1 — desktop: vertical left menu; mobile: horizontal tabs over fullscreen video.
 ---
@@ -113,7 +114,37 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
           <path d="M10 5v15a4 4 0 1 1-1.7-3.3V7l13-2v13.5a4 4 0 1 1-1.7-3.2V6.6z" />
         </svg>
       </span>
-    </span>
+    </span>{
+      nowPlayingUrl && (
+        <div class="hero__now-playing" data-now-playing data-now-playing-url={nowPlayingUrl} hidden>
+          <a class="hero__now-playing-card" data-now-playing-link href="#" target="_blank" rel="noopener">
+            <span class="hero__now-playing-topline">
+              <span class="hero__now-playing-pulse" aria-hidden="true"></span>
+              <span>{musicContent.nowPlaying.label}</span>
+              <span class="hero__now-playing-spotify" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M12 1.8A10.2 10.2 0 1 0 12 22.2 10.2 10.2 0 0 0 12 1.8Zm4.68 14.71a.64.64 0 0 1-.88.21c-2.4-1.47-5.43-1.8-8.99-.98a.64.64 0 1 1-.29-1.25c3.9-.89 7.25-.51 9.95 1.14.3.18.39.57.21.88Zm1.25-2.78a.78.78 0 0 1-1.07.26c-2.75-1.69-6.95-2.18-10.2-1.19a.78.78 0 0 1-.45-1.5c3.7-1.12 8.32-.58 11.46 1.34.37.22.48.71.26 1.09Zm.11-2.9c-3.3-1.96-8.74-2.14-11.89-1.18a.94.94 0 1 1-.55-1.8c3.62-1.1 9.62-.89 13.4 1.35a.94.94 0 0 1-.96 1.63Z" />
+                </svg>
+              </span>
+            </span>
+            <span class="hero__now-playing-main">
+              <img class="hero__now-playing-art" data-now-playing-art alt="" />
+              <span class="hero__now-playing-copy">
+                <span class="hero__now-playing-track">
+                  <span data-now-playing-title></span>
+                  <span data-now-playing-separator aria-hidden="true"> — </span>
+                  <span data-now-playing-artist></span>
+                </span>
+                <span class="hero__now-playing-album" data-now-playing-album></span>
+              </span>
+            </span>
+            <span class="hero__now-playing-progress" aria-hidden="true">
+              <span data-now-playing-progress></span>
+            </span>
+          </a>
+        </div>
+      )
+    }
   </div>
 
   <nav class="hero__overlay" aria-label="Site sections">
@@ -135,7 +166,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
                 <ul class="hero__menu-panel">
                   {
                     section.items.map((item) => (
-                      <li class={`hero__menu-item${item.children && item.children.length > 0 ? " hero__menu-item--group" : ""}`}>
+                      (!item.nowPlaying || nowPlayingUrl) && <li class={`hero__menu-item${item.children && item.children.length > 0 ? " hero__menu-item--group" : ""}`}>
                         {item.collection ? (
                           <button
                             type="button"
@@ -147,6 +178,16 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
                           >
                             {item.label}{item.suffix ?? ""}
                           </button>
+                        ) : item.nowPlaying ? (
+                          <a
+                            class="hero__menu-link hero__menu-link--dash"
+                            target="_blank"
+                            rel="noopener"
+                            aria-disabled="true"
+                            data-now-playing-menu-item
+                          >
+                            {item.label}{item.suffix ?? ""}
+                          </a>
                         ) : item.href ? (
                           <a
                             class="hero__menu-link hero__menu-link--dash"
@@ -285,6 +326,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   <script is:inline type="application/json" id="catalog-data" set:html={catalogDataJson}></script>
 </section>
+{nowPlayingUrl && <script is:inline type="module" src={withBase("/scripts/now-playing.js")}></script>}
 
 <script>
   import { getLiveHeroMenu, type LiveHeroMenuEntry } from "../../lib/menu";
@@ -304,6 +346,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   }
 
   const BASE = import.meta.env.BASE_URL ?? "/";
+  const mobileNowPlayingCollapsingClass = "is-now-playing-collapsing";
   const hero = document.querySelector<HTMLElement>(".hero-video");
   const stencil = hero?.querySelector<HTMLElement>(".hero__stencil");
   const dj = hero?.querySelector<HTMLElement>(".hero__dj");
@@ -336,6 +379,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const searchAllRow = hero?.querySelector<HTMLButtonElement>("[data-search-all-row]");
   const catalogDataNode = hero?.querySelector<HTMLScriptElement>("#catalog-data");
   const heroMenuElement = hero?.querySelector<HTMLElement>(".hero__menu");
+  const nowPlayingRoot = hero?.querySelector<HTMLElement>("[data-now-playing]");
   const menuSections = hero ? Array.from(hero.querySelectorAll<HTMLElement>("[data-hero-dropdown]")) : [];
   const subgroupToggles = hero ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-menu-subgroup]")) : [];
   const mobileQuery = window.matchMedia("(max-width: 760px)");
@@ -348,6 +392,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   let filmHasStarted = false;
   let stencilReturnCleanup: (() => void) | undefined;
   let stageCleanup: ReturnType<typeof window.setTimeout> | undefined;
+  let mobileNowPlayingCollapseCleanup: ReturnType<typeof window.setTimeout> | undefined;
   type HeroStage = "landing" | "catalog" | "search" | "product" | "preorder" | "music" | "film" | "fam";
   type PanelStage = "catalog" | "search" | "product" | "preorder" | "music" | "film" | "fam";
   interface SavedCatalogReturn {
@@ -393,6 +438,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   let searchSessionReturn: SearchSessionReturn | null = null;
   let searchSessionReturnUrl: URL | null = null;
   let searchSessionHasHistoryEntry = false;
+  let nowPlayingClose: HTMLButtonElement | undefined;
   const sectionCollapseTokens = new WeakMap<HTMLElement, number>();
   const subgroupCollapseTokens = new WeakMap<HTMLElement, number>();
   const menuCollapseAnimations = new WeakMap<HTMLElement, Animation>();
@@ -727,12 +773,47 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     restoreCatalogScroll(0);
   };
 
+  const syncMenuSectionHeaderState = (section: HTMLElement) => {
+    const trigger = section.querySelector(".hero__menu-header");
+    const toggle = section.querySelector(".hero__menu-toggle");
+    const isExpanded = trigger?.getAttribute("aria-expanded") === "true";
+    const isCurrent = mobileQuery.matches && section.classList.contains("is-current");
+    if (toggle) {
+      toggle.textContent = isExpanded || isCurrent ? "\u2013" : "+";
+    }
+  };
+
+  const setCurrentMenuSection = (collection: string | null) => {
+    if (!mobileQuery.matches) {
+      menuSections.forEach((section) => {
+        if (!section.classList.contains("is-current")) return;
+
+        section.classList.remove("is-current");
+        syncMenuSectionHeaderState(section);
+      });
+      return;
+    }
+
+    const currentSection =
+      collection
+        ? getCollectionButtons()
+            .find((button) => button.dataset.collection === collection)
+            ?.closest<HTMLElement>("[data-hero-dropdown]") ?? null
+        : null;
+
+    menuSections.forEach((section) => {
+      section.classList.toggle("is-current", section === currentSection);
+      syncMenuSectionHeaderState(section);
+    });
+  };
+
   const setActiveButton = (collection: string | null) => {
     getCollectionButtons().forEach((button) => {
       const isActive = Boolean(collection && button.dataset.collection === collection);
       button.classList.toggle("is-active", isActive);
       button.setAttribute("aria-pressed", String(isActive));
     });
+    setCurrentMenuSection(collection);
   };
 
   const getCollectionLabel = (collection: string) => {
@@ -906,11 +987,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 
   const setMenuSectionExpanded = (section: HTMLElement, isOpen: boolean) => {
     const trigger = section.querySelector(".hero__menu-header");
-    const toggle = section.querySelector(".hero__menu-toggle");
     trigger?.setAttribute("aria-expanded", String(isOpen));
-    if (toggle) {
-      toggle.textContent = isOpen ? "\u2013" : "+";
-    }
+    syncMenuSectionHeaderState(section);
   };
 
   const cancelMenuCollapse = (element: HTMLElement | null | undefined) => {
@@ -924,27 +1002,51 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     element.style.removeProperty("overflow");
   };
 
-  const animateMenuCollapse = async (element: HTMLElement) => {
+  const finishMenuCollapse = (element: HTMLElement, animation: Animation | null) => {
+    if (animation && menuCollapseAnimations.get(element) === animation) {
+      animation.cancel();
+      menuCollapseAnimations.delete(element);
+    }
+    element.style.removeProperty("overflow");
+  };
+
+  const animateMenuCollapse = async (element: HTMLElement): Promise<Animation | null> => {
     cancelMenuCollapse(element);
     if (prefersReducedMenuMotion() || element.offsetHeight <= 0) {
-      return;
+      return null;
     }
 
+    const computedStyle = window.getComputedStyle(element);
     element.style.overflow = "hidden";
     const animation = element.animate(
       [
-        { height: `${element.offsetHeight}px`, opacity: 1, transform: "translateY(0)", clipPath: "inset(0 0 0 0)" },
-        { height: "0px", opacity: 0, transform: "translateY(-0.45em)", clipPath: "inset(0 0 100% 0)" },
+        {
+          height: `${element.offsetHeight}px`,
+          marginTop: computedStyle.marginTop,
+          marginBottom: computedStyle.marginBottom,
+          paddingTop: computedStyle.paddingTop,
+          paddingBottom: computedStyle.paddingBottom,
+          opacity: 1,
+          transform: "translateY(0)",
+          clipPath: "inset(0 0 0 0)",
+        },
+        {
+          height: "0px",
+          marginTop: "0px",
+          marginBottom: "0px",
+          paddingTop: "0px",
+          paddingBottom: "0px",
+          opacity: 0,
+          transform: "translateY(-0.45em)",
+          clipPath: "inset(0 0 100% 0)",
+        },
       ],
-      { duration: stageDuration, easing: "cubic-bezier(.16,1,.3,1)" },
+      { duration: stageDuration, easing: "cubic-bezier(.16,1,.3,1)", fill: "forwards" },
     );
     menuCollapseAnimations.set(element, animation);
 
     await animation.finished.catch(() => undefined);
-    if (menuCollapseAnimations.get(element) === animation) {
-      menuCollapseAnimations.delete(element);
-      element.style.removeProperty("overflow");
-    }
+    return menuCollapseAnimations.get(element) === animation ? animation : null;
   };
 
   const resetMenuSubgroups = (section: HTMLElement) => {
@@ -963,24 +1065,33 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     if (isOpen) {
       nextMenuCollapseToken(subgroupCollapseTokens, group);
       cancelMenuCollapse(nested);
+      group.classList.remove("is-collapsing");
       group.classList.add("is-open");
       setMenuSubgroupExpanded(button, true);
       return;
     }
 
     setMenuSubgroupExpanded(button, false);
-    const token = nextMenuCollapseToken(subgroupCollapseTokens, group);
-    if (!shouldAnimate || prefersReducedMenuMotion() || !group.classList.contains("is-open") || !nested) {
+    const isOpenGroup = group.classList.contains("is-open");
+    const isCollapsingGroup = group.classList.contains("is-collapsing");
+    if (!shouldAnimate || prefersReducedMenuMotion() || (!isOpenGroup && !isCollapsingGroup) || !nested) {
+      nextMenuCollapseToken(subgroupCollapseTokens, group);
       cancelMenuCollapse(nested);
-      group.classList.remove("is-open");
+      group.classList.remove("is-open", "is-collapsing");
       return;
     }
+    if (isCollapsingGroup) return;
 
-    void animateMenuCollapse(nested).then(() => {
+    const token = nextMenuCollapseToken(subgroupCollapseTokens, group);
+    group.classList.add("is-collapsing");
+    group.classList.remove("is-open");
+
+    void animateMenuCollapse(nested).then((animation) => {
       if (!isCurrentMenuCollapse(subgroupCollapseTokens, group, token)) return;
       if (button.getAttribute("aria-expanded") === "true") return;
 
-      group.classList.remove("is-open");
+      group.classList.remove("is-collapsing");
+      finishMenuCollapse(nested, animation);
     });
   };
 
@@ -1004,14 +1115,18 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     const panel = section.querySelector<HTMLElement>(".hero__menu-panel");
     setMenuSectionExpanded(section, false);
 
-    const token = nextMenuCollapseToken(sectionCollapseTokens, section);
     if (!keepSearchBreadcrumb) {
       section.classList.remove("is-search-breadcrumb");
     }
-    if (!section.classList.contains("is-open") || !panel || prefersReducedMenuMotion()) {
+    const isOpenSection = section.classList.contains("is-open");
+    const isCollapsingSection = section.classList.contains("is-collapsing");
+    if (!isOpenSection && isCollapsingSection) return;
+
+    const token = nextMenuCollapseToken(sectionCollapseTokens, section);
+    if (!isOpenSection || !panel || prefersReducedMenuMotion()) {
       cancelMenuCollapse(panel);
       resetMenuSubgroups(section);
-      section.classList.remove("is-open");
+      section.classList.remove("is-open", "is-collapsing");
       return;
     }
 
@@ -1019,13 +1134,17 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       setMenuSubgroupState(button, false);
     });
 
-    void animateMenuCollapse(panel).then(() => {
+    section.classList.add("is-collapsing");
+    section.classList.remove("is-open");
+
+    void animateMenuCollapse(panel).then((animation) => {
       if (!isCurrentMenuCollapse(sectionCollapseTokens, section, token)) return;
       const trigger = section.querySelector(".hero__menu-header");
       if (trigger?.getAttribute("aria-expanded") === "true") return;
 
       resetMenuSubgroups(section);
-      section.classList.remove("is-open");
+      section.classList.remove("is-collapsing");
+      finishMenuCollapse(panel, animation);
     });
   };
 
@@ -1033,6 +1152,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     const panel = section.querySelector<HTMLElement>(".hero__menu-panel");
     nextMenuCollapseToken(sectionCollapseTokens, section);
     cancelMenuCollapse(panel);
+    section.classList.remove("is-collapsing");
     section.classList.add("is-open");
     setMenuSectionExpanded(section, true);
   };
@@ -1070,7 +1190,57 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     hero?.classList.toggle("is-settled", isSettled && activeStage === "music");
   };
 
-  const clearStageCleanup = () => {
+  const setMobileNowPlayingOpen = (isOpen: boolean) => {
+    if (!hero) return;
+
+    const shouldOpen = isOpen && mobileQuery.matches && activeStage === "music";
+    hero.classList.toggle("is-now-playing-open", shouldOpen);
+    if (nowPlayingClose) nowPlayingClose.hidden = !shouldOpen;
+  };
+
+  const closeMobileNowPlaying = () => {
+    setMobileNowPlayingOpen(false);
+  };
+
+  const openMobileNowPlaying = () => {
+    setMobileNowPlayingOpen(true);
+  };
+
+  const clearMobileNowPlayingCollapse = () => {
+    if (mobileNowPlayingCollapseCleanup) {
+      window.clearTimeout(mobileNowPlayingCollapseCleanup);
+      mobileNowPlayingCollapseCleanup = undefined;
+    }
+    hero?.classList.remove(mobileNowPlayingCollapsingClass);
+  };
+
+  const collapseMobileNowPlayingToLanding = () => {
+    if (!hero) return;
+
+    clearMobileNowPlayingCollapse();
+    hero.classList.add(mobileNowPlayingCollapsingClass);
+    if (nowPlayingClose) nowPlayingClose.hidden = true;
+    setMobileNowPlayingOpen(false);
+    mobileNowPlayingCollapseCleanup = window.setTimeout(() => {
+      hero.classList.remove(mobileNowPlayingCollapsingClass);
+      mobileNowPlayingCollapseCleanup = undefined;
+    }, stageDuration + 80);
+  };
+
+  const ensureMobileNowPlayingClose = () => {
+    if (!nowPlayingRoot || nowPlayingClose || !mobileQuery.matches) return;
+
+    nowPlayingClose = document.createElement("button");
+    nowPlayingClose.type = "button";
+    nowPlayingClose.className = "hero__now-playing-close";
+    nowPlayingClose.setAttribute("aria-label", "Back to music");
+    nowPlayingClose.hidden = true;
+    nowPlayingClose.textContent = "\u00d7";
+    nowPlayingClose.addEventListener("click", closeMobileNowPlaying);
+    nowPlayingRoot.prepend(nowPlayingClose);
+  };
+
+  const clearStageCleanup = (options: { preserveMobileNowPlayingOpen?: boolean } = {}) => {
     if (stageCleanup) {
       window.clearTimeout(stageCleanup);
       stageCleanup = undefined;
@@ -1082,6 +1252,10 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     filmPanel?.classList.remove("is-exiting-left");
     famPanel?.classList.remove("is-exiting-left");
     setMusicSettled(false);
+    if (!options.preserveMobileNowPlayingOpen) {
+      clearMobileNowPlayingCollapse();
+      setMobileNowPlayingOpen(false);
+    }
   };
 
   const clearStencilReturn = () => {
@@ -1714,6 +1888,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   const openMusic = () => {
     if (!hero || !dj) return;
 
+    setMobileNowPlayingOpen(false);
     prepareToLeaveProductForStage();
     stripSearchParamFromUrl();
     activeSearchQuery = "";
@@ -1888,10 +2063,17 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     updateFilmMute();
   };
 
-  const closeStage = () => {
+  const closeStage = (options: { collapseMobileNowPlaying?: boolean } = {}) => {
     if (!hero) return;
 
-    clearStageCleanup();
+    const shouldCollapseMobileNowPlaying =
+      options.collapseMobileNowPlaying === true &&
+      mobileQuery.matches &&
+      activeStage === "music" &&
+      hero.classList.contains("is-now-playing-open");
+
+    clearStageCleanup({ preserveMobileNowPlayingOpen: shouldCollapseMobileNowPlaying });
+    if (shouldCollapseMobileNowPlaying) collapseMobileNowPlayingToLanding();
     filmVideo?.pause();
     resetFilmMute();
     updateFilmPlayback();
@@ -1909,6 +2091,7 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     dj?.setAttribute("aria-hidden", "true");
     filmPanel?.setAttribute("aria-hidden", "true");
     famPanel?.setAttribute("aria-hidden", "true");
+    if (!shouldCollapseMobileNowPlaying) setMobileNowPlayingOpen(false);
     setActiveButton(null);
     activeProductHandle = null;
     savedStageReturn = null;
@@ -1961,6 +2144,13 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
   heroMenuElement?.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
+
+    const nowPlayingTrigger = target.closest<HTMLAnchorElement>("[data-now-playing-menu-item]");
+    if (nowPlayingTrigger && heroMenuElement.contains(nowPlayingTrigger) && mobileQuery.matches) {
+      event.preventDefault();
+      if (activeStage === "music") openMobileNowPlaying();
+      return;
+    }
 
     const button = target.closest<HTMLButtonElement>("[data-shop-all]");
     if (!button || !heroMenuElement.contains(button)) return;
@@ -2105,6 +2295,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       const isFamSection = section.dataset.fam === "true";
       const isMusicSection = section.dataset.music === "true";
       const isOpen = trigger.getAttribute("aria-expanded") !== "true";
+      const collapseMobileNowPlaying = Boolean(
+        isMusicSection && !isOpen && mobileQuery.matches && hero?.classList.contains("is-now-playing-open"),
+      );
 
       closeMobileSearchForNavigation();
 
@@ -2127,8 +2320,8 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
       }
 
       setMenuSectionState(isOpen ? section : null);
-      if (!mobileQuery.matches) {
-        closeStage();
+      if (!mobileQuery.matches || !isOpen) {
+        closeStage({ collapseMobileNowPlaying });
       }
     });
   });
@@ -2141,6 +2334,17 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
     preorderObserver?.observe(preorderShell);
     window.addEventListener("resize", resizePreorderFrame);
   }
+  ensureMobileNowPlayingClose();
+  mobileQuery.addEventListener("change", () => {
+    if (mobileQuery.matches) {
+      ensureMobileNowPlayingClose();
+      setCurrentMenuSection(hero?.dataset.activeCollection ?? null);
+      return;
+    }
+
+    closeMobileNowPlaying();
+    setCurrentMenuSection(null);
+  });
   void hydrateLiveMenu();
   syncStageFromUrl();
 </script>
