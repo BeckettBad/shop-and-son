@@ -378,6 +378,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   const searchAllRow = hero?.querySelector<HTMLButtonElement>("[data-search-all-row]");
   const catalogDataNode = hero?.querySelector<HTMLScriptElement>("#catalog-data");
   const heroMenuElement = hero?.querySelector<HTMLElement>(".hero__menu");
+  const nowPlayingRoot = hero?.querySelector<HTMLElement>("[data-now-playing]");
   const menuSections = hero ? Array.from(hero.querySelectorAll<HTMLElement>("[data-hero-dropdown]")) : [];
   const subgroupToggles = hero ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-menu-subgroup]")) : [];
   const mobileQuery = window.matchMedia("(max-width: 760px)");
@@ -435,6 +436,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   let searchSessionReturn: SearchSessionReturn | null = null;
   let searchSessionReturnUrl: URL | null = null;
   let searchSessionHasHistoryEntry = false;
+  let nowPlayingClose: HTMLButtonElement | undefined;
   const sectionCollapseTokens = new WeakMap<HTMLElement, number>();
   const subgroupCollapseTokens = new WeakMap<HTMLElement, number>();
   const menuCollapseAnimations = new WeakMap<HTMLElement, Animation>();
@@ -1112,6 +1114,35 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     hero?.classList.toggle("is-settled", isSettled && activeStage === "music");
   };
 
+  const setMobileNowPlayingOpen = (isOpen: boolean) => {
+    if (!hero) return;
+
+    const shouldOpen = isOpen && mobileQuery.matches && activeStage === "music";
+    hero.classList.toggle("is-now-playing-open", shouldOpen);
+    if (nowPlayingClose) nowPlayingClose.hidden = !shouldOpen;
+  };
+
+  const closeMobileNowPlaying = () => {
+    setMobileNowPlayingOpen(false);
+  };
+
+  const openMobileNowPlaying = () => {
+    setMobileNowPlayingOpen(true);
+  };
+
+  const ensureMobileNowPlayingClose = () => {
+    if (!nowPlayingRoot || nowPlayingClose || !mobileQuery.matches) return;
+
+    nowPlayingClose = document.createElement("button");
+    nowPlayingClose.type = "button";
+    nowPlayingClose.className = "hero__now-playing-close";
+    nowPlayingClose.setAttribute("aria-label", "Back to music");
+    nowPlayingClose.hidden = true;
+    nowPlayingClose.textContent = "\u00d7";
+    nowPlayingClose.addEventListener("click", closeMobileNowPlaying);
+    nowPlayingRoot.prepend(nowPlayingClose);
+  };
+
   const clearStageCleanup = () => {
     if (stageCleanup) {
       window.clearTimeout(stageCleanup);
@@ -1124,6 +1155,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     filmPanel?.classList.remove("is-exiting-left");
     famPanel?.classList.remove("is-exiting-left");
     setMusicSettled(false);
+    setMobileNowPlayingOpen(false);
   };
 
   const clearStencilReturn = () => {
@@ -1756,6 +1788,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   const openMusic = () => {
     if (!hero || !dj) return;
 
+    setMobileNowPlayingOpen(false);
     prepareToLeaveProductForStage();
     stripSearchParamFromUrl();
     activeSearchQuery = "";
@@ -1951,6 +1984,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     dj?.setAttribute("aria-hidden", "true");
     filmPanel?.setAttribute("aria-hidden", "true");
     famPanel?.setAttribute("aria-hidden", "true");
+    setMobileNowPlayingOpen(false);
     setActiveButton(null);
     activeProductHandle = null;
     savedStageReturn = null;
@@ -2003,6 +2037,13 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   heroMenuElement?.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
+
+    const nowPlayingTrigger = target.closest<HTMLAnchorElement>("[data-now-playing-menu-item]");
+    if (nowPlayingTrigger && heroMenuElement.contains(nowPlayingTrigger) && mobileQuery.matches) {
+      event.preventDefault();
+      if (activeStage === "music") openMobileNowPlaying();
+      return;
+    }
 
     const button = target.closest<HTMLButtonElement>("[data-shop-all]");
     if (!button || !heroMenuElement.contains(button)) return;
@@ -2150,6 +2191,11 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
 
       closeMobileSearchForNavigation();
 
+      if (isMusicSection && !isOpen && mobileQuery.matches && hero?.classList.contains("is-now-playing-open")) {
+        closeMobileNowPlaying();
+        return;
+      }
+
       if (isPreorderSection && isOpen) {
         setMenuSectionState(section);
         openPreorder();
@@ -2183,6 +2229,15 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     preorderObserver?.observe(preorderShell);
     window.addEventListener("resize", resizePreorderFrame);
   }
+  ensureMobileNowPlayingClose();
+  mobileQuery.addEventListener("change", () => {
+    if (mobileQuery.matches) {
+      ensureMobileNowPlayingClose();
+      return;
+    }
+
+    closeMobileNowPlaying();
+  });
   void hydrateLiveMenu();
   syncStageFromUrl();
 </script>
