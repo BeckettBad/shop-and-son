@@ -9,4 +9,4 @@ ALLOWED_DEVICES = "Benjamin's iPad"
 
 [[kv_namespaces]]
 binding = "NOW_PLAYING_KV"
-id = "00000000000000000000000000000000"
+id = "64e0dc44b8f1433aa3748a8385e207a1"
