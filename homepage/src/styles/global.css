@@ -1023,6 +1023,9 @@ body{
     padding:0.7em 0 0; width:calc(100% + 112px); max-width:none;
   }
   .hero__menu-section.is-open .hero__menu-panel{display:block}
+  .hero__menu-section.is-current > .hero__menu-header{
+    color:var(--neon-green);
+  }
   .hero-video.is-now-playing-open a.hero__menu-link[data-now-playing-menu-item]{
     color:var(--neon-green);
   }

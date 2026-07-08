@@ -771,12 +771,47 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     restoreCatalogScroll(0);
   };
 
+  const syncMenuSectionHeaderState = (section: HTMLElement) => {
+    const trigger = section.querySelector(".hero__menu-header");
+    const toggle = section.querySelector(".hero__menu-toggle");
+    const isExpanded = trigger?.getAttribute("aria-expanded") === "true";
+    const isCurrent = mobileQuery.matches && section.classList.contains("is-current");
+    if (toggle) {
+      toggle.textContent = isExpanded || isCurrent ? "\u2013" : "+";
+    }
+  };
+
+  const setCurrentMenuSection = (collection: string | null) => {
+    if (!mobileQuery.matches) {
+      menuSections.forEach((section) => {
+        if (!section.classList.contains("is-current")) return;
+
+        section.classList.remove("is-current");
+        syncMenuSectionHeaderState(section);
+      });
+      return;
+    }
+
+    const currentSection =
+      collection
+        ? getCollectionButtons()
+            .find((button) => button.dataset.collection === collection)
+            ?.closest<HTMLElement>("[data-hero-dropdown]") ?? null
+        : null;
+
+    menuSections.forEach((section) => {
+      section.classList.toggle("is-current", section === currentSection);
+      syncMenuSectionHeaderState(section);
+    });
+  };
+
   const setActiveButton = (collection: string | null) => {
     getCollectionButtons().forEach((button) => {
       const isActive = Boolean(collection && button.dataset.collection === collection);
       button.classList.toggle("is-active", isActive);
       button.setAttribute("aria-pressed", String(isActive));
     });
+    setCurrentMenuSection(collection);
   };
 
   const getCollectionLabel = (collection: string) => {
@@ -950,11 +985,8 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
 
   const setMenuSectionExpanded = (section: HTMLElement, isOpen: boolean) => {
     const trigger = section.querySelector(".hero__menu-header");
-    const toggle = section.querySelector(".hero__menu-toggle");
     trigger?.setAttribute("aria-expanded", String(isOpen));
-    if (toggle) {
-      toggle.textContent = isOpen ? "\u2013" : "+";
-    }
+    syncMenuSectionHeaderState(section);
   };
 
   const cancelMenuCollapse = (element: HTMLElement | null | undefined) => {
@@ -2233,10 +2265,12 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   mobileQuery.addEventListener("change", () => {
     if (mobileQuery.matches) {
       ensureMobileNowPlayingClose();
+      setCurrentMenuSection(hero?.dataset.activeCollection ?? null);
       return;
     }
 
     closeMobileNowPlaying();
+    setCurrentMenuSection(null);
   });
   void hydrateLiveMenu();
   syncStageFromUrl();
