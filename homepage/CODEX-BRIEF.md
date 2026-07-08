@@ -71,11 +71,74 @@ below so Codex has ONE target; everything else in this file is context.
 > **ACTIVE SUB-TASK: PHASE R POLISH (operator review, 2026-07-08) — three
 > ordered commits R7/R8/R9, one dispatch each, Claude reviews between. Do NOT
 > push until operator says "ship". Full spec in "PHASE R POLISH" below.
-> Status: (none) — PHASE R POLISH 2 COMPLETE on dev (unpushed). R10 @ 2a70034
-> (menu header unhighlights instantly on folder switch, both viewports; panel
-> slides via is-collapsing; reopen-mid-collapse clean), R11 @ 3e92c2a (desktop
-> now-playing card nudged left 120px, rightGap 43→163). Whole Phase R (R1–R11)
-> awaits operator review + "ship".**
+> Status: (none) — PHASE R POLISH 3 COMPLETE on dev (unpushed). R12 @ d8e947f
+> (mobile section collapse returns to landing stencil), R13 @ 58a7cf8 (collapse
+> end-flash/residual gap fixed via fill:forwards + zeroed padding/margins;
+> reopen restores fully; sections + subgroups, both viewports). All verified.
+> Whole Phase R (R1–R13) awaits operator review + "ship".**
+
+---
+
+## Log (Phase R polish 3)
+
+- 2026-07-08 — R13 collapse end-flash fix — 58a7cf8 — build:green check:green — fill:forwards + animate height/padding/margins to 0; no end-flash or residual gap; reopen restores (cancel filled anim); sections+subgroups, 1440+390 verified
+- 2026-07-08 — R12 mobile stage reset on collapse — d8e947f — build:green check:green — closeStage() now also runs on mobile when closing a section; & FAM/MUSIC collapse returns to landing stencil
+
+## PHASE R POLISH 3 — mobile stage reset + collapse-animation glitch (2026-07-08)
+
+Same hard rules: `dev`; never merge; build + check green each; one focused
+commit each prefixed `R<n>:`.
+
+### R12 — mobile: collapsing a main folder returns to the resting stencil
+Bug (mobile only): when a section that owns a stage is opened (& FAM → tattoo
+stage, MUSIC → DJ booth, PREORDER), then collapsed by tapping its header again,
+the STAGE content stays on screen instead of returning to the landing stencil.
+Desktop is correct. Root cause: in the section-header click handler
+(`HeroVideo.astro` ~2266) the closing branch runs
+`setMenuSectionState(isOpen ? section : null); if (!mobileQuery.matches) { closeStage(); }`
+— `closeStage()` (returns to landing) is gated to desktop only, so mobile never
+resets the stage on collapse.
+- Fix: also call `closeStage()` on mobile when the section is being CLOSED
+  (i.e. when `isOpen` is false). Simplest: `if (!mobileQuery.matches || !isOpen) closeStage();`.
+- Leave the early-return branches untouched (opening MUSIC/FAM/PREORDER, and the
+  mobile now-playing-close case). Don't touch the mobile collection-open path
+  (the `[data-shop-all]` handler) or desktop behavior.
+- Done when: build+check green; at 390px opening & FAM (tattoo rolls in) then
+  tapping & FAM again returns to the landing stencil (no leftover fam content);
+  same for MUSIC (booth) and any stage-owning section; desktop 1440 unchanged;
+  mobile collection open/close + now-playing still work.
+
+### R13 — fix the collapse-animation flash / residual spacing (both viewports + subgroups)
+Bug (after R10, both viewports; sections AND subgroups like CATEGORIES/
+DESIGNERS): right at the end of a folder collapse there's a brief "weird
+spacing" — the panel flashes back toward full height / leaves a gap just before
+it disappears. Root cause in `animateMenuCollapse` (`HeroVideo.astro` ~1003):
+the WAAPI height animation has NO `fill` mode, so when it finishes the element
+reverts to its natural height (still `display:block` under `is-collapsing`) for
+the frame(s) before the `.then()` removes `is-collapsing`; and the panel's
+top padding (`.hero__menu-panel{padding:0.35em 0 0}`) isn't collapsed, leaving
+residual height during the slide.
+- Fix so the collapse ends cleanly with no flash and no leftover gap:
+  - Hold the fully-collapsed end state (e.g. `fill:"forwards"`/`"both"` on the
+    animation, or commit the end styles) so it never reverts to full height
+    before hiding. CRITICAL: keep the `menuCollapseAnimations` bookkeeping
+    correct so a filled animation is still cancelled on reopen — reopening a
+    collapsed section must restore full height (no stuck-collapsed panel).
+    (Note today's `animateMenuCollapse` deletes the animation from the map
+    after `finished`; a filled animation must remain cancellable by
+    `cancelMenuCollapse` on the next open.)
+  - Ensure the panel collapses to truly zero visible height — account for the
+    `0.35em` top padding (animate/zero it too, or include it) so no residual
+    gap remains during or after the slide.
+- Reduced-motion path (instant collapse) must stay correct.
+- Applies to both the section panel and the subgroup nested list (same
+  function).
+- Done when: build+check green; at 1440 AND 390, collapsing a section OR a
+  subgroup (CATEGORIES/DESIGNERS) slides smoothly to nothing with NO end-flash
+  and NO residual spacing; reopening a just-collapsed folder restores it fully
+  (not stuck collapsed); mid-collapse reopen still clean (R10).
+
+---
 
 ---
 
