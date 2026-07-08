@@ -122,11 +122,52 @@
 }
 @media(min-width:761px){
   .hero__now-playing{
-    top:clamp(102px,16vh,150px);
-    right:clamp(-390px,-26vw,-260px);
-    left:auto;
+    --now-playing-width:clamp(300px,23vw,340px);
+    --now-playing-right:clamp(36px,3vw,54px);
+    top:calc(50% - 10vh - 75px);
+    left:calc(50vw + 50% - var(--now-playing-width) - var(--now-playing-right));
+    right:auto;
     bottom:auto;
+    width:var(--now-playing-width);
     transform:none;
+  }
+  .hero__now-playing-card{
+    box-sizing:border-box;
+    min-height:150px;
+    padding:14px;
+  }
+  .hero__now-playing-topline{
+    gap:8px;
+    font-size:11px;
+  }
+  .hero__now-playing-pulse{
+    width:8px;
+    height:8px;
+  }
+  .hero__now-playing-spotify{
+    width:15px;
+    height:15px;
+  }
+  .hero__now-playing-main{
+    grid-template-columns:84px minmax(0,1fr);
+    gap:14px;
+    margin-top:14px;
+  }
+  .hero__now-playing-art{
+    width:84px;
+    height:84px;
+  }
+  .hero__now-playing-copy{
+    font-size:14px;
+    line-height:1.3;
+  }
+  .hero__now-playing-album{
+    margin-top:6px;
+    font-size:11px;
+  }
+  .hero__now-playing-progress{
+    height:2px;
+    margin-top:14px;
   }
 }
 @media(max-width:760px){
