@@ -1039,24 +1039,32 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     if (isOpen) {
       nextMenuCollapseToken(subgroupCollapseTokens, group);
       cancelMenuCollapse(nested);
+      group.classList.remove("is-collapsing");
       group.classList.add("is-open");
       setMenuSubgroupExpanded(button, true);
       return;
     }
 
     setMenuSubgroupExpanded(button, false);
-    const token = nextMenuCollapseToken(subgroupCollapseTokens, group);
-    if (!shouldAnimate || prefersReducedMenuMotion() || !group.classList.contains("is-open") || !nested) {
+    const isOpenGroup = group.classList.contains("is-open");
+    const isCollapsingGroup = group.classList.contains("is-collapsing");
+    if (!shouldAnimate || prefersReducedMenuMotion() || (!isOpenGroup && !isCollapsingGroup) || !nested) {
+      nextMenuCollapseToken(subgroupCollapseTokens, group);
       cancelMenuCollapse(nested);
-      group.classList.remove("is-open");
+      group.classList.remove("is-open", "is-collapsing");
       return;
     }
+    if (isCollapsingGroup) return;
+
+    const token = nextMenuCollapseToken(subgroupCollapseTokens, group);
+    group.classList.add("is-collapsing");
+    group.classList.remove("is-open");
 
     void animateMenuCollapse(nested).then(() => {
       if (!isCurrentMenuCollapse(subgroupCollapseTokens, group, token)) return;
       if (button.getAttribute("aria-expanded") === "true") return;
 
-      group.classList.remove("is-open");
+      group.classList.remove("is-collapsing");
     });
   };
 
@@ -1080,14 +1088,18 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     const panel = section.querySelector<HTMLElement>(".hero__menu-panel");
     setMenuSectionExpanded(section, false);
 
-    const token = nextMenuCollapseToken(sectionCollapseTokens, section);
     if (!keepSearchBreadcrumb) {
       section.classList.remove("is-search-breadcrumb");
     }
-    if (!section.classList.contains("is-open") || !panel || prefersReducedMenuMotion()) {
+    const isOpenSection = section.classList.contains("is-open");
+    const isCollapsingSection = section.classList.contains("is-collapsing");
+    if (!isOpenSection && isCollapsingSection) return;
+
+    const token = nextMenuCollapseToken(sectionCollapseTokens, section);
+    if (!isOpenSection || !panel || prefersReducedMenuMotion()) {
       cancelMenuCollapse(panel);
       resetMenuSubgroups(section);
-      section.classList.remove("is-open");
+      section.classList.remove("is-open", "is-collapsing");
       return;
     }
 
@@ -1095,13 +1107,16 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
       setMenuSubgroupState(button, false);
     });
 
+    section.classList.add("is-collapsing");
+    section.classList.remove("is-open");
+
     void animateMenuCollapse(panel).then(() => {
       if (!isCurrentMenuCollapse(sectionCollapseTokens, section, token)) return;
       const trigger = section.querySelector(".hero__menu-header");
       if (trigger?.getAttribute("aria-expanded") === "true") return;
 
       resetMenuSubgroups(section);
-      section.classList.remove("is-open");
+      section.classList.remove("is-collapsing");
     });
   };
 
@@ -1109,6 +1124,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     const panel = section.querySelector<HTMLElement>(".hero__menu-panel");
     nextMenuCollapseToken(sectionCollapseTokens, section);
     cancelMenuCollapse(panel);
+    section.classList.remove("is-collapsing");
     section.classList.add("is-open");
     setMenuSectionExpanded(section, true);
   };
