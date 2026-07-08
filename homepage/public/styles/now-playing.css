@@ -214,6 +214,7 @@
   .hero-video.is-now-playing-collapsing .music-notes-layer{
     animation:none;
     transform:translateX(calc(-50vw - 100%));
+    visibility:hidden;
   }
   .hero-video.is-now-playing-collapsing .hero__now-playing:not([hidden]){
     transform:translate(calc(-50vw - 100%),-50%);
