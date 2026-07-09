@@ -988,7 +988,11 @@ body{
     --hero-mobile-cart-stage-y:calc(var(--hero-icon-stage-clearance) + var(--hero-icon-size) + var(--hero-icon-gap));
     --hero-mobile-search-stage-x:calc((var(--hero-icon-size) + 8px) * -1);
     --hero-mobile-search-stage-y:calc(var(--hero-mobile-panel-top) - var(--hero-mobile-icon-top) - var(--hero-icon-size) - var(--hero-icon-gap));
-    --hero-mobile-search-collapsed-y:0px;
+    /* Search is DOM-second (one flex row below the cart), so to land it in the
+       cart's on-load top slot (clearance) we lift it by one icon row. This makes
+       the catalogue/product swap mirror the landing spacing exactly: search takes
+       the top slot, cart the bottom slot, same gap. */
+    --hero-mobile-search-collapsed-y:calc(var(--hero-icon-stage-clearance) - var(--hero-icon-size) - var(--hero-icon-gap));
     top:var(--hero-mobile-icon-top); right:4vw;
     flex-direction:column; align-items:flex-end; gap:var(--hero-icon-gap);
   }
