@@ -58,27 +58,168 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 > **Phases G–J are SHIPPED** (merged `dev → main` @ `012f918`, live). Do not re-do
 > any of them; their brief text lives in this file's git history + the sections below.
 
-**Status:** ready for Codex — Phase S (functionality-sweep fixes, from the
-2026-07-08 3-agent audit; report at repo root
-`SITE-FUNCTIONALITY-SWEEP-2026-07-08.md`, untracked). Phase R is complete and
-shipping; every section below is history, not instruction.
+**Status:** ready for Codex — Phase T (operator edits 2026-07-08, "no text overlay
+anywhere, especially mobile" pass; 4 commits T1–T4). Phase S SHIPPED (PR #19).
+Everything below Phase T is history, not instruction.
 
 **DISPATCH PROTOCOL — one sub-task per `./dispatch-codex.sh` run, one commit
 each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: PHASE S — functionality-sweep fixes (audit, 2026-07-08).
-> One commit `S1:` to `homepage/public/scripts/now-playing.js` only, one
-> dispatch. Do NOT push until operator says "ship". Full spec in "PHASE S" below.
-> Status: ready for Codex.
-> Context: Phase R DONE + SECURITY-PASSED @ ef95cc8, shipping to main per
-> operator. Standing operator TODOs from that pass (not Codex work): Cloudflare
-> rate-limit on /toggle, rotate the chat-exposed client secret, remove the Mac
-> test device from ALLOWED_DEVICES on deploy. The worker apostrophe-normalize
-> (audit M4) is applied direct by Claude, out of homepage scope — NOT in S1.**
+> **ACTIVE SUB-TASK: (none) — PHASE T COMPLETE ON DEV, awaiting operator verify.
+> T1 @ e1f5425 (fam collision), T2 @ 231f23f (now-playing mobile click bug),
+> T3 @ a72118c (mobile search above cart), T4 @ 540bf07 (designer about +/−
+> typewriter). All reviewed clean, build+check green (Claude re-verified T4).
+> To view: `cd homepage && npm run dev`. T4 collapsed variants: default
+> `?about=name` (name-only) vs `?about=preview` (2-line preview). Do NOT merge to
+> main — wait for operator "ship T" (or per-task) after they verify on dev.**
 
 ---
+
+## Log (Phase T)
+
+- 2026-07-08 — T4 designer about +/− typewriter expand — 540bf07 — build:green check:green (Claude re-ran both) — separator "—"→"+" (var(--neon-green), 1.18em, clickable button row), expands to "−" dim on finish; word-by-word typewriter with a 1px cursor bar (Range-positioned, tracks last line) that becomes the full-width bottom divider on is-finished; description height animates .32s cubic-bezier(.16,1,.3,1) so catalog drops fast to fixed position then types; collapse reverse-types faster (19ms vs 28ms/word); reduced-motion→instant; both collapsed variants via ?about=name(default)/preview; description now flex:0 0 inside head so viewport shrinks (no overlay). Verified --neon-green=#1faa2e exists, no stray refs to old markup. Reviewed clean.
+- 2026-07-08 — T3 relocate mobile search magnifier above cart — a72118c — build:green check:green — gated the left-of-× transform behind .is-search-open for is-catalog/is-product; collapsed falls to base translateY(14px) = one slot above the cart (64px), same x; opens straight to left-of-× via existing .55s transform. Mobile-only, desktop untouched. Reviewed clean, global.css only.
+- 2026-07-08 — T2 now-playing mobile card clickable after renav — 231f23f — build:green check:green — 3-part: HeroVideo section-header handler now calls closeStage when mobile+is-now-playing-open (clears is-music/is-now-playing-open via clearStageCleanup); now-playing.js clears card href in hideNowPlaying+stop; now-playing.css .hero__now-playing[hidden]{display:none}. Traced closeStage for cross-section + collapse + × paths, all correct. Reviewed clean.
+- 2026-07-08 — T1 fam panel copy collision — e1f5425 — build:green check:green — image now flex:1 1 0 (shrinks, object-fit:contain), copy+kicker flex:0 0 auto (always full), .hero__fam min-height:0, mobile image max-height:none. Reviewed clean, global.css only.
+
+## PHASE T — operator edits, "no overlay" pass (2026-07-08)
+
+OVERRIDING PRINCIPLE for T1–T4: **no text overlay anywhere, especially on mobile.**
+Four independent commits `T1:`…`T4:`, one dispatch + one Claude review each, in
+order. All work in `homepage/` only. `npm run build` AND `npx astro check` green
+each. Do NOT push or merge; operator verifies all four on `dev` first.
+
+File map (from a code audit; verify before editing, line numbers approximate):
+- Designer catalog header + `& fam` panel: `src/components/blocks/HeroVideo.astro`.
+- Styles: `src/styles/global.css`. Mobile = `@media (max-width:760px)`; desktop =
+  `@media (min-width:761px)`.
+- Now-playing: poller `public/scripts/now-playing.js`, styles
+  `public/styles/now-playing.css`.
+
+### T1 — `& fam` about-copy collision (commit `T1:`, CSS-only)
+Problem: in `.hero__fam` (HeroVideo.astro ~L319-325) the interview-series copy
+`.hero__fam-copy` overlaps the tattoo image `.hero__fam-image`. Cause (global.css
+~L517-536 desktop, ~L896-907 mobile): `.hero__fam` is a centered flex column with
+`max-height` and NO overflow handling, and the image height is capped at
+`calc(Xvh - 7.5em)` — a fixed 7.5em reservation for copy+kicker+gaps. The copy
+wraps past 7.5em (worse on mobile, narrower column) and overflows onto the image.
+Fix (mobile + desktop): the panel must show image, then FULL copy, then
+"coming soon…", cleanly stacked with a clear gap and NO overlap and NO clipped
+text. Allowed approaches: let the image shrink to the space left by the text
+(`min-height:0`, size image off remaining space instead of the fixed 7.5em),
+and/or reduce copy/kicker size, and/or let the column size to content. Test
+~320-430px mobile widths and desktop.
+Done when: no overlap and no clipped text at any mobile width or desktop; image
+above, full copy + "coming soon…" below.
+
+### T2 — now-playing card stays clickable after mobile renavigation (commit `T2:`)
+Bug: on mobile, after leaving the now-playing stage (tapping another section
+header, collapsing the folder, or the ×), the Spotify song card link stays live/
+clickable. Root causes: (a) HeroVideo.astro (~L2293-2326 section-header handler):
+when another section opens on mobile while now-playing is open, `closeStage` is
+skipped (guard `if (!mobileQuery.matches || !isOpen)`), so `is-now-playing-open`
++ `is-music` stay on `.hero-video` and the CSS open rule (now-playing.css
+~L206-212) keeps the card `visibility:visible; pointer-events:auto`. (b)
+now-playing.js: `hideNowPlaying()` (~L95-101) and `stop()` (~L308-316) clear only
+the MENU link; the CARD link (`data-now-playing-link`) href is cleared ONLY in
+`renderEmptyState()` (~L191).
+Fix (do all three, defense-in-depth):
+1. HeroVideo.astro: when navigating to another section / collapsing on mobile
+   while now-playing is open, tear down the stage state via the existing
+   `setMobileNowPlayingOpen(false)` / `closeStage` path so `is-now-playing-open`
+   and `is-music` clear. Don't break the existing collapse-to-landing or × paths.
+2. now-playing.js: in `hideNowPlaying()` and `stop()`, also
+   `link?.removeAttribute("href")` (mirror renderEmptyState) so the card is a dead
+   link whenever hidden.
+3. now-playing.css: add `.hero__now-playing[hidden]{ display:none; }` so `hidden`
+   is a real gate (currently `.hero__now-playing{display:flex}` beats UA hidden).
+Done when: on mobile, entering now-playing then (a) tapping another section
+header, (b) collapsing via the MUSIC header, (c) the × back button each leave the
+song card immediately non-clickable (no Spotify navigation) and gone. Desktop
+unaffected; normal show/hide still works.
+
+### T3 — relocate mobile search magnifier above the cart (commit `T3:`, mobile CSS)
+MOBILE ONLY (inside `@media (max-width:760px)`). In the catalogue-listing and
+product stages the COLLAPSED search magnifier currently sits at the panel top row
+(left of ×), overlapping the catalog title/about text. Move the collapsed
+magnifier to sit directly ABOVE the cart (vertical stack: magnifier top, cart
+bottom). When opened it animates in a straight line down to its CURRENT end spot
+(left of the ×) — that end position is UNCHANGED. Pure CSS; the class toggles
+`is-open`, `is-search-open`, and stage classes already exist (no JS).
+Implementation (global.css mobile ~L961-974 + `.hero__search` ~L930-936): the
+icon pair is a top-right vertical column; in these stages the cart is at
+`translateY(var(--hero-mobile-cart-stage-y))` (~64px). Put the COLLAPSED
+`.hero__search` in those stages directly above the cart, at
+`translateY(var(--hero-icon-stage-clearance))` (~14px) with the same right-edge x
+as the cart, so it reads magnifier-top / cart-bottom. Add an OPEN override keyed
+on `.hero-video.is-search-open` (scoped to mobile + those stages) applying the
+current end transform `translate(var(--hero-mobile-search-stage-x),
+var(--hero-mobile-search-stage-y))`. Existing `transform .55s ease-in-out` gives
+the straight-line move; no keyframes. Do NOT touch desktop (`min-width:761px`) or
+the input-width expand.
+Done when: on mobile in a catalogue listing AND a product listing, the collapsed
+magnifier sits directly above the cart with NO overlap of the about text; tapping
+it animates straight down to the (unchanged) left-of-× spot and expands the input;
+closing reverses; desktop unchanged.
+
+### T4 — designer about: `+` toggle + typewriter expand (commit `T4:`, THE BIG ONE)
+Context: the designer "about" is the live Shopify collection description, rendered
+in the catalog header `.hero__catalog-head` (HeroVideo.astro ~L270-283) as a
+baseline flex row `.hero__catalog-title` containing `.hero__catalog-title-text`
+(NAME), `.hero__catalog-description-separator` (currently an em-dash "—", hidden
+until a description exists), and `.hero__catalog-description` (the about text,
+currently `-webkit-line-clamp:2`, global.css ~L624-630). The catalog grid is in
+`.hero__catalog-viewport` (flex:1, scrollable) below. `renderCatalogHeader(title,
+description)` (~L1492-1500) fills these; the FULL description is available as
+`reconciledLiveCollection.description` (~L1828). Head is `flex:0 0` so growing it
+shrinks the scroll viewport (does not reflow the grid).
+
+Requirements:
+1. **Separator → `+`.** Replace the em-dash separator with a `+` that is a
+   PERMANENTLY HIGHLIGHTED icon using the site's existing neon accent color,
+   slightly BIGGER than the current separator, mobile + desktop. It signals the
+   row is clickable.
+2. **Clickable row.** The whole "NAME +" row is the tap target; the `+` is the
+   visual cue. Click toggles expand/collapse of the full description.
+3. **Collapsed state → BUILD BOTH VARIANTS behind a dev switch** so the operator
+   can compare: Variant A "name-only" (collapsed shows just "NAME +", no about
+   text) and Variant B "preview" (collapsed shows "NAME +" plus the current
+   1-2 line clamp preview). Expand/typewriter behavior is IDENTICAL in both; only
+   the collapsed rendering differs. Switch via a URL query param
+   `?about=name` (default, Variant A) vs `?about=preview` (Variant B), read once
+   on load; note the exact mechanism in the commit message + Log.
+4. **Expand animation (elegance is explicitly important).** On click, the full
+   description types out WORD-BY-WORD below the designer name, rapid + elegant. A
+   thin cursor "bar" sits just below the line currently being written; when a line
+   fills it wraps (carriage-return) and the bar drops to the next line, staying
+   under the current line until the whole description is printed. When finished
+   the bar settles into place as the divider between the about section and the
+   catalog, with the site's normal about↔catalog margin (adjusted for the taller
+   about). The catalog animates DOWNWARD to a fixed position FAST as the about
+   grows, then stays put while text types (animate the head height / a max-height,
+   easing ~cubic-bezier(.16,1,.3,1), ~250-400ms). When the about is full, the `+`
+   becomes `−` and LOSES its highlight (dim).
+5. **Sizes.** About text slightly bigger than current (mobile + desktop). Keep the
+   expanded about proportionate — it must not eat too much of the catalog; the
+   viewport shrinks/scrolls but stays usable.
+6. **Collapse.** Clicking `−` reverse-types back to "NAME +" in the same
+   typewriter style but ~1.3-1.5× QUICKER than expand; catalog animates back up;
+   `−` returns to highlighted `+`.
+7. **Reduced motion.** If `prefers-reduced-motion: reduce`, skip the typewriter —
+   show/hide the full about instantly (still toggle + / −).
+8. Applies to every designer catalogue (one shared component). Keep existing
+   catalog open/close, search, and product flows intact.
+Layout note: the about moves from an inline 2-line-clamped element after the name
+to a block BELOW the name that expands. Remove the clamp on the EXPANDED
+description; collapsed hides it (A) or shows a small clamp preview (B). NO overlap
+or clipping with the catalog, the "search all" row, or the × at any size, mobile +
+desktop (the no-overlay principle).
+Risks / review focus: most complex change. Verify typewriter elegance; no overlay/
+clipping at mobile widths; catalog still scrollable and not over-compressed; the
++/− + highlight toggle; reduced-motion path; the variant switch; existing catalog/
+search/product flows unbroken; build + check green. Land ONE cohesive `T4:` commit.
 
 ## PHASE S — functionality-sweep fixes (audit, 2026-07-08)
 
@@ -152,6 +293,10 @@ is that single file. Build + check green. Do not touch the worker, `wrangler.tom
 review that `renderedProgress` is read consistently everywhere after the field
 rename, and that the reduced-motion and track-end timers still behave. Confirm
 `npm run build` and `npx astro check` both green.
+
+## Log (Phase S)
+
+- 2026-07-08 — S1 now-playing functionality-sweep fixes — 2a7df65 — build:green check:green — getEasternHour via Intl.formatToParts (M1, iOS-Safari silent-hide), freshness+progress off local receivedAtMs not visitor clock (M2, dropped staleAfterMs/isFresh), album-art host tightened to i.scdn.co (scdn CSP match). Reviewed clean, only now-playing.js staged. Ready for operator verify; not yet on main.
 
 ## Log (Phase R security/correctness)
 
