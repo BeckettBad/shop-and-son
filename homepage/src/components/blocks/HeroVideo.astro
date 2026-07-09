@@ -312,7 +312,7 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
 
   <aside class="hero__film" aria-hidden="true">
     <div class="hero__film-frame">
-      <video class="hero__film-video" src={withBase("/videos/about-film.mp4")} preload="none" {...sectionVideoPriorityAttrs} playsinline></video>
+      <video class="hero__film-video" src={withBase("/videos/about-film.mp4")} preload="none" {...sectionVideoPriorityAttrs} poster={withBase("/videos/about-film-poster.webp")} playsinline></video>
       <button type="button" class="hero__film-close" data-film-close aria-label="Close">&times;</button>
       <button type="button" class="hero__film-playback" data-film-playback aria-label="Play film">
         <svg class="hero__film-glyph hero__film-glyph--play" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
