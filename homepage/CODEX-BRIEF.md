@@ -67,7 +67,12 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — T12 HERO VIDEO REGRESSION FIX (mobile loop dead +
+> **ACTIVE SUB-TASK: PHASE T13 — mobile hero MUST autoplay+loop on iOS (still
+> broken on real iPhone after T12; stuck on poster frame). Fix: arm the source
+> SYNCHRONOUSLY at parse via an inline script + native autoplay + interaction
+> fallback (T12's deferred load-event .play() is too late for iOS). One commit
+> `T13:`, full spec in "PHASE T13" below. Dispatch to Codex; push to main
+> immediately when fixed (operator authorized). — Prior: T12 HERO VIDEO FIX (mobile loop dead +
 > lag). Root cause: T8 replaced native autoplay with a one-shot JS .play() on a
 > preload=none video → fails silently on mobile, no retry, but load() churns the
 > decoder → dead poster + laggy UI. Fix: re-added `autoplay` (self-retrying native
@@ -118,6 +123,46 @@ Done when: the hero poster is preloaded high-priority on the homepage only; hero
 videos carry fetchpriority high and section videos fetchpriority low; the hero still
 loads/plays as before (deferred, one device video, behind poster); no other page
 preloads the hero poster; build + check green.
+
+## PHASE T13 — mobile hero MUST reliably autoplay+loop on iOS (operator-critical, 2026-07-09)
+
+CRITICAL: on real iOS Safari the mobile hero is stuck on the poster frame (no
+loop). Root cause: T8/T12 set the video `<source>` src and call `.play()` from a
+`load`-event / requestIdleCallback — that's TOO LATE for iOS autoplay (iOS only
+grants muted-inline autoplay during initial parse/load, not from a late deferred
+callback). Chromium is lenient so it looked fine in tests; iOS is not.
+
+GOAL: the mobile hero autoplays + loops reliably on iOS from first display, at
+quality (desktop full 1080p homepage-hero.mp4, mobile 720p homepage-hero-mobile.mp4),
+while still loading ONLY the device's video. ONE commit `T13:`, scope =
+`src/components/blocks/HeroVideo.astro`. Build + check green.
+
+Wiring (the key change: arm the source SYNCHRONOUSLY during parse, not deferred):
+1. Keep both hero `<video>` with `autoplay muted loop playsinline preload="auto"`
+   + their existing `poster`. Keep `<source data-src=...>` (NO `src` at parse) so
+   neither video loads until selected.
+2. Add a `<script is:inline>` IMMEDIATELY AFTER the two `<video>` elements (must be
+   `is:inline` so it renders inline and runs SYNCHRONOUSLY during parse, before
+   first paint — this timing is the whole fix). It must:
+   - pick the viewport-matching video: `window.matchMedia("(max-width: 760px)").matches`
+     → `.hero-video__media--mobile`, else `.hero-video__media--desktop`;
+   - set that video's `<source>` `src` from `data-src`, remove the `data-src`, call
+     `video.load()`;
+   - call `video.play()` and swallow rejection; retry once on the video's `canplay`;
+   - add a ONE-TIME global fallback: first `pointerdown`/`touchstart`/`scroll`
+     (once, passive) → call that video's `.play()` (covers iOS Low Power Mode,
+     which blocks all autoplay until an interaction);
+   - leave the non-matching video's `data-src` untouched (it never loads).
+3. REMOVE the now-obsolete `loadActiveHeroVideo` / `scheduleHeroVideoLoad` and the
+   `document.readyState`/`load`-event trigger from the module `<script>` (they are
+   superseded and were the broken deferral). Keep `reducedMotionQuery` (still used
+   by the typewriter). Remove any consts left unused by this deletion.
+4. Do NOT touch: the poster preload links in Base.astro, fetchpriority attrs, the
+   CSS `--desktop`/`--mobile` display toggle, or the video files.
+Done when: the visible mobile hero autoplays+loops from load (currentTime advances)
+and only the device video loads (non-matching stays unloaded); desktop unaffected;
+build + `astro check` green. (iOS is the real test — Claude will chromium-verify
+single-load + playback, then ship; operator confirms on iPhone.)
 
 ## PHASE T8 — media/perf pass: hero delivery + WebP images (operator, 2026-07-08)
 
