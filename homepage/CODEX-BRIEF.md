@@ -67,15 +67,59 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — T5 DONE ON DEV @ 8083181, awaiting operator verify.
+> **ACTIVE SUB-TASK: (none) — T6 DONE ON DEV @ bad0887, awaiting operator verify.
 > Full Phase T on dev: T1 e1f5425, T2 231f23f, T3 a72118c, T3b 535a6cc, T4
-> 540bf07, T5 8083181 (typewriter revision: full-width descending separator line,
-> desktop full width, bigger +/−, much faster, collapse<expand). All reviewed
-> clean, build+check green. Assumption to confirm: desktop about TEXT is now full
-> width too (not just the line) — flag if you want narrower text. Do NOT merge —
-> wait for operator "ship T" after dev verify.**
+> 540bf07, T5 8083181, T6 bad0887 (typewriter bar slides down into the section
+> divider on finish → one bar; head border transparent while expanded; catalogue
+> unchanged). All reviewed clean, build+check green, dev hot-reloaded no error.
+> Do NOT merge — wait for operator "ship T" after dev verify.**
 
 ---
+
+## PHASE T6 — typewriter bar becomes the section divider (operator, 2026-07-08)
+
+Follow-up to T5. ONE commit `T6:`, scope = `src/components/blocks/HeroVideo.astro`
+(cursor finish logic) + `src/styles/global.css` (cursor / head divider). Build +
+check green. Do NOT push. Keep all other T4/T5 behavior intact (speeds, full-width
+line, bigger +/−, variants, reduced-motion).
+
+PROBLEM: after the typewriter finishes there are TWO horizontal lines: (1) the
+typewriter cursor line resting at the bottom of the about text
+(`.hero__catalog-description-cursor.is-finished`, at the description's bottom),
+and (2) the section divider below it (`.hero__catalog-head` `border-bottom`, above
+the catalogue). The operator wants only ONE.
+
+DESIRED (operator confirmed the exact behavior): when the last word is typed, the
+typewriter line does NOT stop at the bottom of the text — it CONTINUES animating
+downward and falls into place exactly at the section-divider location (where the
+head border-bottom sits now), becoming the single divider. **The catalogue does
+NOT move** — the divider location is unchanged; only the typewriter line travels
+down to it. End state: exactly ONE horizontal line, at the current section-divider
+position, with the about text above it and the catalogue below (unchanged).
+
+Implementation guidance (Codex's call on exact method, but hit these points):
+- Keep the section-divider position fixed so the catalogue never shifts.
+- On finish, animate the cursor line's vertical position DOWN from the last text
+  line to the section-divider location as a smooth transition ("fall into place"),
+  then resolve to a single line there (e.g. slide the cursor onto the divider and
+  hide the cursor so only the divider shows, or make the cursor the divider and
+  drop the head border-bottom — whichever yields one clean line and no catalogue
+  shift).
+- The cursor currently lives inside `.hero__catalog-description`, which has
+  `overflow:hidden` — that will CLIP the cursor as it slides below the text. Handle
+  this (relax/skip the clip during the slide, or position the finishing line
+  relative to a non-clipping ancestor like `.hero__catalog-head`) so the downward
+  slide is visible.
+- COLLAPSED state must still show its single divider under "NAME +" exactly as
+  now (do not remove the divider that separates the collapsed head from the
+  catalogue). Only the EXPANDED finish should avoid the double line.
+- Collapse (−): reverse cleanly back to the collapsed single-divider state; do not
+  introduce a transient second bar on collapse.
+- Reduced motion: no slide; settle directly to the single-divider end state.
+Done when: after expanding a designer about, exactly ONE horizontal line remains
+(no double bar), reached by the typewriter sliding down into the divider spot; the
+catalogue does not move; collapsed state still shows its single divider; collapse
+reverses cleanly; build + check green.
 
 ## PHASE T5 — T4 typewriter revision (operator, 2026-07-08)
 
@@ -131,6 +175,7 @@ reduced-motion still instant; build + check green.
 
 ## Log (Phase T)
 
+- 2026-07-08 — T6 typewriter bar merges into section divider — bad0887 — build:green check:green — on finish the cursor translateY's down to the head bottom (dividerY computed from head rect) with overflow:visible so it isn't clipped; head border-bottom goes transparent while .is-typing/.is-expanded (via :has) so only one line shows; catalogue position unchanged; collapsed state keeps its border divider. Reviewed clean, dev hot-reloaded no error.
 - 2026-07-08 — T5 about typewriter revision — 8083181 — build:green check:green — cursor now full-width line (left:0/right:0, JS sets translateY only) descending line-by-line then resting as divider; description width min(100%,76ch)→100% (desktop full width); separator +/− 1.18em→1.5em; speeds head 320→150, expand 28→9, collapse 19→5, height transition .32s→.16s. Collapse<expand kept. Reviewed clean, dev hot-reloaded no error.
 - 2026-07-08 — T3b raise mobile search magnifier — 535a6cc — build:green check:green — collapsed magnifier to translateY 0 (var --hero-mobile-search-collapsed-y) for a more even gap above the cart, mobile catalogue/product only. Direct live-tune, operator confirmed mobile spacing.
 - 2026-07-08 — T4 designer about +/− typewriter expand — 540bf07 — build:green check:green (Claude re-ran both) — separator "—"→"+" (var(--neon-green), 1.18em, clickable button row), expands to "−" dim on finish; word-by-word typewriter with a 1px cursor bar (Range-positioned, tracks last line) that becomes the full-width bottom divider on is-finished; description height animates .32s cubic-bezier(.16,1,.3,1) so catalog drops fast to fixed position then types; collapse reverse-types faster (19ms vs 28ms/word); reduced-motion→instant; both collapsed variants via ?about=name(default)/preview; description now flex:0 0 inside head so viewport shrinks (no overlay). Verified --neon-green=#1faa2e exists, no stray refs to old markup. Reviewed clean.
