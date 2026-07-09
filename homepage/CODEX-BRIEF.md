@@ -67,7 +67,14 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — T11 media cleanup + film poster DONE on dev, build+
+> **ACTIVE SUB-TASK: (none) — T12 HERO VIDEO REGRESSION FIX (mobile loop dead +
+> lag). Root cause: T8 replaced native autoplay with a one-shot JS .play() on a
+> preload=none video → fails silently on mobile, no retry, but load() churns the
+> decoder → dead poster + laggy UI. Fix: re-added `autoplay` (self-retrying native
+> playback) + removed the reduced-motion gate that also killed the loop; kept the
+> deferred single-video source-load. VERIFIED via headless mobile Playwright:
+> mobile video plays (currentTime 2.48→4.49), desktop stays unloaded. Ready to
+> ship. — Prior: T11 media cleanup + film poster DONE on dev, build+
 > check green. Deleted 10 dead assets (~27MB: about.mp4, new-arrivals.mp4, +block
 > images/posters/chronicle/logo — old block components not rendered on any page).
 > about-film.mp4 31→22M (CRF21, audio kept) + about-film-poster.webp (stencil film
