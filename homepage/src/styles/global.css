@@ -1539,6 +1539,15 @@ body{
 .hero-subscribe.is-subscribed .hero-subscribe__submit{color:var(--neon-green)}
 .hero-subscribe.is-subscribed .hero-subscribe__icon--arrow{display:none}
 .hero-subscribe.is-subscribed .hero-subscribe__icon--check{display:block}
+.hero-subscribe__suggestion{
+  display:block; width:100%; margin:.34em 0 0; padding:0; border:0; background:transparent;
+  color:rgba(0,0,0,.52); font:inherit; font-size:8px; line-height:1.2; text-align:left;
+  text-transform:none; cursor:pointer;
+}
+.hero-subscribe__suggestion[hidden]{display:none}
+.hero-subscribe__suggestion:hover{
+  color:#000; text-decoration:underline; text-underline-offset:2px;
+}
 .hero-info__legal{
   font-size:9px; color:rgba(0,0,0,.55);
 }
@@ -1565,6 +1574,7 @@ body{
   .hero-subscribe__idle,
   .hero-subscribe__input,
   .hero-subscribe__placeholder{font-size:9px}
+  .hero-subscribe__suggestion{font-size:6px; text-align:center}
   .hero-subscribe__input{padding:0 6px}
   .hero-subscribe__placeholder{left:6px}
   .hero-subscribe.is-valid .hero-subscribe__submit,
