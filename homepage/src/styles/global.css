@@ -1485,12 +1485,24 @@ body{
   --hero-subscribe-h:25px;
   --hero-subscribe-w:138px;
   --hero-subscribe-valid-w:178px;
-  display:block; width:var(--hero-subscribe-w); margin:0 0 .9em;
+  --hero-subscribe-submit-w:34px;
+  --hero-subscribe-input-max-w:45ch;
+  --hero-subscribe-max-w:calc(var(--hero-subscribe-input-max-w) + var(--hero-subscribe-submit-w) + 24px);
+  --hero-subscribe-value-ch:8;
+  display:block;
+  width:clamp(var(--hero-subscribe-w), calc((var(--hero-subscribe-value-ch) * 1ch) + 24px), var(--hero-subscribe-max-w));
+  max-width:var(--hero-subscribe-max-w); margin:0 0 .9em;
   color:#000; font-family:var(--mono-ui); pointer-events:auto;
   transition:width .16s ease;
 }
 .hero-subscribe.is-valid,
-.hero-subscribe.is-subscribed{width:var(--hero-subscribe-valid-w)}
+.hero-subscribe.is-subscribed{
+  width:clamp(
+    var(--hero-subscribe-valid-w),
+    calc((var(--hero-subscribe-value-ch) * 1ch) + var(--hero-subscribe-submit-w) + 24px),
+    var(--hero-subscribe-max-w)
+  );
+}
 .hero-subscribe__box{
   position:relative; display:flex; width:100%; height:var(--hero-subscribe-h);
   border:1px solid #000; background:rgba(255,255,255,.42); color:#000; overflow:hidden;
@@ -1503,7 +1515,7 @@ body{
 .hero-subscribe.is-valid .hero-subscribe__idle,
 .hero-subscribe.is-subscribed .hero-subscribe__idle{opacity:0}
 .hero-subscribe__input-wrap{
-  position:relative; flex:1 1 auto; min-width:0; height:100%;
+  position:relative; flex:1 1 auto; min-width:0; height:100%; overflow:hidden;
   opacity:0; transition:opacity .08s ease;
 }
 .hero-subscribe.is-active .hero-subscribe__input-wrap,
@@ -1530,17 +1542,27 @@ body{
 }
 .hero-subscribe.is-valid .hero-subscribe__submit,
 .hero-subscribe.is-subscribed .hero-subscribe__submit{
-  width:34px; opacity:1; transform:translateX(0);
+  width:var(--hero-subscribe-submit-w); opacity:1; transform:translateX(0);
 }
 .hero-subscribe__submit:disabled{cursor:default}
+.hero-subscribe.is-submit-failed .hero-subscribe__submit{color:#c80000}
 .hero-subscribe__icon{
   width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.8;
   stroke-linecap:round; stroke-linejoin:round;
+}
+.hero-subscribe.is-submit-failed .hero-subscribe__icon--arrow{
+  animation:heroSubscribeArrowShake .38s cubic-bezier(.36,.07,.19,.97);
 }
 .hero-subscribe__icon--check{display:none}
 .hero-subscribe.is-subscribed .hero-subscribe__submit{color:var(--neon-green)}
 .hero-subscribe.is-subscribed .hero-subscribe__icon--arrow{display:none}
 .hero-subscribe.is-subscribed .hero-subscribe__icon--check{display:block}
+@keyframes heroSubscribeArrowShake{
+  10%,90%{transform:translateX(-1px)}
+  20%,80%{transform:translateX(2px)}
+  30%,50%,70%{transform:translateX(-3px)}
+  40%,60%{transform:translateX(3px)}
+}
 .hero-subscribe__suggestion{
   display:block; width:100%; margin:.34em 0 0; padding:0; border:0; background:transparent;
   color:rgba(0,0,0,.52); font:inherit; font-size:8px; line-height:1.2; text-align:left;
@@ -1571,6 +1593,9 @@ body{
     --hero-subscribe-h:22px;
     --hero-subscribe-w:116px;
     --hero-subscribe-valid-w:150px;
+    --hero-subscribe-submit-w:28px;
+    --hero-subscribe-input-max-w:45ch;
+    --hero-subscribe-max-w:min(88vw, calc(var(--hero-subscribe-input-max-w) + var(--hero-subscribe-submit-w) + 24px));
     margin:.1em auto .35em;
   }
   .hero-subscribe__idle,
@@ -1579,8 +1604,6 @@ body{
   .hero-subscribe__suggestion{font-size:6px; text-align:center}
   .hero-subscribe__input{padding:0 6px}
   .hero-subscribe__placeholder{left:6px}
-  .hero-subscribe.is-valid .hero-subscribe__submit,
-  .hero-subscribe.is-subscribed .hero-subscribe__submit{width:28px}
   .hero-subscribe__icon{width:14px; height:14px}
   .hero-info__legal{font-size:6px; line-height:1.08; margin-top:.1em}
   .hero-video.is-catalog .hero-info,

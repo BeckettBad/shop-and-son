@@ -50,6 +50,8 @@ document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
   const commonEmailTlds = "com net org edu co io us ca me info".split(" ");
   let placeholderTimer;
   let suggestionTimer;
+  let failureTimer;
+  let successResetTimer;
   let hasTypedPlaceholder = false;
   let suggestedEmail = "";
 
@@ -89,6 +91,28 @@ document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
   };
 
   const getIsValidEmail = () => Boolean(subscribeEmail?.value.trim() && subscribeEmail.checkValidity());
+
+  const updateSubscribeWidth = () => {
+    const valueLength = subscribeEmail?.value.length ?? 0;
+    const visibleLength = Math.max(valueLength + 1, placeholderValue.length + 1);
+    subForm.style.setProperty("--hero-subscribe-value-ch", String(visibleLength));
+  };
+
+  const clearSubmitFailure = () => {
+    if (failureTimer) {
+      window.clearTimeout(failureTimer);
+      failureTimer = undefined;
+    }
+
+    subForm.classList.remove("is-submit-failed");
+  };
+
+  const clearSuccessReset = () => {
+    if (!successResetTimer) return;
+
+    window.clearTimeout(successResetTimer);
+    successResetTimer = undefined;
+  };
 
   const hideEmailSuggestion = () => {
     if (suggestionTimer) {
@@ -205,6 +229,7 @@ document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
   const updateSubscribeState = () => {
     const hasValue = Boolean(subscribeEmail?.value);
     const isValid = getIsValidEmail();
+    updateSubscribeWidth();
     subForm.classList.toggle("has-value", hasValue);
     subForm.classList.toggle("is-valid", isValid);
 
@@ -214,25 +239,71 @@ document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
   };
 
   const activateSubscribe = () => {
-    if (subForm.classList.contains("is-subscribed")) return;
+    if (subForm.classList.contains("is-subscribed")) {
+      resetSubscribeFresh();
+      return;
+    }
 
     subForm.classList.add("is-active");
     typePlaceholder();
     updateSubscribeState();
   };
 
+  const resetSubscribeIdle = () => {
+    clearSuccessReset();
+    clearSubmitFailure();
+    hideEmailSuggestion();
+    stopPlaceholderType();
+    hasTypedPlaceholder = false;
+    if (placeholderText) placeholderText.textContent = "";
+    if (subscribeEmail) {
+      subscribeEmail.value = "";
+      subscribeEmail.readOnly = false;
+    }
+    subForm.classList.remove("is-active", "has-value", "is-valid", "is-submitting", "is-subscribed");
+    if (subscribeButton) subscribeButton.disabled = true;
+    updateSubscribeState();
+  };
+
+  function resetSubscribeFresh() {
+    resetSubscribeIdle();
+    subForm.classList.add("is-active");
+    typePlaceholder();
+    updateSubscribeState();
+  }
+
+  const queueSuccessReset = () => {
+    clearSuccessReset();
+    successResetTimer = window.setTimeout(() => {
+      successResetTimer = undefined;
+      resetSubscribeIdle();
+    }, 20000);
+  };
+
   const setSubscribeSuccess = () => {
+    clearSubmitFailure();
     hideEmailSuggestion();
     subForm.classList.remove("is-submitting");
     subForm.classList.add("is-active", "is-valid", "is-subscribed");
     if (subscribeButton) subscribeButton.disabled = true;
     if (subscribeEmail) subscribeEmail.readOnly = true;
+    queueSuccessReset();
   };
 
   const setSubscribeFailure = () => {
+    clearSuccessReset();
     subForm.classList.remove("is-submitting", "is-subscribed");
     if (subscribeEmail) subscribeEmail.readOnly = false;
     updateSubscribeState();
+    if (getIsValidEmail()) {
+      clearSubmitFailure();
+      void subForm.offsetWidth;
+      subForm.classList.add("is-submit-failed");
+      failureTimer = window.setTimeout(() => {
+        failureTimer = undefined;
+        subForm.classList.remove("is-submit-failed");
+      }, 520);
+    }
   };
 
   const getShopifyEndpoint = () => {
@@ -318,6 +389,7 @@ document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
   subscribeEmail?.addEventListener("input", () => {
     if (subForm.classList.contains("is-subscribed")) return;
 
+    clearSubmitFailure();
     activateSubscribe();
     updateSubscribeState();
     queueEmailSuggestion();
@@ -330,6 +402,7 @@ document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
 
     subscribeEmail.value = suggestedEmail;
     hideEmailSuggestion();
+    clearSubmitFailure();
     activateSubscribe();
     updateSubscribeState();
     subscribeEmail.focus({ preventScroll: true });
@@ -346,6 +419,8 @@ document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
     }
 
     subForm.classList.add("is-submitting");
+    clearSubmitFailure();
+    clearSuccessReset();
     if (subscribeButton) subscribeButton.disabled = true;
 
     try {
