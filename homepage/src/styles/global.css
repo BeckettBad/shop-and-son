@@ -290,7 +290,9 @@ body{
   transform:translateX(var(--hero-icon-stage-clearance));
   transition:transform .55s ease-in-out,opacity .18s ease,visibility 0s;
 }
-.hero__instagram svg,
+.hero__instagram svg{
+  display:block; width:20px; height:20px;
+}
 .hero__cart svg{
   display:block; width:22px; height:22px;
 }
@@ -1012,7 +1014,7 @@ body{
     transform:translateY(var(--hero-icon-stage-clearance));
     transition:transform .55s ease-in-out,opacity .18s ease,visibility 0s;
   }
-  .hero__instagram svg,
+  .hero__instagram svg{width:20px; height:20px}
   .hero__cart svg{width:22px; height:22px}
   .hero__cart-count{
     top:2px; right:4px;
