@@ -67,14 +67,66 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — T7 DONE ON DEV @ 9407cea, awaiting operator verify.
-> Full Phase T on dev: T1 e1f5425, T2 231f23f, T3 a72118c, T3b 535a6cc, T4 540bf07,
-> T5 8083181, T6 bad0887, T7 9407cea (about text indent 1.2em; finish bar widens to
-> full head width + hands off to the real border divider; +/− 1.5em→2em). All
-> reviewed clean, build+check green, dev hot-reloaded no error. Do NOT merge — wait
-> for operator "ship T" after dev verify.**
+> **ACTIVE SUB-TASK: (none) — T8 DONE ON DEV @ 3a632d6, awaiting operator quality
+> check + re-measure. Media/perf pass: only device hero loads (deferred + poster),
+> mobile hero right-sized 2.5MB→1MB, 3 images → WebP (dj 2MB→150K, fam 929K→192K,
+> stencil 552K→228K). Originals (.png/.jpg) KEPT until operator confirms WebP
+> quality on preview — cleanup pending. Full Phase T on dev thru T8. Do NOT merge
+> — wait for operator "ship T" after dev verify.**
 
 ---
+
+## PHASE T8 — media/perf pass: hero delivery + WebP images (operator, 2026-07-08)
+
+Perf pass from a measured Lighthouse audit (mobile, sim 4G): LCP 7.9s, total 8.9MB,
+TBT 0 / CLS 0 (our code is clean — this is all media). Root causes: BOTH hero
+videos download (2.6MB each; one is wasted), plus heavy PNG/JPG. Goal: cut landing
+weight with ZERO quality loss to product imagery (Shopify CDN, untouched) and the
+watched films (untouched). ONE commit `T8:`, scope = `src/components/blocks/
+HeroVideo.astro` (+ verify no CSS breakage). Build + check green. Do NOT push.
+
+ASSETS ALREADY CREATED + PLACED by Claude (do not regenerate):
+- `public/videos/homepage-hero-mobile.mp4` — already replaced with a right-sized
+  1280×720 version (2.5MB→1.0MB, near-lossless). Just reference it as today.
+- `public/videos/hero-poster.webp` (desktop, 32K), `public/videos/hero-poster-mobile.webp` (mobile, 9K) — poster stills.
+- `public/images/dj-in-action-cutout.webp` (150K), `public/images/hero-stencil.webp` (228K), `public/images/fam-tattoo.webp` (192K) — high-quality WebP, dims + alpha preserved. Originals (.png/.jpg) are kept alongside for now — do NOT delete them (quality validation; cleanup later).
+
+Changes:
+
+1. **Hero video: load ONLY the device's video, deferred, with a poster.** Today two
+   `<video autoplay muted loop playsinline preload="metadata">` (lines ~52-72) both
+   download on load (5.2MB, one wasted). Rework so:
+   - Add posters: desktop video `poster={withBase("/videos/hero-poster.webp")}`,
+     mobile video `poster={withBase("/videos/hero-poster-mobile.webp")}` — the
+     poster paints immediately for a fast LCP.
+   - Defer + single-load: remove `autoplay`, set `preload="none"`, and move each
+     source URL off the eager `<source src>` into a `data-src` (so nothing downloads
+     on load). Then in the hero script, AFTER first paint (window `load` event, or
+     `requestIdleCallback` with a `setTimeout` fallback), pick ONLY the
+     viewport-matching video via `matchMedia("(max-width:760px)")`, set its source
+     from `data-src`, then `.load()` + `.play()` (muted, so autoplay-by-JS is
+     allowed). The non-matching video never loads. Keep `muted loop playsinline`.
+   - Respect `prefers-reduced-motion`: if reduced, keep the poster and do not
+     autoplay the video.
+   - Net: one hero downloads, after first paint; poster shows instantly; mobile
+     uses the right-sized file.
+
+2. **Swap the three images to the WebP already placed:**
+   - Line ~79: `--stencil-mask-url` `/images/hero-stencil.png` → `.webp` (this is a
+     CSS mask; WebP alpha works as a mask in modern browsers — verify the stencil
+     still masks correctly).
+   - Line ~83: `dj-in-action-cutout.png` → `.webp`.
+   - Line ~327: `fam-tattoo.jpg` → `.webp`.
+
+3. **Section videos `preload="none"`** (minor): the film/section videos (e.g.
+   about-film ~line 311, and any about / new-arrivals videos) — set `preload="none"`
+   so they cost nothing until played. Do not change their sources or quality.
+
+Done when: the landing downloads only ONE hero video, after first paint, with its
+poster showing instantly; the three images load as WebP and render correctly
+(stencil mask, dj cutout, fam image); section videos preload none; the hero still
+plays as a muted looping background once loaded; reduced-motion shows the poster;
+build + check green. (Claude will rebuild + re-run Lighthouse to confirm the win.)
 
 ## PHASE T7 — about indent + full-width finish divider + bigger +/− (operator, 2026-07-08)
 
@@ -222,6 +274,7 @@ reduced-motion still instant; build + check green.
 
 ## Log (Phase T)
 
+- 2026-07-08 — T8 media/perf pass (hero delivery + WebP) — 3a632d6 — build:green check:green — measured mobile Lighthouse (sim 4G) BEFORE→AFTER: total 8.9MB→1.87MB (−79%), LCP 7.9s→5.1s, perf 70→75, TBT/CLS 0. Only device hero loads (deferred + poster), mobile hero right-sized 2.5MB→1.0MB, dj-cutout 2MB→150K / fam 929K→192K / stencil 552K→228K WebP. Reviewed clean. PENDING: operator quality-check WebP on preview; then remove original .png/.jpg (cleanup) + optional LCP-image right-size.
 - 2026-07-08 — T7 about indent + full-width finish divider + bigger +/− — 9407cea — build:green check:green — description padding-left 1.2em (text indent); on finish the cursor animates left/right to full head width (computed --finish-left/right from head vs description rects) + slides down, then after 170ms is-divider-settled fades the cursor out and restores the full-width head border-bottom as the divider; separator 1.5em→2em. Reviewed clean, dev hot-reloaded no error. Note: separator line-height .58 is tight — operator to eyeball +/− alignment.
 - 2026-07-08 — T6 typewriter bar merges into section divider — bad0887 — build:green check:green — on finish the cursor translateY's down to the head bottom (dividerY computed from head rect) with overflow:visible so it isn't clipped; head border-bottom goes transparent while .is-typing/.is-expanded (via :has) so only one line shows; catalogue position unchanged; collapsed state keeps its border divider. Reviewed clean, dev hot-reloaded no error.
 - 2026-07-08 — T5 about typewriter revision — 8083181 — build:green check:green — cursor now full-width line (left:0/right:0, JS sets translateY only) descending line-by-line then resting as divider; description width min(100%,76ch)→100% (desktop full width); separator +/− 1.18em→1.5em; speeds head 320→150, expand 28→9, collapse 19→5, height transition .32s→.16s. Collapse<expand kept. Reviewed clean, dev hot-reloaded no error.
