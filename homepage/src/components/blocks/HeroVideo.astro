@@ -269,11 +269,18 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
 
   <aside class="hero__catalog" aria-hidden="true">
     <div class="hero__catalog-head">
-      <h2 class="hero__catalog-title">
-        <span class="hero__catalog-title-text" data-catalog-title></span>
-        <span class="hero__catalog-description-separator" data-catalog-description-separator hidden>—</span>
-        <span class="hero__catalog-description" data-catalog-description hidden></span>
-      </h2>
+      <div class="hero__catalog-about" data-catalog-about>
+        <h2 class="hero__catalog-title">
+          <button type="button" class="hero__catalog-about-toggle" data-catalog-about-toggle aria-expanded="false">
+            <span class="hero__catalog-title-text" data-catalog-title></span>
+            <span class="hero__catalog-description-separator" data-catalog-description-separator hidden>+</span>
+          </button>
+        </h2>
+        <p class="hero__catalog-description" data-catalog-description hidden>
+          <span data-catalog-description-copy></span>
+          <span class="hero__catalog-description-cursor" data-catalog-description-cursor aria-hidden="true"></span>
+        </p>
+      </div>
       <button type="button" class="hero__search-all-row" data-search-all-row hidden>search all products →</button>
       <button type="button" class="hero__catalog-close" data-catalog-close aria-label="Close catalogue">&times;</button>
     </div>
@@ -351,8 +358,12 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   const stencil = hero?.querySelector<HTMLElement>(".hero__stencil");
   const dj = hero?.querySelector<HTMLElement>(".hero__dj");
   const catalog = hero?.querySelector<HTMLElement>(".hero__catalog");
+  const catalogAbout = hero?.querySelector<HTMLElement>("[data-catalog-about]");
+  const catalogAboutToggle = hero?.querySelector<HTMLButtonElement>("[data-catalog-about-toggle]");
   const catalogTitle = hero?.querySelector<HTMLElement>("[data-catalog-title]");
   const catalogDescription = hero?.querySelector<HTMLElement>("[data-catalog-description]");
+  const catalogDescriptionCopy = hero?.querySelector<HTMLElement>("[data-catalog-description-copy]");
+  const catalogDescriptionCursor = hero?.querySelector<HTMLElement>("[data-catalog-description-cursor]");
   const catalogDescriptionSeparator = hero?.querySelector<HTMLElement>("[data-catalog-description-separator]");
   const catalogViewport = hero?.querySelector<HTMLElement>("[data-catalog-viewport]");
   const catalogTrack = hero?.querySelector<HTMLElement>("[data-catalog-track]");
@@ -384,10 +395,14 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   const subgroupToggles = hero ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-menu-subgroup]")) : [];
   const mobileQuery = window.matchMedia("(max-width: 760px)");
   const desktopQuery = window.matchMedia("(min-width: 761px)");
+  const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   const preorderDesktopWidth = 1160;
   const stageDuration = 550;
   const fallbackCardAspect = 0.75;
   const searchPredictiveDelayMs = 250;
+  const aboutHeadAnimationMs = 320;
+  const aboutExpandWordMs = 28;
+  const aboutCollapseWordMs = 19;
   const liveCollectionCache = new Map<string, Promise<CollectionDetail | null>>();
   let filmHasStarted = false;
   let stencilReturnCleanup: (() => void) | undefined;
@@ -439,6 +454,11 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   let searchSessionReturnUrl: URL | null = null;
   let searchSessionHasHistoryEntry = false;
   let nowPlayingClose: HTMLButtonElement | undefined;
+  const catalogAboutVariant = new URLSearchParams(window.location.search).get("about") === "preview" ? "preview" : "name";
+  if (hero) hero.dataset.aboutVariant = catalogAboutVariant;
+  let catalogAboutDescription = "";
+  let catalogAboutExpanded = false;
+  let catalogAboutTypingTimer: ReturnType<typeof window.setTimeout> | undefined;
   const sectionCollapseTokens = new WeakMap<HTMLElement, number>();
   const subgroupCollapseTokens = new WeakMap<HTMLElement, number>();
   const menuCollapseAnimations = new WeakMap<HTMLElement, Animation>();
@@ -1490,13 +1510,44 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   };
 
   const renderCatalogHeader = (title: string, description = "") => {
-    if (!catalogTitle || !catalogDescription || !catalogDescriptionSeparator) return;
+    if (!catalogTitle || !catalogDescription || !catalogDescriptionCopy || !catalogDescriptionSeparator) return;
 
+    clearCatalogAboutTyping();
     const trimmedDescription = description.trim();
     catalogTitle.textContent = title;
-    catalogDescription.textContent = trimmedDescription;
-    catalogDescription.hidden = !trimmedDescription;
+    catalogAboutDescription = trimmedDescription;
+    catalogAboutExpanded = false;
+    catalogAboutToggle?.setAttribute("aria-expanded", "false");
+    catalogAboutToggle?.toggleAttribute("disabled", !trimmedDescription);
+    catalogAboutToggle?.classList.toggle("has-description", Boolean(trimmedDescription));
+    catalogDescriptionSeparator.textContent = "+";
+    catalogDescriptionSeparator.classList.remove("is-minus");
     catalogDescriptionSeparator.hidden = !trimmedDescription;
+
+    if (!trimmedDescription) {
+      catalogDescription.hidden = true;
+      catalogDescriptionCopy.textContent = "";
+      setCatalogAboutClasses("empty");
+      setCatalogDescriptionHeight(0);
+      updateCatalogDescriptionCursor();
+      return;
+    }
+
+    if (catalogAboutVariant === "preview") {
+      const previewHeight = getCatalogDescriptionHeight(trimmedDescription, true);
+      catalogDescription.hidden = false;
+      catalogDescriptionCopy.textContent = trimmedDescription;
+      setCatalogAboutClasses("preview");
+      setCatalogDescriptionHeight(previewHeight);
+      updateCatalogDescriptionCursor();
+      return;
+    }
+
+    catalogDescription.hidden = true;
+    catalogDescriptionCopy.textContent = "";
+    setCatalogAboutClasses("collapsed");
+    setCatalogDescriptionHeight(0);
+    updateCatalogDescriptionCursor();
   };
 
   const renderCatalogGrid = (products: CatalogProduct[], targetScrollTop = 0) => {
@@ -1541,6 +1592,243 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
 
   const getSortedProducts = (products: CatalogProduct[]) =>
     [...products].sort((a, b) => Number(a.available === false) - Number(b.available === false));
+
+  const getCatalogAboutTokens = (description: string) => description.match(/\S+\s*/g) ?? [];
+
+  const clearCatalogAboutTyping = () => {
+    if (!catalogAboutTypingTimer) return;
+
+    window.clearTimeout(catalogAboutTypingTimer);
+    catalogAboutTypingTimer = undefined;
+  };
+
+  const setCatalogAboutClasses = (state: "empty" | "collapsed" | "preview" | "typing" | "expanded") => {
+    catalogAbout?.classList.toggle("has-description", state !== "empty");
+    catalogAbout?.classList.toggle("is-preview", state === "preview");
+    catalogAbout?.classList.toggle("is-typing", state === "typing");
+    catalogAbout?.classList.toggle("is-expanded", state === "expanded");
+    catalogDescription?.classList.toggle("is-preview", state === "preview");
+    catalogDescription?.classList.toggle("is-typing", state === "typing");
+    catalogDescription?.classList.toggle("is-finished", state === "expanded");
+  };
+
+  const getCatalogDescriptionHeight = (description: string, preview = false) => {
+    if (!catalogDescription || !catalogDescriptionCopy) return 0;
+
+    const wasHidden = catalogDescription.hidden;
+    const previousText = catalogDescriptionCopy.textContent ?? "";
+    const previousHeight = catalogDescription.style.height;
+    const previousPreview = catalogDescription.classList.contains("is-preview");
+    const previousTyping = catalogDescription.classList.contains("is-typing");
+    const previousFinished = catalogDescription.classList.contains("is-finished");
+
+    catalogDescription.hidden = false;
+    catalogDescription.style.height = "auto";
+    catalogDescription.classList.toggle("is-preview", preview);
+    catalogDescription.classList.remove("is-typing", "is-finished");
+    catalogDescription.classList.add("is-measuring");
+    catalogDescriptionCopy.textContent = description;
+    const height = Math.ceil(catalogDescription.scrollHeight);
+
+    catalogDescriptionCopy.textContent = previousText;
+    catalogDescription.style.height = previousHeight;
+    catalogDescription.hidden = wasHidden;
+    catalogDescription.classList.toggle("is-preview", previousPreview);
+    catalogDescription.classList.toggle("is-typing", previousTyping);
+    catalogDescription.classList.toggle("is-finished", previousFinished);
+    catalogDescription.classList.remove("is-measuring");
+    return height;
+  };
+
+  const setCatalogDescriptionHeight = (height: number | "auto") => {
+    if (!catalogDescription) return;
+
+    if (height === "auto") {
+      catalogDescription.style.height = "auto";
+      return;
+    }
+
+    catalogDescription.style.height = `${Math.max(0, Math.ceil(height))}px`;
+  };
+
+  const updateCatalogDescriptionCursor = () => {
+    if (!catalogDescription || !catalogDescriptionCopy || !catalogDescriptionCursor) return;
+    if (catalogDescription.classList.contains("is-finished")) {
+      catalogDescriptionCursor.removeAttribute("style");
+      return;
+    }
+
+    const descriptionRect = catalogDescription.getBoundingClientRect();
+    const textNode = catalogDescriptionCopy.firstChild;
+
+    if (!textNode || !catalogDescriptionCopy.textContent?.length) {
+      catalogDescriptionCursor.style.width = "22px";
+      catalogDescriptionCursor.style.transform = "translate(0, 1.45em)";
+      return;
+    }
+
+    const range = document.createRange();
+    range.setStart(textNode, 0);
+    range.setEnd(textNode, catalogDescriptionCopy.textContent.length);
+    const rects = Array.from(range.getClientRects());
+
+    const lastRect = rects[rects.length - 1];
+    if (!lastRect) return;
+
+    const left = Math.max(0, lastRect.left - descriptionRect.left);
+    const top = Math.max(0, lastRect.bottom - descriptionRect.top + 3);
+    const width = Math.max(22, lastRect.width);
+    catalogDescriptionCursor.style.width = `${width}px`;
+    catalogDescriptionCursor.style.transform = `translate(${left}px, ${top}px)`;
+  };
+
+  const finishCatalogAboutExpand = () => {
+    catalogAboutExpanded = true;
+    catalogDescriptionSeparator?.classList.add("is-minus");
+    if (catalogDescriptionSeparator) catalogDescriptionSeparator.textContent = "\u2212";
+    setCatalogAboutClasses("expanded");
+    setCatalogDescriptionHeight("auto");
+    updateCatalogDescriptionCursor();
+  };
+
+  const collapseCatalogAboutInstantly = () => {
+    if (!catalogDescription || !catalogDescriptionCopy || !catalogDescriptionSeparator) return;
+
+    catalogAboutExpanded = false;
+    catalogDescriptionSeparator.textContent = "+";
+    catalogDescriptionSeparator.classList.remove("is-minus");
+    catalogAboutToggle?.setAttribute("aria-expanded", "false");
+
+    if (catalogAboutVariant === "preview") {
+      const previewHeight = getCatalogDescriptionHeight(catalogAboutDescription, true);
+      catalogDescription.hidden = false;
+      catalogDescriptionCopy.textContent = catalogAboutDescription;
+      setCatalogAboutClasses("preview");
+      setCatalogDescriptionHeight(previewHeight);
+      updateCatalogDescriptionCursor();
+      return;
+    }
+
+    catalogDescription.hidden = true;
+    catalogDescriptionCopy.textContent = "";
+    setCatalogAboutClasses(catalogAboutDescription ? "collapsed" : "empty");
+    setCatalogDescriptionHeight(0);
+    updateCatalogDescriptionCursor();
+  };
+
+  const expandCatalogAbout = () => {
+    if (!catalogDescription || !catalogDescriptionCopy || !catalogDescriptionSeparator || !catalogAboutDescription) return;
+
+    clearCatalogAboutTyping();
+    catalogAboutExpanded = true;
+    catalogAboutToggle?.setAttribute("aria-expanded", "true");
+    catalogDescriptionSeparator.textContent = "+";
+    catalogDescriptionSeparator.classList.remove("is-minus");
+
+    const startHeight = catalogDescription.hidden ? 0 : catalogDescription.getBoundingClientRect().height;
+    const fullHeight = getCatalogDescriptionHeight(catalogAboutDescription);
+    catalogDescription.hidden = false;
+    catalogDescriptionCopy.textContent = reducedMotionQuery.matches ? catalogAboutDescription : "";
+    setCatalogAboutClasses(reducedMotionQuery.matches ? "expanded" : "typing");
+    setCatalogDescriptionHeight(startHeight);
+    updateCatalogDescriptionCursor();
+
+    window.requestAnimationFrame(() => {
+      setCatalogDescriptionHeight(fullHeight);
+
+      if (reducedMotionQuery.matches) {
+        finishCatalogAboutExpand();
+        return;
+      }
+
+      const tokens = getCatalogAboutTokens(catalogAboutDescription);
+      let tokenIndex = 0;
+      const typeNextToken = () => {
+        catalogDescriptionCopy.textContent = tokens.slice(0, tokenIndex).join("");
+        updateCatalogDescriptionCursor();
+
+        if (tokenIndex >= tokens.length) {
+          finishCatalogAboutExpand();
+          return;
+        }
+
+        tokenIndex += 1;
+        catalogAboutTypingTimer = window.setTimeout(typeNextToken, aboutExpandWordMs);
+      };
+
+      catalogAboutTypingTimer = window.setTimeout(typeNextToken, aboutHeadAnimationMs);
+    });
+  };
+
+  const collapseCatalogAbout = () => {
+    if (!catalogDescription || !catalogDescriptionCopy || !catalogDescriptionSeparator || !catalogAboutDescription) return;
+
+    clearCatalogAboutTyping();
+    catalogAboutExpanded = false;
+    catalogAboutToggle?.setAttribute("aria-expanded", "false");
+
+    if (reducedMotionQuery.matches) {
+      collapseCatalogAboutInstantly();
+      return;
+    }
+
+    const tokens = getCatalogAboutTokens(catalogAboutDescription);
+    let tokenIndex = tokens.length;
+    catalogDescription.hidden = false;
+    catalogDescriptionCopy.textContent = catalogAboutDescription;
+    setCatalogDescriptionHeight(catalogDescription.getBoundingClientRect().height);
+    setCatalogAboutClasses("typing");
+    updateCatalogDescriptionCursor();
+
+    const eraseNextToken = () => {
+      catalogDescriptionCopy.textContent = tokens.slice(0, tokenIndex).join("");
+      updateCatalogDescriptionCursor();
+
+      if (tokenIndex <= 0) {
+        const collapsedHeight =
+          catalogAboutVariant === "preview" ? getCatalogDescriptionHeight(catalogAboutDescription, true) : 0;
+
+        catalogAboutExpanded = false;
+        catalogDescriptionSeparator.textContent = "+";
+        catalogDescriptionSeparator.classList.remove("is-minus");
+
+        if (catalogAboutVariant === "preview") {
+          catalogDescriptionCopy.textContent = catalogAboutDescription;
+          setCatalogAboutClasses("preview");
+          setCatalogDescriptionHeight(collapsedHeight);
+          updateCatalogDescriptionCursor();
+          return;
+        }
+
+        setCatalogAboutClasses("collapsed");
+        setCatalogDescriptionHeight(0);
+        window.setTimeout(() => {
+          if (catalogAboutExpanded) return;
+          catalogDescription.hidden = true;
+        }, aboutHeadAnimationMs);
+        return;
+      }
+
+      tokenIndex -= 1;
+      catalogAboutTypingTimer = window.setTimeout(eraseNextToken, aboutCollapseWordMs);
+    };
+
+    catalogAboutTypingTimer = window.setTimeout(eraseNextToken, aboutCollapseWordMs);
+  };
+
+  const syncCatalogAboutHeight = () => {
+    if (!catalogAboutDescription || !catalogDescription) return;
+
+    if (catalogAboutExpanded) {
+      setCatalogDescriptionHeight("auto");
+      updateCatalogDescriptionCursor();
+      return;
+    }
+
+    if (catalogAboutVariant === "preview" && !catalogDescription.hidden) {
+      setCatalogDescriptionHeight(getCatalogDescriptionHeight(catalogAboutDescription, true));
+    }
+  };
 
   const renderSearchGrid = (
     query: string,
@@ -2073,6 +2361,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
       hero.classList.contains("is-now-playing-open");
 
     clearStageCleanup({ preserveMobileNowPlayingOpen: shouldCollapseMobileNowPlaying });
+    clearCatalogAboutTyping();
     if (shouldCollapseMobileNowPlaying) collapseMobileNowPlayingToLanding();
     filmVideo?.pause();
     resetFilmMute();
@@ -2178,6 +2467,16 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
       return;
     }
     closeStage();
+  });
+  catalogAboutToggle?.addEventListener("click", () => {
+    if (!catalogAboutDescription) return;
+
+    if (catalogAboutExpanded) {
+      collapseCatalogAbout();
+      return;
+    }
+
+    expandCatalogAbout();
   });
   productClose?.addEventListener("click", closeProduct);
   preorderClose?.addEventListener("click", () => {
@@ -2337,8 +2636,10 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     preorderObserver?.observe(preorderShell);
     window.addEventListener("resize", resizePreorderFrame);
   }
+  window.addEventListener("resize", syncCatalogAboutHeight);
   ensureMobileNowPlayingClose();
   mobileQuery.addEventListener("change", () => {
+    syncCatalogAboutHeight();
     if (mobileQuery.matches) {
       ensureMobileNowPlayingClose();
       setCurrentMenuSection(hero?.dataset.activeCollection ?? null);
