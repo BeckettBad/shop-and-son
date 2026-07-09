@@ -279,6 +279,7 @@ body{
   display:flex; align-items:center; justify-content:flex-end; gap:var(--hero-icon-gap);
   pointer-events:none;
 }
+.hero__instagram,
 .hero__cart{
   position:relative; z-index:1;
   display:inline-flex; align-items:center; justify-content:center;
@@ -289,6 +290,7 @@ body{
   transform:translateX(var(--hero-icon-stage-clearance));
   transition:transform .55s ease-in-out,opacity .18s ease,visibility 0s;
 }
+.hero__instagram svg,
 .hero__cart svg{
   display:block; width:22px; height:22px;
 }
@@ -349,6 +351,13 @@ body{
 .product-detail__cart-count{
   top:-2px; right:-5px;
 }
+.hero-video.is-catalog .hero__instagram,
+.hero-video.is-search .hero__instagram,
+.hero-video.is-product .hero__instagram,
+.hero-video.is-preorder .hero__instagram{
+  transform:translateX(0);
+  transition-delay:.16s,0s,0s;
+}
 .hero-video.is-catalog .hero__cart,
 .hero-video.is-search .hero__cart,
 .hero-video.is-product .hero__cart,
@@ -363,6 +372,10 @@ body{
   transform:translateX(0);
   transition-delay:0s,0s,0s;
 }
+.hero-video.is-catalog .hero__instagram,
+.hero-video.is-search .hero__instagram,
+.hero-video.is-product .hero__instagram,
+.hero-video.is-preorder .hero__instagram,
 .hero-video.is-catalog .hero__cart,
 .hero-video.is-search .hero__cart,
 .hero-video.is-product .hero__cart,
@@ -813,6 +826,7 @@ body{
 .hero__menu-item--group.is-collapsing .hero__menu-nested{display:block}
 .hero__menu-item--group.is-open .hero__menu-nested{animation:heroPanelReveal .55s cubic-bezier(.16,1,.3,1)}
 @media (hover:hover){
+  .hero__instagram:hover,
   .hero__cart:hover{
     color:var(--neon-green); opacity:1; text-decoration:underline; text-underline-offset:3px;
   }
@@ -974,14 +988,17 @@ body{
     --hero-mobile-icon-top:max(1.25vh, env(safe-area-inset-top));
     --hero-mobile-cart-stage-y:calc(var(--hero-icon-stage-clearance) + var(--hero-icon-size) + var(--hero-icon-gap));
     --hero-mobile-search-stage-x:calc((var(--hero-icon-size) + 8px) * -1);
-    --hero-mobile-search-stage-y:calc(var(--hero-mobile-panel-top) - var(--hero-mobile-icon-top) - var(--hero-icon-size) - var(--hero-icon-gap));
-    /* Search is DOM-second (one flex row below the cart), so to land it in the
-       cart's on-load top slot (clearance) we lift it by one icon row. This makes
-       the catalogue/product swap mirror the landing spacing exactly: search takes
-       the top slot, cart the bottom slot, same gap. */
+    --hero-mobile-search-stage-y:calc(var(--hero-mobile-panel-top) - var(--hero-mobile-icon-top) - var(--hero-icon-size) - var(--hero-icon-gap) - var(--hero-icon-size) - var(--hero-icon-gap));
+    /* Search is two rows below Instagram in the DOM; lift it by one row in
+       catalogue/product states so it swaps with cart while IG stays pinned above. */
     --hero-mobile-search-collapsed-y:calc(var(--hero-icon-stage-clearance) - var(--hero-icon-size) - var(--hero-icon-gap));
     top:var(--hero-mobile-icon-top); right:4vw;
     flex-direction:column; align-items:flex-end; gap:var(--hero-icon-gap);
+  }
+  .hero__instagram{
+    z-index:5; width:var(--hero-icon-size); height:var(--hero-icon-size);
+    transform:translateY(var(--hero-icon-stage-clearance));
+    transition:transform .55s ease-in-out,opacity .18s ease,visibility 0s;
   }
   .hero__cart{
     z-index:5; width:var(--hero-icon-size); height:var(--hero-icon-size);
@@ -995,6 +1012,7 @@ body{
     transform:translateY(var(--hero-icon-stage-clearance));
     transition:transform .55s ease-in-out,opacity .18s ease,visibility 0s;
   }
+  .hero__instagram svg,
   .hero__cart svg{width:22px; height:22px}
   .hero__cart-count{
     top:2px; right:4px;
@@ -1018,6 +1036,18 @@ body{
   .hero__search-scope-chip,
   .hero__search-all-row{
     display:none !important;
+  }
+  .hero-video.is-catalog .hero__instagram,
+  .hero-video.is-search .hero__instagram,
+  .hero-video.is-product .hero__instagram,
+  .hero-video.is-preorder .hero__instagram{
+    transform:translateY(var(--hero-icon-stage-clearance));
+    transition-delay:0s,0s,0s;
+  }
+  .hero-video.is-search-open.is-catalog .hero__instagram,
+  .hero-video.is-search-open.is-product .hero__instagram{
+    transform:translateY(var(--hero-mobile-cart-stage-y));
+    transition-delay:0s,0s,0s;
   }
   .hero-video.is-catalog .hero__cart,
   .hero-video.is-search .hero__cart,
@@ -1272,6 +1302,7 @@ body{
   .hero__search-input{
     transition:none;
   }
+  .hero__instagram,
   .hero__cart,
   .hero__search{
     transition:none;
