@@ -403,6 +403,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   const aboutHeadAnimationMs = 150;
   const aboutExpandWordMs = 9;
   const aboutCollapseWordMs = 5;
+  const aboutDividerSettleMs = 170;
   const liveCollectionCache = new Map<string, Promise<CollectionDetail | null>>();
   let filmHasStarted = false;
   let stencilReturnCleanup: (() => void) | undefined;
@@ -459,6 +460,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   let catalogAboutDescription = "";
   let catalogAboutExpanded = false;
   let catalogAboutTypingTimer: ReturnType<typeof window.setTimeout> | undefined;
+  let catalogAboutSettleTimer: ReturnType<typeof window.setTimeout> | undefined;
   const sectionCollapseTokens = new WeakMap<HTMLElement, number>();
   const subgroupCollapseTokens = new WeakMap<HTMLElement, number>();
   const menuCollapseAnimations = new WeakMap<HTMLElement, Animation>();
@@ -1513,6 +1515,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     if (!catalogTitle || !catalogDescription || !catalogDescriptionCopy || !catalogDescriptionSeparator) return;
 
     clearCatalogAboutTyping();
+    clearCatalogAboutSettle();
     const trimmedDescription = description.trim();
     catalogTitle.textContent = title;
     catalogAboutDescription = trimmedDescription;
@@ -1602,6 +1605,15 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     catalogAboutTypingTimer = undefined;
   };
 
+  const clearCatalogAboutSettle = () => {
+    if (catalogAboutSettleTimer) {
+      window.clearTimeout(catalogAboutSettleTimer);
+      catalogAboutSettleTimer = undefined;
+    }
+
+    catalogAbout?.classList.remove("is-divider-settled");
+  };
+
   const setCatalogAboutClasses = (state: "empty" | "collapsed" | "preview" | "typing" | "expanded") => {
     catalogAbout?.classList.toggle("has-description", state !== "empty");
     catalogAbout?.classList.toggle("is-preview", state === "preview");
@@ -1661,6 +1673,19 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
         : Math.max(0, catalogDescription.getBoundingClientRect().height - 1);
 
       catalogDescriptionCursor.style.setProperty("--hero-catalog-cursor-finish-y", `${Math.ceil(dividerY)}px`);
+      if (catalogHeadRect) {
+        catalogDescriptionCursor.style.setProperty(
+          "--hero-catalog-cursor-finish-left",
+          `${Math.floor(catalogHeadRect.left - descriptionRect.left)}px`,
+        );
+        catalogDescriptionCursor.style.setProperty(
+          "--hero-catalog-cursor-finish-right",
+          `${Math.floor(descriptionRect.right - catalogHeadRect.right)}px`,
+        );
+      } else {
+        catalogDescriptionCursor.style.removeProperty("--hero-catalog-cursor-finish-left");
+        catalogDescriptionCursor.style.removeProperty("--hero-catalog-cursor-finish-right");
+      }
       catalogDescriptionCursor.style.removeProperty("transform");
       return;
     }
@@ -1668,6 +1693,8 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     const descriptionRect = catalogDescription.getBoundingClientRect();
     const textNode = catalogDescriptionCopy.firstChild;
     catalogDescriptionCursor.style.removeProperty("--hero-catalog-cursor-finish-y");
+    catalogDescriptionCursor.style.removeProperty("--hero-catalog-cursor-finish-left");
+    catalogDescriptionCursor.style.removeProperty("--hero-catalog-cursor-finish-right");
 
     if (!textNode || !catalogDescriptionCopy.textContent?.length) {
       catalogDescriptionCursor.style.transform = "translateY(1.45em)";
@@ -1693,6 +1720,17 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     setCatalogAboutClasses("expanded");
     setCatalogDescriptionHeight("auto");
     updateCatalogDescriptionCursor();
+
+    if (reducedMotionQuery.matches) {
+      catalogAbout?.classList.add("is-divider-settled");
+      return;
+    }
+
+    clearCatalogAboutSettle();
+    catalogAboutSettleTimer = window.setTimeout(() => {
+      catalogAbout?.classList.add("is-divider-settled");
+      catalogAboutSettleTimer = undefined;
+    }, aboutDividerSettleMs);
   };
 
   const collapseCatalogAboutInstantly = () => {
@@ -1724,6 +1762,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     if (!catalogDescription || !catalogDescriptionCopy || !catalogDescriptionSeparator || !catalogAboutDescription) return;
 
     clearCatalogAboutTyping();
+    clearCatalogAboutSettle();
     catalogAboutExpanded = true;
     catalogAboutToggle?.setAttribute("aria-expanded", "true");
     catalogDescriptionSeparator.textContent = "+";
@@ -1768,6 +1807,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     if (!catalogDescription || !catalogDescriptionCopy || !catalogDescriptionSeparator || !catalogAboutDescription) return;
 
     clearCatalogAboutTyping();
+    clearCatalogAboutSettle();
     catalogAboutExpanded = false;
     catalogAboutToggle?.setAttribute("aria-expanded", "false");
 
