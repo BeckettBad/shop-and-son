@@ -36,3 +36,199 @@ const overHero = () => {
 overHero();
 window.addEventListener("scroll", overHero, { passive: true });
 window.addEventListener("resize", overHero, { passive: true });
+
+// hero newsletter subscribe. Bundled here (not inline) because the prod CSP
+// blocks inline scripts.
+document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
+  const subscribeButton = subForm.querySelector("[data-hero-subscribe-submit]");
+  const subscribeEmail = subForm.querySelector("[data-hero-subscribe-email]");
+  const placeholderText = subForm.querySelector("[data-hero-subscribe-placeholder-text]");
+  const placeholderValue = "email..";
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let placeholderTimer;
+  let hasTypedPlaceholder = false;
+
+  const stopPlaceholderType = () => {
+    if (!placeholderTimer) return;
+
+    window.clearTimeout(placeholderTimer);
+    placeholderTimer = undefined;
+  };
+
+  const typePlaceholder = () => {
+    if (!placeholderText || hasTypedPlaceholder) return;
+
+    stopPlaceholderType();
+    placeholderText.textContent = "";
+
+    if (reducedMotion.matches) {
+      placeholderText.textContent = placeholderValue;
+      hasTypedPlaceholder = true;
+      return;
+    }
+
+    let index = 0;
+    const step = () => {
+      placeholderText.textContent = placeholderValue.slice(0, index);
+      if (index >= placeholderValue.length) {
+        hasTypedPlaceholder = true;
+        placeholderTimer = undefined;
+        return;
+      }
+
+      index += 1;
+      placeholderTimer = window.setTimeout(step, 26);
+    };
+
+    step();
+  };
+
+  const getIsValidEmail = () => Boolean(subscribeEmail?.value.trim() && subscribeEmail.checkValidity());
+
+  const updateSubscribeState = () => {
+    const hasValue = Boolean(subscribeEmail?.value);
+    const isValid = getIsValidEmail();
+    subForm.classList.toggle("has-value", hasValue);
+    subForm.classList.toggle("is-valid", isValid);
+
+    if (subscribeButton && !subForm.classList.contains("is-subscribed")) {
+      subscribeButton.disabled = !isValid || subForm.classList.contains("is-submitting");
+    }
+  };
+
+  const activateSubscribe = () => {
+    if (subForm.classList.contains("is-subscribed")) return;
+
+    subForm.classList.add("is-active");
+    typePlaceholder();
+    updateSubscribeState();
+  };
+
+  const setSubscribeSuccess = () => {
+    subForm.classList.remove("is-submitting");
+    subForm.classList.add("is-active", "is-valid", "is-subscribed");
+    if (subscribeButton) subscribeButton.disabled = true;
+    if (subscribeEmail) subscribeEmail.readOnly = true;
+  };
+
+  const setSubscribeFailure = () => {
+    subForm.classList.remove("is-submitting", "is-subscribed");
+    if (subscribeEmail) subscribeEmail.readOnly = false;
+    updateSubscribeState();
+  };
+
+  const getShopifyEndpoint = () => {
+    const rawDomain = subForm.dataset.shopDomain?.trim();
+    const version = subForm.dataset.sfVersion?.trim() || "2025-01";
+    if (!rawDomain) return "";
+
+    try {
+      const url = new URL(rawDomain.startsWith("http") ? rawDomain : `https://${rawDomain}`);
+      return `https://${url.hostname}/api/${encodeURIComponent(version)}/graphql.json`;
+    } catch (_) {
+      return "";
+    }
+  };
+
+  const createThrowawayPassword = () => {
+    if (!globalThis.crypto?.getRandomValues) return "";
+
+    const bytes = new Uint8Array(24);
+    globalThis.crypto.getRandomValues(bytes);
+    return `sns-${Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+  };
+
+  const submitSubscriber = async (email) => {
+    const token = subForm.dataset.sfToken?.trim();
+    const endpoint = getShopifyEndpoint();
+    const password = createThrowawayPassword();
+    if (!endpoint || !token || !password) return false;
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Storefront-Access-Token": token,
+      },
+      body: JSON.stringify({
+        query: `
+          mutation HeroNewsletterSubscribe($input: CustomerCreateInput!) {
+            customerCreate(input: $input) {
+              customer {
+                id
+              }
+              customerUserErrors {
+                code
+                field
+                message
+              }
+            }
+          }
+        `,
+        variables: {
+          input: {
+            email,
+            password,
+            acceptsMarketing: true,
+          },
+        },
+      }),
+    });
+
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) return false;
+
+    const result = payload?.data?.customerCreate;
+    const customer = result?.customer;
+    const userErrors = Array.isArray(result?.customerUserErrors) ? result.customerUserErrors : [];
+    const isAlreadyRegistered = userErrors.some((error) => {
+      const code = String(error?.code ?? "").toUpperCase();
+      return code === "TAKEN" || code === "CUSTOMER_DISABLED";
+    });
+
+    return Boolean(customer?.id || isAlreadyRegistered);
+  };
+
+  subForm.addEventListener("click", (event) => {
+    if (event.target?.closest?.("[data-hero-subscribe-submit]")) return;
+
+    activateSubscribe();
+    subscribeEmail?.focus({ preventScroll: true });
+  });
+
+  subscribeEmail?.addEventListener("focus", activateSubscribe);
+  subscribeEmail?.addEventListener("input", () => {
+    if (subForm.classList.contains("is-subscribed")) return;
+
+    activateSubscribe();
+    updateSubscribeState();
+  });
+
+  subForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    activateSubscribe();
+
+    if (!subscribeEmail || !getIsValidEmail()) {
+      updateSubscribeState();
+      subscribeEmail?.reportValidity?.();
+      return;
+    }
+
+    subForm.classList.add("is-submitting");
+    if (subscribeButton) subscribeButton.disabled = true;
+
+    try {
+      const subscribed = await submitSubscriber(subscribeEmail.value.trim());
+      if (subscribed) {
+        setSubscribeSuccess();
+        return;
+      }
+    } catch (_) {
+      // A failed or malformed response must not look like a subscription.
+    }
+
+    setSubscribeFailure();
+  });
+
+  updateSubscribeState();
+});

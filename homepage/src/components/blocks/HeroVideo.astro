@@ -22,6 +22,9 @@ const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
 const heroVideoPriorityAttrs: Record<string, string> = { fetchpriority: "high" };
 const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low" };
+const shopifyStoreDomain = import.meta.env.PUBLIC_SHOPIFY_STORE_DOMAIN?.trim() ?? "";
+const shopifyStorefrontToken = import.meta.env.PUBLIC_SHOPIFY_STOREFRONT_API_TOKEN?.trim() ?? "";
+const shopifyStorefrontVersion = "2025-01";
 
 // Block 1 — desktop: vertical left menu; mobile: horizontal tabs over fullscreen video.
 ---
@@ -253,6 +256,40 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
     <div class="hero-info">
       <p>138 sullivan st,<br />new york, ny 10012</p>
       <p>contact:<br /><a href="mailto:info@shopandson.com">info@shopandson.com</a></p>
+      <form
+        class="hero-subscribe"
+        data-hero-subscribe-form
+        data-shop-domain={shopifyStoreDomain}
+        data-sf-token={shopifyStorefrontToken}
+        data-sf-version={shopifyStorefrontVersion}
+      >
+        <div class="hero-subscribe__box" data-hero-subscribe-box>
+          <span class="hero-subscribe__idle" data-hero-subscribe-idle>subscribe</span>
+          <span class="hero-subscribe__input-wrap">
+            <span class="hero-subscribe__placeholder" data-hero-subscribe-placeholder aria-hidden="true">
+              <span class="hero-subscribe__placeholder-caret">|</span><span data-hero-subscribe-placeholder-text></span>
+            </span>
+            <input
+              class="hero-subscribe__input"
+              data-hero-subscribe-email
+              type="email"
+              autocomplete="email"
+              inputmode="email"
+              required
+              aria-label="email"
+              spellcheck="false"
+            />
+          </span>
+          <button class="hero-subscribe__submit" data-hero-subscribe-submit type="submit" aria-label="subscribe" disabled>
+            <svg class="hero-subscribe__icon hero-subscribe__icon--arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M4 12h14M13 6l6 6-6 6" />
+            </svg>
+            <svg class="hero-subscribe__icon hero-subscribe__icon--check" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M4.5 12.5 9.2 17 19.5 7" />
+            </svg>
+          </button>
+        </div>
+      </form>
       <p class="hero-info__legal">
         <a href={withBase("/policies/?policy=refund-policy")}>refund policy</a><br />
         <a href={withBase("/policies/?policy=privacy-policy")}>privacy policy</a><br />
