@@ -967,10 +967,10 @@ body{
     transform:translateY(var(--hero-mobile-cart-stage-y));
     transition-delay:0s,0s,0s;
   }
-  .hero-video.is-catalog .hero__search,
   .hero-video.is-search .hero__search,
-  .hero-video.is-product .hero__search,
-  .hero-video.is-preorder .hero__search{
+  .hero-video.is-preorder .hero__search,
+  .hero-video.is-search-open.is-catalog .hero__search,
+  .hero-video.is-search-open.is-product .hero__search{
     transform:translate(var(--hero-mobile-search-stage-x),var(--hero-mobile-search-stage-y));
     transition-delay:.08s,0s,0s;
   }
