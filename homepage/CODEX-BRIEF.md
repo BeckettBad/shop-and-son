@@ -67,14 +67,48 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — T8 DONE ON DEV @ 3a632d6, awaiting operator quality
-> check + re-measure. Media/perf pass: only device hero loads (deferred + poster),
-> mobile hero right-sized 2.5MB→1MB, 3 images → WebP (dj 2MB→150K, fam 929K→192K,
-> stencil 552K→228K). Originals (.png/.jpg) KEPT until operator confirms WebP
-> quality on preview — cleanup pending. Full Phase T on dev thru T8. Do NOT merge
-> — wait for operator "ship T" after dev verify.**
+> **ACTIVE SUB-TASK: PHASE T10 — & fam vs hero-info overlap (mobile). Revert T1,
+> then condense .hero-info so the & fam panel + info block coexist. Direct CSS
+> live-tune (global.css). Status: in progress. DONE on dev: … T9 bacd501 (hero
+> fetchpriority high, section low, poster preload scoped to landing) + CRF22 hero
+> 1.9MB. Do NOT merge — wait for operator "ship T".**
 
 ---
+
+## PHASE T9 — bias the hero video over other videos in render priority (operator, 2026-07-08)
+
+Operator wants the background hero video favored over the section films in render
+priority (quality half is done: mobile hero already re-encoded to CRF22 720p 1.9MB,
+same filename, no code change for it). ONE commit `T9:`, scope = `src/components/
+blocks/HeroVideo.astro` (+ `src/layouts/Base.astro` if needed for the head preload).
+Build + check green. Do NOT push. Keep the T8 deferred-hero behavior intact (only
+device hero loads, after first paint, behind poster).
+
+Changes (progressive hints; do not break anything if a browser ignores them):
+
+1. **Preload the hero poster at high priority** so the hero is the first paint.
+   Add two device-conditional preload links to the document `<head>`:
+   `<link rel="preload" as="image" href={withBase("/videos/hero-poster.webp")} media="(min-width:761px)" fetchpriority="high">`
+   and the mobile one with `href=".../hero-poster-mobile.webp" media="(max-width:760px)"`.
+   The `<head>` lives in Base.astro — **scope these to pages that actually render the
+   hero (the homepage)**, not every page (don't preload an unused image on product/
+   policy pages). Use whatever Astro mechanism is cleanest (a head slot the homepage
+   fills, a prop/flag, or a conditional). The poster URL matches the `<video poster>`
+   so the browser fetches once, just at high priority + early.
+
+2. **Hero video = high priority:** add `fetchpriority="high"` to both hero `<video>`
+   elements (the `--desktop` and `--mobile` ones). It already loads first (T8 JS,
+   after paint) — this reinforces it.
+
+3. **Section videos = low priority:** add `fetchpriority="low"` to the section
+   videos (the about-film `<video>` ~line 311, and any about / new-arrivals video
+   elements) so that when they load on demand they never compete with the hero.
+   They are already `preload="none"`; leave their sources/quality unchanged.
+
+Done when: the hero poster is preloaded high-priority on the homepage only; hero
+videos carry fetchpriority high and section videos fetchpriority low; the hero still
+loads/plays as before (deferred, one device video, behind poster); no other page
+preloads the hero poster; build + check green.
 
 ## PHASE T8 — media/perf pass: hero delivery + WebP images (operator, 2026-07-08)
 
@@ -274,6 +308,7 @@ reduced-motion still instant; build + check green.
 
 ## Log (Phase T)
 
+- 2026-07-08 — T9 bias hero media priority — bacd501 (+ CRF22 hero/poster assets) — build:green check:green — hero videos fetchpriority=high, about-film fetchpriority=low, hero-poster preload links (device-conditional, high) scoped to landing pages only (Base.astro). Mobile hero re-encoded CRF22 720p (1.0MB→1.9MB, operator chose the higher-quality tier since deferred = no LCP cost). Reviewed clean.
 - 2026-07-08 — T8 media/perf pass (hero delivery + WebP) — 3a632d6 — build:green check:green — measured mobile Lighthouse (sim 4G) BEFORE→AFTER: total 8.9MB→1.87MB (−79%), LCP 7.9s→5.1s, perf 70→75, TBT/CLS 0. Only device hero loads (deferred + poster), mobile hero right-sized 2.5MB→1.0MB, dj-cutout 2MB→150K / fam 929K→192K / stencil 552K→228K WebP. Reviewed clean. PENDING: operator quality-check WebP on preview; then remove original .png/.jpg (cleanup) + optional LCP-image right-size.
 - 2026-07-08 — T7 about indent + full-width finish divider + bigger +/− — 9407cea — build:green check:green — description padding-left 1.2em (text indent); on finish the cursor animates left/right to full head width (computed --finish-left/right from head vs description rects) + slides down, then after 170ms is-divider-settled fades the cursor out and restores the full-width head border-bottom as the divider; separator 1.5em→2em. Reviewed clean, dev hot-reloaded no error. Note: separator line-height .58 is tight — operator to eyeball +/− alignment.
 - 2026-07-08 — T6 typewriter bar merges into section divider — bad0887 — build:green check:green — on finish the cursor translateY's down to the head bottom (dividerY computed from head rect) with overflow:visible so it isn't clipped; head border-bottom goes transparent while .is-typing/.is-expanded (via :has) so only one line shows; catalogue position unchanged; collapsed state keeps its border divider. Reviewed clean, dev hot-reloaded no error.
