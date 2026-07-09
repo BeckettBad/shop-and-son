@@ -67,7 +67,7 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: PHASE T15 — hero STILL not playing on real iPhone: iOS shows
+> **ACTIVE SUB-TASK: (none) — T15 @ 5b24468 SHIPPING: single 1080p source + CSP-safe interaction fallback (play on first tap/scroll) for iOS autoplay-decline/Low Power Mode. Chromium-verified plays+single-load+no CSP. Operator to confirm on iPhone (+ check Low Power Mode).**
 > its native PLAY BUTTON = autoplay DECLINED (Low Power Mode blocks all autoplay).
 > Fix: single unconditional <source> + CSP-SAFE interaction fallback in the BUNDLED
 > module script (play on first tap/scroll, window-level). One commit `T15:`, spec in
