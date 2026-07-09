@@ -67,13 +67,13 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: PHASE T14 — mobile hero autoplay, NO-JS / CSP-safe. T13's
-> inline script is BLOCKED by the prod CSP (`script-src 'self'`, no unsafe-inline)
-> → source never set, video dead. Fix with ZERO JS: one <video> + native autoplay
-> + <source> in HTML at parse. One commit `T14:`, spec in "PHASE T14" below.
-> Dispatch to Codex; push to main immediately when fixed (operator authorized).
-> — Prior (superseded): T13 inline-script approach (CSP-blocked). Earlier: T12 HERO
-> VIDEO FIX (mobile loop dead +
+> **ACTIVE SUB-TASK: (none) — T14 @ 4194d59 DONE + VERIFIED (chromium w/ prod CSP:
+> single <video> native autoplay plays/loops, only mobile 720p source loads, zero
+> inline JS, no CSP violations). ROOT CAUSE of the whole hero saga: prod CSP
+> `script-src 'self'` blocks ALL inline scripts, so every JS approach (T8/T12/T13)
+> failed silently on the live/prod build. T14 = pure HTML native autoplay + <source
+> media>, no JS. SHIPPING to main per operator. — Prior (superseded): T13 inline
+> (CSP-blocked). Earlier: T12 (mobile loop dead +
 > broken on real iPhone after T12; stuck on poster frame). Fix: arm the source
 > SYNCHRONOUSLY at parse via an inline script + native autoplay + interaction
 > fallback (T12's deferred load-event .play() is too late for iOS). One commit
