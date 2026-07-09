@@ -67,7 +67,18 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — T12 HERO VIDEO REGRESSION FIX (mobile loop dead +
+> **ACTIVE SUB-TASK: (none) — T14 @ 4194d59 DONE + VERIFIED (chromium w/ prod CSP:
+> single <video> native autoplay plays/loops, only mobile 720p source loads, zero
+> inline JS, no CSP violations). ROOT CAUSE of the whole hero saga: prod CSP
+> `script-src 'self'` blocks ALL inline scripts, so every JS approach (T8/T12/T13)
+> failed silently on the live/prod build. T14 = pure HTML native autoplay + <source
+> media>, no JS. SHIPPING to main per operator. — Prior (superseded): T13 inline
+> (CSP-blocked). Earlier: T12 (mobile loop dead +
+> broken on real iPhone after T12; stuck on poster frame). Fix: arm the source
+> SYNCHRONOUSLY at parse via an inline script + native autoplay + interaction
+> fallback (T12's deferred load-event .play() is too late for iOS). One commit
+> `T13:`, full spec in "PHASE T13" below. Dispatch to Codex; push to main
+> immediately when fixed (operator authorized). — Prior: T12 HERO VIDEO FIX (mobile loop dead +
 > lag). Root cause: T8 replaced native autoplay with a one-shot JS .play() on a
 > preload=none video → fails silently on mobile, no retry, but load() churns the
 > decoder → dead poster + laggy UI. Fix: re-added `autoplay` (self-retrying native
@@ -118,6 +129,94 @@ Done when: the hero poster is preloaded high-priority on the homepage only; hero
 videos carry fetchpriority high and section videos fetchpriority low; the hero still
 loads/plays as before (deferred, one device video, behind poster); no other page
 preloads the hero poster; build + check green.
+
+## PHASE T14 — mobile hero autoplay, NO-JS / CSP-safe (operator-critical, 2026-07-09)
+
+CRITICAL DISCOVERY: T13's inline `<script is:inline>` is BLOCKED by the production
+CSP in Base.astro (`script-src 'self'` — no `'unsafe-inline'`, no hash). So the
+inline script never runs, the `<source>` src is never set, and the hero stays a
+dead poster frame. (Confirmed: dist has the script but the video has no src at
+runtime; script-src is 'self'.) DO NOT use any inline/JS approach for the hero
+video — it will be blocked. The fix must be pure HTML + native autoplay.
+
+GOAL: hero autoplays+loops reliably on iOS, CSP-safe (no JS), single-video load,
+per-device quality. ONE commit `T14:`, scope = `src/components/blocks/HeroVideo.astro`
++ `src/styles/global.css` + `src/layouts/Base.astro`. Build + check green.
+
+Wiring (pure HTML, no JS):
+1. In HeroVideo.astro, REPLACE the two `<video>` elements AND the T13 inline
+   `<script is:inline>` with a SINGLE `<video>`:
+   ```
+   <video class="hero-video__media" autoplay muted loop playsinline preload="auto"
+          {...heroVideoPriorityAttrs} poster={withBase("/videos/hero-poster.webp")}>
+     <source src={withBase("/videos/homepage-hero-mobile.mp4")} media="(max-width: 760px)" type="video/mp4" />
+     <source src={withBase("/videos/homepage-hero.mp4")} type="video/mp4" />
+   </video>
+   ```
+   - Real `src` in the HTML at parse (native autoplay ⇒ reliable iOS playback), NO
+     data-src, NO inline script.
+   - Mobile source FIRST with `media` so mobile loads the 720p; desktop the 1080p.
+     The browser loads only the matching source (single-load). If a browser ignores
+     `media` on `<source>`, it uses the first (mobile) source — still single-load
+     and still plays (acceptable). Mobile source first guarantees iOS mobile gets a
+     working source regardless.
+2. Remove the now-unused two-element markup and any leftover hero-video JS in the
+   module script (loadActiveHeroVideo etc. were already removed in T13 — verify
+   none remains; remove unused consts).
+3. global.css: replace the `.hero-video__media--desktop` / `--mobile` display-toggle
+   rules with styling for the single `.hero-video__media` (full-bleed background
+   cover exactly as the videos render now — object-fit:cover, positioning, etc.).
+4. Base.astro: simplify the hero-poster preload to the single poster
+   `/videos/hero-poster.webp` (remove the mobile-poster preload + the two media
+   conditions); keep it landing-scoped + `fetchpriority="high"`.
+5. Keep everything else (fetchpriority attrs, reducedMotionQuery for the typewriter,
+   section-video preload=none, etc.). Leave the now-unused homepage-hero-mobile
+   poster file in place (cleanup later).
+Done when: exactly ONE hero `<video>` with native `autoplay` and `<source>` in the
+HTML (NO inline/JS for the hero); it autoplays+loops; only one source loads per
+viewport; build + `astro check` green; the CSP is unchanged (still no unsafe-inline).
+Claude will verify in Chromium that the video plays with the CSP applied and only
+one source loads; operator confirms on iPhone.
+
+## PHASE T13 — mobile hero MUST reliably autoplay+loop on iOS (operator-critical, 2026-07-09)
+
+CRITICAL: on real iOS Safari the mobile hero is stuck on the poster frame (no
+loop). Root cause: T8/T12 set the video `<source>` src and call `.play()` from a
+`load`-event / requestIdleCallback — that's TOO LATE for iOS autoplay (iOS only
+grants muted-inline autoplay during initial parse/load, not from a late deferred
+callback). Chromium is lenient so it looked fine in tests; iOS is not.
+
+GOAL: the mobile hero autoplays + loops reliably on iOS from first display, at
+quality (desktop full 1080p homepage-hero.mp4, mobile 720p homepage-hero-mobile.mp4),
+while still loading ONLY the device's video. ONE commit `T13:`, scope =
+`src/components/blocks/HeroVideo.astro`. Build + check green.
+
+Wiring (the key change: arm the source SYNCHRONOUSLY during parse, not deferred):
+1. Keep both hero `<video>` with `autoplay muted loop playsinline preload="auto"`
+   + their existing `poster`. Keep `<source data-src=...>` (NO `src` at parse) so
+   neither video loads until selected.
+2. Add a `<script is:inline>` IMMEDIATELY AFTER the two `<video>` elements (must be
+   `is:inline` so it renders inline and runs SYNCHRONOUSLY during parse, before
+   first paint — this timing is the whole fix). It must:
+   - pick the viewport-matching video: `window.matchMedia("(max-width: 760px)").matches`
+     → `.hero-video__media--mobile`, else `.hero-video__media--desktop`;
+   - set that video's `<source>` `src` from `data-src`, remove the `data-src`, call
+     `video.load()`;
+   - call `video.play()` and swallow rejection; retry once on the video's `canplay`;
+   - add a ONE-TIME global fallback: first `pointerdown`/`touchstart`/`scroll`
+     (once, passive) → call that video's `.play()` (covers iOS Low Power Mode,
+     which blocks all autoplay until an interaction);
+   - leave the non-matching video's `data-src` untouched (it never loads).
+3. REMOVE the now-obsolete `loadActiveHeroVideo` / `scheduleHeroVideoLoad` and the
+   `document.readyState`/`load`-event trigger from the module `<script>` (they are
+   superseded and were the broken deferral). Keep `reducedMotionQuery` (still used
+   by the typewriter). Remove any consts left unused by this deletion.
+4. Do NOT touch: the poster preload links in Base.astro, fetchpriority attrs, the
+   CSS `--desktop`/`--mobile` display toggle, or the video files.
+Done when: the visible mobile hero autoplays+loops from load (currentTime advances)
+and only the device video loads (non-matching stays unloaded); desktop unaffected;
+build + `astro check` green. (iOS is the real test — Claude will chromium-verify
+single-load + playback, then ship; operator confirms on iPhone.)
 
 ## PHASE T8 — media/perf pass: hero delivery + WebP images (operator, 2026-07-08)
 

@@ -52,29 +52,17 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
   </div>
 
   <video
-    class="hero-video__media hero-video__media--desktop"
+    class="hero-video__media"
     autoplay
     muted
     loop
     playsinline
-    preload="none"
+    preload="auto"
     {...heroVideoPriorityAttrs}
     poster={withBase("/videos/hero-poster.webp")}
   >
-    <source data-src={withBase("/videos/homepage-hero.mp4")} type="video/mp4" />
-  </video>
-
-  <video
-    class="hero-video__media hero-video__media--mobile"
-    autoplay
-    muted
-    loop
-    playsinline
-    preload="none"
-    {...heroVideoPriorityAttrs}
-    poster={withBase("/videos/hero-poster-mobile.webp")}
-  >
-    <source data-src={withBase("/videos/homepage-hero-mobile.mp4")} type="video/mp4" />
+    <source src={withBase("/videos/homepage-hero-mobile.mp4")} media="(max-width: 760px)" type="video/mp4" />
+    <source src={withBase("/videos/homepage-hero.mp4")} type="video/mp4" />
   </video>
 
   <button
@@ -397,8 +385,6 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
   const catalogDataNode = hero?.querySelector<HTMLScriptElement>("#catalog-data");
   const heroMenuElement = hero?.querySelector<HTMLElement>(".hero__menu");
   const nowPlayingRoot = hero?.querySelector<HTMLElement>("[data-now-playing]");
-  const desktopHeroVideo = hero?.querySelector<HTMLVideoElement>(".hero-video__media--desktop");
-  const mobileHeroVideo = hero?.querySelector<HTMLVideoElement>(".hero-video__media--mobile");
   const menuSections = hero ? Array.from(hero.querySelectorAll<HTMLElement>("[data-hero-dropdown]")) : [];
   const subgroupToggles = hero ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-menu-subgroup]")) : [];
   const mobileQuery = window.matchMedia("(max-width: 760px)");
@@ -472,44 +458,6 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
   const sectionCollapseTokens = new WeakMap<HTMLElement, number>();
   const subgroupCollapseTokens = new WeakMap<HTMLElement, number>();
   const menuCollapseAnimations = new WeakMap<HTMLElement, Animation>();
-
-  const loadActiveHeroVideo = () => {
-    // Only the viewport-matching hero video gets a source (so just one downloads).
-    // Native `autoplay` on the element then handles robust, self-retrying playback
-    // once the source is set — a one-shot .play() here was fragile on mobile
-    // (fired before the video was ready, failed silently, no loop).
-    const video = mobileQuery.matches ? mobileHeroVideo : desktopHeroVideo;
-    if (!video || video.dataset.loaded === "true") return;
-
-    const source = video.querySelector<HTMLSourceElement>("source[data-src]");
-    const src = source?.dataset.src;
-    if (!source || !src) return;
-
-    source.src = src;
-    source.removeAttribute("data-src");
-    video.dataset.loaded = "true";
-    video.load();
-    void video.play().catch(() => undefined);
-  };
-
-  const scheduleHeroVideoLoad = () => {
-    const idleWindow = window as Window & {
-      requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number;
-    };
-
-    if (idleWindow.requestIdleCallback) {
-      idleWindow.requestIdleCallback(loadActiveHeroVideo, { timeout: 1200 });
-      return;
-    }
-
-    window.setTimeout(loadActiveHeroVideo, 250);
-  };
-
-  if (document.readyState === "complete") {
-    scheduleHeroVideoLoad();
-  } else {
-    window.addEventListener("load", scheduleHeroVideoLoad, { once: true });
-  }
 
   const isCartOpen = () => document.querySelector(".cart-drawer")?.classList.contains("is-open") ?? false;
   const isMobileSearchViewport = () => window.matchMedia("(max-width: 760px)").matches;
