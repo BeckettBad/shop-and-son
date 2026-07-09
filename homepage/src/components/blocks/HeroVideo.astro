@@ -51,24 +51,24 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
 
   <video
     class="hero-video__media hero-video__media--desktop"
-    autoplay
     muted
     loop
     playsinline
-    preload="metadata"
+    preload="none"
+    poster={withBase("/videos/hero-poster.webp")}
   >
-    <source src={withBase("/videos/homepage-hero.mp4")} type="video/mp4" />
+    <source data-src={withBase("/videos/homepage-hero.mp4")} type="video/mp4" />
   </video>
 
   <video
     class="hero-video__media hero-video__media--mobile"
-    autoplay
     muted
     loop
     playsinline
-    preload="metadata"
+    preload="none"
+    poster={withBase("/videos/hero-poster-mobile.webp")}
   >
-    <source src={withBase("/videos/homepage-hero-mobile.mp4")} type="video/mp4" />
+    <source data-src={withBase("/videos/homepage-hero-mobile.mp4")} type="video/mp4" />
   </video>
 
   <button
@@ -76,11 +76,11 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     class="hero__stencil"
     data-film-open
     aria-label="about & son"
-    style={`--stencil-mask-url:url("${withBase("/images/hero-stencil.png")}")`}
+    style={`--stencil-mask-url:url("${withBase("/images/hero-stencil.webp")}")`}
   ></button>
 
   <div class="hero__dj dj-content-wrapper" aria-hidden="true">
-    <img class="dj-cutout-image" src={withBase("/images/dj-in-action-cutout.png")} alt="" />
+    <img class="dj-cutout-image" src={withBase("/images/dj-in-action-cutout.webp")} alt="" />
     <span class="music-notes-layer">
       <span class="music-note music-note--single music-note--1" aria-hidden="true">
         <svg viewBox="0 0 24 32" focusable="false">
@@ -308,7 +308,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
 
   <aside class="hero__film" aria-hidden="true">
     <div class="hero__film-frame">
-      <video class="hero__film-video" src={withBase("/videos/about-film.mp4")} preload="metadata" playsinline></video>
+      <video class="hero__film-video" src={withBase("/videos/about-film.mp4")} preload="none" playsinline></video>
       <button type="button" class="hero__film-close" data-film-close aria-label="Close">&times;</button>
       <button type="button" class="hero__film-playback" data-film-playback aria-label="Play film">
         <svg class="hero__film-glyph hero__film-glyph--play" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
@@ -324,7 +324,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   </aside>
 
   <aside class="hero__fam" aria-hidden="true">
-    <img class="hero__fam-image" src={withBase("/images/fam-tattoo.jpg")} alt="& fam" />
+    <img class="hero__fam-image" src={withBase("/images/fam-tattoo.webp")} alt="& fam" />
     <p class="hero__fam-copy">
       an interview series that takes an in-depth look at designers we carry like you've never seen them before, unless you're related to them.
     </p>
@@ -391,6 +391,8 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   const catalogDataNode = hero?.querySelector<HTMLScriptElement>("#catalog-data");
   const heroMenuElement = hero?.querySelector<HTMLElement>(".hero__menu");
   const nowPlayingRoot = hero?.querySelector<HTMLElement>("[data-now-playing]");
+  const desktopHeroVideo = hero?.querySelector<HTMLVideoElement>(".hero-video__media--desktop");
+  const mobileHeroVideo = hero?.querySelector<HTMLVideoElement>(".hero-video__media--mobile");
   const menuSections = hero ? Array.from(hero.querySelectorAll<HTMLElement>("[data-hero-dropdown]")) : [];
   const subgroupToggles = hero ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-menu-subgroup]")) : [];
   const mobileQuery = window.matchMedia("(max-width: 760px)");
@@ -464,6 +466,42 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   const sectionCollapseTokens = new WeakMap<HTMLElement, number>();
   const subgroupCollapseTokens = new WeakMap<HTMLElement, number>();
   const menuCollapseAnimations = new WeakMap<HTMLElement, Animation>();
+
+  const loadActiveHeroVideo = () => {
+    if (reducedMotionQuery.matches) return;
+
+    const video = mobileQuery.matches ? mobileHeroVideo : desktopHeroVideo;
+    if (!video || video.dataset.loaded === "true") return;
+
+    const source = video.querySelector<HTMLSourceElement>("source[data-src]");
+    const src = source?.dataset.src;
+    if (!source || !src) return;
+
+    source.src = src;
+    source.removeAttribute("data-src");
+    video.dataset.loaded = "true";
+    video.load();
+    void video.play().catch(() => undefined);
+  };
+
+  const scheduleHeroVideoLoad = () => {
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number;
+    };
+
+    if (idleWindow.requestIdleCallback) {
+      idleWindow.requestIdleCallback(loadActiveHeroVideo, { timeout: 1200 });
+      return;
+    }
+
+    window.setTimeout(loadActiveHeroVideo, 250);
+  };
+
+  if (document.readyState === "complete") {
+    scheduleHeroVideoLoad();
+  } else {
+    window.addEventListener("load", scheduleHeroVideoLoad, { once: true });
+  }
 
   const isCartOpen = () => document.querySelector(".cart-drawer")?.classList.contains("is-open") ?? false;
   const isMobileSearchViewport = () => window.matchMedia("(max-width: 760px)").matches;
