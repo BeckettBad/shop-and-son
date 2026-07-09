@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import TopBar from "../components/TopBar.astro";
 import IndexOverlay from "../components/IndexOverlay.astro";
+import SiteFooter from "../components/SiteFooter.astro";
 import { site } from "../data/content.ts";
 import { withBase } from "../lib/url.ts";
 
@@ -70,6 +71,7 @@ const contentSecurityPolicy = [
     {!landing && !bare && <TopBar />}
     <slot />
     {!landing && !bare && <IndexOverlay />}
+    <SiteFooter />
 
     <script type="module" src={withBase("/scripts/base.js")}></script>
   </body>

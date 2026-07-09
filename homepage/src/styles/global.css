@@ -17,7 +17,7 @@
 }
 *{box-sizing:border-box; margin:0; padding:0}
 html{scroll-behavior:smooth}
-html.landing,html.landing body{overflow:hidden; height:100%}
+html.landing,html.landing body{overflow-x:hidden}
 body{
   font-family:var(--mono); font-size:15px; color:var(--ink); background:var(--paper);
   text-transform:lowercase;            /* the catalog register — matches shopandson.com */
@@ -2284,4 +2284,65 @@ html.cart-ready .cart-drawer.is-open{transition:transform .55s ease-in-out,visib
   .policy-page__back::after,
   .product-detail__back::after,
   .product-detail__home-link::after{inset:-16px -4px}
+}
+
+/* ============================================================
+   site footer / newsletter  (the &son Chronicle + subscribe)
+   rendered on every page via Base, reached by scrolling to end
+   ============================================================ */
+.site-footer{width:100%; margin:0; background:transparent}
+.site-footer__break{
+  border:0; border-top:1px solid var(--ink); opacity:.55; margin:0;
+}
+.site-footer__break + .site-footer__break{margin-top:3px}
+.site-footer__panel{
+  background:#BAA995;
+  padding:clamp(30px,5vw,66px) clamp(16px,4vw,56px);
+  display:flex; flex-direction:column; align-items:center;
+  gap:clamp(22px,3.4vw,40px);
+}
+.site-footer__chronicle{
+  display:block; width:min(560px,74vw); height:auto;
+}
+.site-footer__form{
+  display:flex; align-items:stretch;
+  width:min(900px,94vw);
+  border:2px solid var(--ink);
+  background:rgba(255,255,255,.06);
+}
+.site-footer__email{
+  flex:1 1 auto; min-width:0;
+  border:0; background:transparent; outline:none;
+  font-family:var(--mono-ui); font-size:clamp(16px,1.7vw,20px);
+  letter-spacing:.03em; color:var(--ink);
+  padding:16px 20px;
+}
+.site-footer__email::placeholder{
+  font-family:var(--mono-ui); color:var(--ink); opacity:.65;
+  text-transform:lowercase; letter-spacing:.03em;
+}
+.site-footer__email:read-only{opacity:.7}
+.site-footer__subscribe{
+  flex:0 0 auto;
+  border:0; border-left:2px solid var(--ink);
+  background:transparent; cursor:pointer;
+  font-family:var(--mono-ui); font-size:clamp(16px,1.7vw,20px);
+  letter-spacing:.05em; color:var(--ink); text-transform:lowercase;
+  padding:16px clamp(22px,3vw,44px);
+  transition:background-color .18s ease, border-color .18s ease;
+}
+.site-footer__subscribe:hover{background:rgba(255,255,255,.14)}
+/* success: only the box highlights neon, font color stays put */
+.site-footer__subscribe.is-subscribed,
+.site-footer__subscribe.is-subscribed:hover{
+  background:var(--neon-green);
+  border-color:var(--neon-green);
+  cursor:default;
+}
+@media (max-width:480px){
+  .site-footer__form{flex-direction:column; width:min(440px,94vw)}
+  .site-footer__subscribe{
+    border-left:0; border-top:2px solid var(--ink);
+    text-align:center; padding:14px;
+  }
 }

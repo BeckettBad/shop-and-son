@@ -1,0 +1,44 @@
+---
+import { withBase } from "../lib/url.ts";
+
+// Site-wide footer: the &son Chronicle masthead over a taupe panel with the
+// newsletter signup. Rendered on every page via Base, reachable by scrolling
+// to the bottom of the page. The subscribe interaction lives in base.js
+// (bundled) because the prod CSP blocks inline scripts.
+---
+<footer class="site-footer" data-site-footer>
+  <hr class="site-footer__break" />
+  <hr class="site-footer__break" />
+  <div class="site-footer__panel">
+    <img
+      class="site-footer__chronicle"
+      src={withBase("/images/chronicle-neon.png")}
+      alt={`The &son Chronicle`}
+      width="1184"
+      height="602"
+      loading="lazy"
+      decoding="async"
+    />
+    <form
+      class="site-footer__form"
+      data-subscribe-form
+      action="https://shopandson.com/contact#contact_form"
+      method="post"
+    >
+      <input type="hidden" name="form_type" value="customer" />
+      <input type="hidden" name="utf8" value="✓" />
+      <input type="hidden" name="contact[tags]" value="newsletter" />
+      <input
+        class="site-footer__email"
+        type="email"
+        name="contact[email]"
+        required
+        placeholder="email"
+        aria-label="email"
+        autocomplete="email"
+        data-subscribe-email
+      />
+      <button class="site-footer__subscribe" type="submit" data-subscribe-btn>subscribe</button>
+    </form>
+  </div>
+</footer>

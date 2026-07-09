@@ -36,3 +36,31 @@ const overHero = () => {
 overHero();
 window.addEventListener("scroll", overHero, { passive: true });
 window.addEventListener("resize", overHero, { passive: true });
+
+// footer newsletter subscribe: optimistic success, fire-and-forget to Shopify.
+// Bundled here (not inline) because the prod CSP blocks inline scripts.
+const subForm = document.querySelector("[data-subscribe-form]");
+if (subForm) {
+  subForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const btn = subForm.querySelector("[data-subscribe-btn]");
+    const email = subForm.querySelector("[data-subscribe-email]");
+    if (!email || !email.value || !email.checkValidity()) {
+      email?.reportValidity?.();
+      return;
+    }
+    try {
+      fetch(subForm.action, {
+        method: "POST",
+        body: new FormData(subForm),
+        mode: "no-cors",
+      }).catch(() => {});
+    } catch (_) {}
+    if (btn) {
+      btn.classList.add("is-subscribed");
+      btn.textContent = "subscribed";
+      btn.disabled = true;
+    }
+    email.readOnly = true;
+  });
+}
