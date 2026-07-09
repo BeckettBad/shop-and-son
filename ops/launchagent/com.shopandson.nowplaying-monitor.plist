@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  &son now-playing monitor. Runs the health check every 30 minutes.
+  Install: copy this file to ~/Library/LaunchAgents/ then:
+    launchctl load ~/Library/LaunchAgents/com.shopandson.nowplaying-monitor.plist
+  See ../MONITORING.md for the full setup (including the alert Shortcut).
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.shopandson.nowplaying-monitor</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/robo/Desktop/Shop &amp; Sons/ops/now-playing-healthcheck.sh</string>
+  </array>
+
+  <key>StartInterval</key>
+  <integer>1800</integer>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/robo/Desktop/Shop &amp; Sons/ops/.state/launchd.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/robo/Desktop/Shop &amp; Sons/ops/.state/launchd.err.log</string>
+</dict>
+</plist>

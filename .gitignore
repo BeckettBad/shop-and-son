@@ -30,3 +30,6 @@ pnpm-debug.log*
 
 # personal Claude Code settings (not shared with the public repo)
 .claude/settings.local.json
+
+# monitor runtime state (logs, last-status, test artifacts)
+ops/.state/

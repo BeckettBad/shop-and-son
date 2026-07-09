@@ -58,27 +58,402 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 > **Phases G–J are SHIPPED** (merged `dev → main` @ `012f918`, live). Do not re-do
 > any of them; their brief text lives in this file's git history + the sections below.
 
-**Status:** ready for Codex — Phase S (functionality-sweep fixes, from the
-2026-07-08 3-agent audit; report at repo root
-`SITE-FUNCTIONALITY-SWEEP-2026-07-08.md`, untracked). Phase R is complete and
-shipping; every section below is history, not instruction.
+**Status:** ready for Codex — Phase T (operator edits 2026-07-08, "no text overlay
+anywhere, especially mobile" pass; 4 commits T1–T4). Phase S SHIPPED (PR #19).
+Everything below Phase T is history, not instruction.
 
 **DISPATCH PROTOCOL — one sub-task per `./dispatch-codex.sh` run, one commit
 each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: PHASE S — functionality-sweep fixes (audit, 2026-07-08).
-> One commit `S1:` to `homepage/public/scripts/now-playing.js` only, one
-> dispatch. Do NOT push until operator says "ship". Full spec in "PHASE S" below.
-> Status: ready for Codex.
-> Context: Phase R DONE + SECURITY-PASSED @ ef95cc8, shipping to main per
-> operator. Standing operator TODOs from that pass (not Codex work): Cloudflare
-> rate-limit on /toggle, rotate the chat-exposed client secret, remove the Mac
-> test device from ALLOWED_DEVICES on deploy. The worker apostrophe-normalize
-> (audit M4) is applied direct by Claude, out of homepage scope — NOT in S1.**
+> **ACTIVE SUB-TASK: (none) — PHASE T COMPLETE, SHIPPING to main per operator
+> ("ship all changes to main + merge pr"). T1-T10 + T3b/T3c + worker-config +
+> monitor all on dev, build+check green. Operator authorized the merge.**
 
 ---
+
+## PHASE T9 — bias the hero video over other videos in render priority (operator, 2026-07-08)
+
+Operator wants the background hero video favored over the section films in render
+priority (quality half is done: mobile hero already re-encoded to CRF22 720p 1.9MB,
+same filename, no code change for it). ONE commit `T9:`, scope = `src/components/
+blocks/HeroVideo.astro` (+ `src/layouts/Base.astro` if needed for the head preload).
+Build + check green. Do NOT push. Keep the T8 deferred-hero behavior intact (only
+device hero loads, after first paint, behind poster).
+
+Changes (progressive hints; do not break anything if a browser ignores them):
+
+1. **Preload the hero poster at high priority** so the hero is the first paint.
+   Add two device-conditional preload links to the document `<head>`:
+   `<link rel="preload" as="image" href={withBase("/videos/hero-poster.webp")} media="(min-width:761px)" fetchpriority="high">`
+   and the mobile one with `href=".../hero-poster-mobile.webp" media="(max-width:760px)"`.
+   The `<head>` lives in Base.astro — **scope these to pages that actually render the
+   hero (the homepage)**, not every page (don't preload an unused image on product/
+   policy pages). Use whatever Astro mechanism is cleanest (a head slot the homepage
+   fills, a prop/flag, or a conditional). The poster URL matches the `<video poster>`
+   so the browser fetches once, just at high priority + early.
+
+2. **Hero video = high priority:** add `fetchpriority="high"` to both hero `<video>`
+   elements (the `--desktop` and `--mobile` ones). It already loads first (T8 JS,
+   after paint) — this reinforces it.
+
+3. **Section videos = low priority:** add `fetchpriority="low"` to the section
+   videos (the about-film `<video>` ~line 311, and any about / new-arrivals video
+   elements) so that when they load on demand they never compete with the hero.
+   They are already `preload="none"`; leave their sources/quality unchanged.
+
+Done when: the hero poster is preloaded high-priority on the homepage only; hero
+videos carry fetchpriority high and section videos fetchpriority low; the hero still
+loads/plays as before (deferred, one device video, behind poster); no other page
+preloads the hero poster; build + check green.
+
+## PHASE T8 — media/perf pass: hero delivery + WebP images (operator, 2026-07-08)
+
+Perf pass from a measured Lighthouse audit (mobile, sim 4G): LCP 7.9s, total 8.9MB,
+TBT 0 / CLS 0 (our code is clean — this is all media). Root causes: BOTH hero
+videos download (2.6MB each; one is wasted), plus heavy PNG/JPG. Goal: cut landing
+weight with ZERO quality loss to product imagery (Shopify CDN, untouched) and the
+watched films (untouched). ONE commit `T8:`, scope = `src/components/blocks/
+HeroVideo.astro` (+ verify no CSS breakage). Build + check green. Do NOT push.
+
+ASSETS ALREADY CREATED + PLACED by Claude (do not regenerate):
+- `public/videos/homepage-hero-mobile.mp4` — already replaced with a right-sized
+  1280×720 version (2.5MB→1.0MB, near-lossless). Just reference it as today.
+- `public/videos/hero-poster.webp` (desktop, 32K), `public/videos/hero-poster-mobile.webp` (mobile, 9K) — poster stills.
+- `public/images/dj-in-action-cutout.webp` (150K), `public/images/hero-stencil.webp` (228K), `public/images/fam-tattoo.webp` (192K) — high-quality WebP, dims + alpha preserved. Originals (.png/.jpg) are kept alongside for now — do NOT delete them (quality validation; cleanup later).
+
+Changes:
+
+1. **Hero video: load ONLY the device's video, deferred, with a poster.** Today two
+   `<video autoplay muted loop playsinline preload="metadata">` (lines ~52-72) both
+   download on load (5.2MB, one wasted). Rework so:
+   - Add posters: desktop video `poster={withBase("/videos/hero-poster.webp")}`,
+     mobile video `poster={withBase("/videos/hero-poster-mobile.webp")}` — the
+     poster paints immediately for a fast LCP.
+   - Defer + single-load: remove `autoplay`, set `preload="none"`, and move each
+     source URL off the eager `<source src>` into a `data-src` (so nothing downloads
+     on load). Then in the hero script, AFTER first paint (window `load` event, or
+     `requestIdleCallback` with a `setTimeout` fallback), pick ONLY the
+     viewport-matching video via `matchMedia("(max-width:760px)")`, set its source
+     from `data-src`, then `.load()` + `.play()` (muted, so autoplay-by-JS is
+     allowed). The non-matching video never loads. Keep `muted loop playsinline`.
+   - Respect `prefers-reduced-motion`: if reduced, keep the poster and do not
+     autoplay the video.
+   - Net: one hero downloads, after first paint; poster shows instantly; mobile
+     uses the right-sized file.
+
+2. **Swap the three images to the WebP already placed:**
+   - Line ~79: `--stencil-mask-url` `/images/hero-stencil.png` → `.webp` (this is a
+     CSS mask; WebP alpha works as a mask in modern browsers — verify the stencil
+     still masks correctly).
+   - Line ~83: `dj-in-action-cutout.png` → `.webp`.
+   - Line ~327: `fam-tattoo.jpg` → `.webp`.
+
+3. **Section videos `preload="none"`** (minor): the film/section videos (e.g.
+   about-film ~line 311, and any about / new-arrivals videos) — set `preload="none"`
+   so they cost nothing until played. Do not change their sources or quality.
+
+Done when: the landing downloads only ONE hero video, after first paint, with its
+poster showing instantly; the three images load as WebP and render correctly
+(stencil mask, dj cutout, fam image); section videos preload none; the hero still
+plays as a muted looping background once loaded; reduced-motion shows the poster;
+build + check green. (Claude will rebuild + re-run Lighthouse to confirm the win.)
+
+## PHASE T7 — about indent + full-width finish divider + bigger +/− (operator, 2026-07-08)
+
+Follow-up to T4/T5/T6. ONE commit `T7:`, scope = `src/components/blocks/HeroVideo.astro`
++ `src/styles/global.css`. Build + check green. Do NOT push. Keep all other T4-T6
+behavior (word-by-word typing, fast speeds, collapse<expand, variants, reduced-
+motion, the slide-down-to-divider finish).
+
+Three changes:
+
+1. **Slightly indent the about text (universal).** The about description should
+   sit BELOW the designer name AND be slightly indented (shifted right) relative
+   to the name. Add a small left indent to `.hero__catalog-description` (its text),
+   ~1–1.5em, on BOTH variants and BOTH mobile + desktop. The finished divider bar
+   (change 2) must stay FULL width — do NOT indent the bar, only the text.
+
+2. **The finished bar must be a FULL-WIDTH divider, like the original section
+   divider.** Today (T6) the finished typewriter line spans only the about column
+   width (it lives inside `.hero__catalog-description`, which is the flex:1 column,
+   narrower than the head because the × sits to its right). The operator wants the
+   settled bar to be a FULL bar — the same full-head-width line that divides the
+   designer name/about from the catalogue in the collapsed state (the
+   `.hero__catalog-head` `border-bottom`, `1px solid rgba(0,0,0,.5)`), same weight
+   and full width. Behavior: on typewriter finish, the descending typewriter bar
+   "falls into place" and BECOMES this full-width section divider at the (now
+   lower) adjusted position — exactly like the normal divider was before expanding,
+   just lower. Recommended implementation: keep the head `border-bottom` transparent
+   ONLY while actively typing (`.is-typing`); on finish (`.is-expanded`/finished)
+   bring the full-width head `border-bottom` back as the divider and fade the thin
+   typewriter cursor out as it lands on it (or relocate the cursor to be a full-
+   head-width element that ends as the divider) — whichever yields ONE clean full-
+   width line, matching the collapsed divider's width and weight, with the catalogue
+   position unchanged. Collapsed state keeps its full-width divider as now. Collapse
+   reverses cleanly (no double bar, no width pop).
+
+3. **Make +/− even bigger.** The about `+`/`−`
+   (`.hero__catalog-description-separator`) is currently `font-size:1.5em`. Make it
+   noticeably bigger — clearly LARGER than the menu's `+` toggles (which render at
+   the menu header size `clamp(16px,1.6vw,21px)`). Bump to roughly `2em` (tune for
+   balance) and confirm it reads clearly bigger than the menu +/− on BOTH mobile
+   and desktop; keep the neon highlight on `+`, dim on `−`, baseline aligned.
+
+Done when: about text is indented under the name (both variants, both platforms);
+after expanding, the settled divider is ONE full-width line matching the collapsed
+section divider's width + weight, reached by the typewriter falling into place;
+catalogue position unchanged; collapse reverses cleanly; `+`/`−` are clearly bigger
+than the menu +/− on both platforms; build + check green.
+
+## PHASE T6 — typewriter bar becomes the section divider (operator, 2026-07-08)
+
+Follow-up to T5. ONE commit `T6:`, scope = `src/components/blocks/HeroVideo.astro`
+(cursor finish logic) + `src/styles/global.css` (cursor / head divider). Build +
+check green. Do NOT push. Keep all other T4/T5 behavior intact (speeds, full-width
+line, bigger +/−, variants, reduced-motion).
+
+PROBLEM: after the typewriter finishes there are TWO horizontal lines: (1) the
+typewriter cursor line resting at the bottom of the about text
+(`.hero__catalog-description-cursor.is-finished`, at the description's bottom),
+and (2) the section divider below it (`.hero__catalog-head` `border-bottom`, above
+the catalogue). The operator wants only ONE.
+
+DESIRED (operator confirmed the exact behavior): when the last word is typed, the
+typewriter line does NOT stop at the bottom of the text — it CONTINUES animating
+downward and falls into place exactly at the section-divider location (where the
+head border-bottom sits now), becoming the single divider. **The catalogue does
+NOT move** — the divider location is unchanged; only the typewriter line travels
+down to it. End state: exactly ONE horizontal line, at the current section-divider
+position, with the about text above it and the catalogue below (unchanged).
+
+Implementation guidance (Codex's call on exact method, but hit these points):
+- Keep the section-divider position fixed so the catalogue never shifts.
+- On finish, animate the cursor line's vertical position DOWN from the last text
+  line to the section-divider location as a smooth transition ("fall into place"),
+  then resolve to a single line there (e.g. slide the cursor onto the divider and
+  hide the cursor so only the divider shows, or make the cursor the divider and
+  drop the head border-bottom — whichever yields one clean line and no catalogue
+  shift).
+- The cursor currently lives inside `.hero__catalog-description`, which has
+  `overflow:hidden` — that will CLIP the cursor as it slides below the text. Handle
+  this (relax/skip the clip during the slide, or position the finishing line
+  relative to a non-clipping ancestor like `.hero__catalog-head`) so the downward
+  slide is visible.
+- COLLAPSED state must still show its single divider under "NAME +" exactly as
+  now (do not remove the divider that separates the collapsed head from the
+  catalogue). Only the EXPANDED finish should avoid the double line.
+- Collapse (−): reverse cleanly back to the collapsed single-divider state; do not
+  introduce a transient second bar on collapse.
+- Reduced motion: no slide; settle directly to the single-divider end state.
+Done when: after expanding a designer about, exactly ONE horizontal line remains
+(no double bar), reached by the typewriter sliding down into the divider spot; the
+catalogue does not move; collapsed state still shows its single divider; collapse
+reverses cleanly; build + check green.
+
+## PHASE T5 — T4 typewriter revision (operator, 2026-07-08)
+
+Revision of the T4 designer-about feature (@ 540bf07). ONE commit `T5:`, scope =
+`src/components/blocks/HeroVideo.astro` (T4 cursor logic + timing constants) and
+`src/styles/global.css` (T4 CSS: `.hero__catalog-description`,
+`.hero__catalog-description-cursor`, `.hero__catalog-description-separator`).
+Build + check green. Do NOT push. Keep everything else about T4 intact (word-by-
+word typing, reduced-motion instant fallback, +→− state + neon highlight, both
+variants ?about=name/preview, catalog drops fast then types, no overlay).
+
+Five changes:
+
+1. **The typewriter line IS the about↔catalogue separator (full-width bar), not a
+   short word-cursor.** Today `.hero__catalog-description-cursor` is a ~word-width
+   bar that tracks the last word and only becomes full-width on `is-finished`.
+   Change it so the cursor is a FULL-WIDTH horizontal line (the separator between
+   the about section and the catalogue) THROUGHOUT the animation: it sits just
+   below the currently-typed last line and descends line-by-line as words print,
+   then rests as the final divider between about and catalogue. JS
+   (`updateCatalogDescriptionCursor`) should keep positioning it vertically under
+   the last typed line, but width is always full (not the last word's width). This
+   matches the original T4 intent ("the bar drops below each line then drops into
+   place as the divider").
+
+2. **Desktop: the line goes full width.** `.hero__catalog-description` is currently
+   `width:min(100%,76ch)`, which caps the line on desktop. Make the about section
+   (and thus the separator line) span the FULL available width on desktop (remove
+   the 76ch cap). Mobile is already full width (`width:100%`) and its spacing is
+   good — leave mobile width as is. The full-width line should read as the divider
+   spanning the about column.
+
+3. **Bigger +/− icons.** Increase `.hero__catalog-description-separator` from
+   `font-size:1.18em` to roughly `1.5em` (tune for balance) so both the highlighted
+   `+` and the dim `−` are clearly bigger, on mobile AND desktop. Keep the neon
+   `var(--neon-green)` highlight on `+` and the dim `.is-minus` on `−`; keep
+   baseline alignment clean.
+
+4. **Much faster typewriter, universally.** Reduce the timing constants in
+   HeroVideo.astro: `aboutExpandWordMs` (28 → ~9), `aboutCollapseWordMs` (19 → ~5),
+   `aboutHeadAnimationMs` (320 → ~150), and lower the CSS `height` transition on
+   `.hero__catalog-description` (`.32s` → ~`.16s`) and the cursor transitions to
+   match. Tune so it feels snappy and elegant, not janky.
+
+5. **Collapse faster than expand.** Keep the collapse per-word interval strictly
+   less than expand (e.g. ~5ms vs ~9ms) so reverse-typing is visibly quicker.
+
+Done when: on desktop the descending typewriter line and final divider span the
+full width of the about column; `+`/`−` are clearly bigger on both platforms;
+typing is much faster with collapse quicker than expand; the descending line is
+the full-width separator throughout (not a word-width bar); no overlay/clipping;
+reduced-motion still instant; build + check green.
+
+## Log (Phase T)
+
+- 2026-07-08 — T10 & fam vs hero-info overlap (mobile) — build:green check:green — REVERTED T1 (fam panel back to original: image max-height calc(Xvh-7.5em), copy/kicker natural); condensed .hero-info on mobile (font 10→8px, line-height 1.24, p margin 1em→.3em, legal 9→7px) so the bottom-fixed info block clears the centered & fam panel with no overlay. Direct CSS. NOTE: hero-info is NOT hidden on the is-fam view (unlike other stages), which is why it coexists there.
+- 2026-07-08 — T9 bias hero media priority — bacd501 (+ CRF22 hero/poster assets) — build:green check:green — hero videos fetchpriority=high, about-film fetchpriority=low, hero-poster preload links (device-conditional, high) scoped to landing pages only (Base.astro). Mobile hero re-encoded CRF22 720p (1.0MB→1.9MB, operator chose the higher-quality tier since deferred = no LCP cost). Reviewed clean.
+- 2026-07-08 — T8 media/perf pass (hero delivery + WebP) — 3a632d6 — build:green check:green — measured mobile Lighthouse (sim 4G) BEFORE→AFTER: total 8.9MB→1.87MB (−79%), LCP 7.9s→5.1s, perf 70→75, TBT/CLS 0. Only device hero loads (deferred + poster), mobile hero right-sized 2.5MB→1.0MB, dj-cutout 2MB→150K / fam 929K→192K / stencil 552K→228K WebP. Reviewed clean. PENDING: operator quality-check WebP on preview; then remove original .png/.jpg (cleanup) + optional LCP-image right-size.
+- 2026-07-08 — T7 about indent + full-width finish divider + bigger +/− — 9407cea — build:green check:green — description padding-left 1.2em (text indent); on finish the cursor animates left/right to full head width (computed --finish-left/right from head vs description rects) + slides down, then after 170ms is-divider-settled fades the cursor out and restores the full-width head border-bottom as the divider; separator 1.5em→2em. Reviewed clean, dev hot-reloaded no error. Note: separator line-height .58 is tight — operator to eyeball +/− alignment.
+- 2026-07-08 — T6 typewriter bar merges into section divider — bad0887 — build:green check:green — on finish the cursor translateY's down to the head bottom (dividerY computed from head rect) with overflow:visible so it isn't clipped; head border-bottom goes transparent while .is-typing/.is-expanded (via :has) so only one line shows; catalogue position unchanged; collapsed state keeps its border divider. Reviewed clean, dev hot-reloaded no error.
+- 2026-07-08 — T5 about typewriter revision — 8083181 — build:green check:green — cursor now full-width line (left:0/right:0, JS sets translateY only) descending line-by-line then resting as divider; description width min(100%,76ch)→100% (desktop full width); separator +/− 1.18em→1.5em; speeds head 320→150, expand 28→9, collapse 19→5, height transition .32s→.16s. Collapse<expand kept. Reviewed clean, dev hot-reloaded no error.
+- 2026-07-08 — T3b raise mobile search magnifier — 535a6cc — build:green check:green — collapsed magnifier to translateY 0 (var --hero-mobile-search-collapsed-y) for a more even gap above the cart, mobile catalogue/product only. Direct live-tune, operator confirmed mobile spacing.
+- 2026-07-08 — T4 designer about +/− typewriter expand — 540bf07 — build:green check:green (Claude re-ran both) — separator "—"→"+" (var(--neon-green), 1.18em, clickable button row), expands to "−" dim on finish; word-by-word typewriter with a 1px cursor bar (Range-positioned, tracks last line) that becomes the full-width bottom divider on is-finished; description height animates .32s cubic-bezier(.16,1,.3,1) so catalog drops fast to fixed position then types; collapse reverse-types faster (19ms vs 28ms/word); reduced-motion→instant; both collapsed variants via ?about=name(default)/preview; description now flex:0 0 inside head so viewport shrinks (no overlay). Verified --neon-green=#1faa2e exists, no stray refs to old markup. Reviewed clean.
+- 2026-07-08 — T3 relocate mobile search magnifier above cart — a72118c — build:green check:green — gated the left-of-× transform behind .is-search-open for is-catalog/is-product; collapsed falls to base translateY(14px) = one slot above the cart (64px), same x; opens straight to left-of-× via existing .55s transform. Mobile-only, desktop untouched. Reviewed clean, global.css only.
+- 2026-07-08 — T2 now-playing mobile card clickable after renav — 231f23f — build:green check:green — 3-part: HeroVideo section-header handler now calls closeStage when mobile+is-now-playing-open (clears is-music/is-now-playing-open via clearStageCleanup); now-playing.js clears card href in hideNowPlaying+stop; now-playing.css .hero__now-playing[hidden]{display:none}. Traced closeStage for cross-section + collapse + × paths, all correct. Reviewed clean.
+- 2026-07-08 — T1 fam panel copy collision — e1f5425 — build:green check:green — image now flex:1 1 0 (shrinks, object-fit:contain), copy+kicker flex:0 0 auto (always full), .hero__fam min-height:0, mobile image max-height:none. Reviewed clean, global.css only.
+
+## PHASE T — operator edits, "no overlay" pass (2026-07-08)
+
+OVERRIDING PRINCIPLE for T1–T4: **no text overlay anywhere, especially on mobile.**
+Four independent commits `T1:`…`T4:`, one dispatch + one Claude review each, in
+order. All work in `homepage/` only. `npm run build` AND `npx astro check` green
+each. Do NOT push or merge; operator verifies all four on `dev` first.
+
+File map (from a code audit; verify before editing, line numbers approximate):
+- Designer catalog header + `& fam` panel: `src/components/blocks/HeroVideo.astro`.
+- Styles: `src/styles/global.css`. Mobile = `@media (max-width:760px)`; desktop =
+  `@media (min-width:761px)`.
+- Now-playing: poller `public/scripts/now-playing.js`, styles
+  `public/styles/now-playing.css`.
+
+### T1 — `& fam` about-copy collision (commit `T1:`, CSS-only)
+Problem: in `.hero__fam` (HeroVideo.astro ~L319-325) the interview-series copy
+`.hero__fam-copy` overlaps the tattoo image `.hero__fam-image`. Cause (global.css
+~L517-536 desktop, ~L896-907 mobile): `.hero__fam` is a centered flex column with
+`max-height` and NO overflow handling, and the image height is capped at
+`calc(Xvh - 7.5em)` — a fixed 7.5em reservation for copy+kicker+gaps. The copy
+wraps past 7.5em (worse on mobile, narrower column) and overflows onto the image.
+Fix (mobile + desktop): the panel must show image, then FULL copy, then
+"coming soon…", cleanly stacked with a clear gap and NO overlap and NO clipped
+text. Allowed approaches: let the image shrink to the space left by the text
+(`min-height:0`, size image off remaining space instead of the fixed 7.5em),
+and/or reduce copy/kicker size, and/or let the column size to content. Test
+~320-430px mobile widths and desktop.
+Done when: no overlap and no clipped text at any mobile width or desktop; image
+above, full copy + "coming soon…" below.
+
+### T2 — now-playing card stays clickable after mobile renavigation (commit `T2:`)
+Bug: on mobile, after leaving the now-playing stage (tapping another section
+header, collapsing the folder, or the ×), the Spotify song card link stays live/
+clickable. Root causes: (a) HeroVideo.astro (~L2293-2326 section-header handler):
+when another section opens on mobile while now-playing is open, `closeStage` is
+skipped (guard `if (!mobileQuery.matches || !isOpen)`), so `is-now-playing-open`
++ `is-music` stay on `.hero-video` and the CSS open rule (now-playing.css
+~L206-212) keeps the card `visibility:visible; pointer-events:auto`. (b)
+now-playing.js: `hideNowPlaying()` (~L95-101) and `stop()` (~L308-316) clear only
+the MENU link; the CARD link (`data-now-playing-link`) href is cleared ONLY in
+`renderEmptyState()` (~L191).
+Fix (do all three, defense-in-depth):
+1. HeroVideo.astro: when navigating to another section / collapsing on mobile
+   while now-playing is open, tear down the stage state via the existing
+   `setMobileNowPlayingOpen(false)` / `closeStage` path so `is-now-playing-open`
+   and `is-music` clear. Don't break the existing collapse-to-landing or × paths.
+2. now-playing.js: in `hideNowPlaying()` and `stop()`, also
+   `link?.removeAttribute("href")` (mirror renderEmptyState) so the card is a dead
+   link whenever hidden.
+3. now-playing.css: add `.hero__now-playing[hidden]{ display:none; }` so `hidden`
+   is a real gate (currently `.hero__now-playing{display:flex}` beats UA hidden).
+Done when: on mobile, entering now-playing then (a) tapping another section
+header, (b) collapsing via the MUSIC header, (c) the × back button each leave the
+song card immediately non-clickable (no Spotify navigation) and gone. Desktop
+unaffected; normal show/hide still works.
+
+### T3 — relocate mobile search magnifier above the cart (commit `T3:`, mobile CSS)
+MOBILE ONLY (inside `@media (max-width:760px)`). In the catalogue-listing and
+product stages the COLLAPSED search magnifier currently sits at the panel top row
+(left of ×), overlapping the catalog title/about text. Move the collapsed
+magnifier to sit directly ABOVE the cart (vertical stack: magnifier top, cart
+bottom). When opened it animates in a straight line down to its CURRENT end spot
+(left of the ×) — that end position is UNCHANGED. Pure CSS; the class toggles
+`is-open`, `is-search-open`, and stage classes already exist (no JS).
+Implementation (global.css mobile ~L961-974 + `.hero__search` ~L930-936): the
+icon pair is a top-right vertical column; in these stages the cart is at
+`translateY(var(--hero-mobile-cart-stage-y))` (~64px). Put the COLLAPSED
+`.hero__search` in those stages directly above the cart, at
+`translateY(var(--hero-icon-stage-clearance))` (~14px) with the same right-edge x
+as the cart, so it reads magnifier-top / cart-bottom. Add an OPEN override keyed
+on `.hero-video.is-search-open` (scoped to mobile + those stages) applying the
+current end transform `translate(var(--hero-mobile-search-stage-x),
+var(--hero-mobile-search-stage-y))`. Existing `transform .55s ease-in-out` gives
+the straight-line move; no keyframes. Do NOT touch desktop (`min-width:761px`) or
+the input-width expand.
+Done when: on mobile in a catalogue listing AND a product listing, the collapsed
+magnifier sits directly above the cart with NO overlap of the about text; tapping
+it animates straight down to the (unchanged) left-of-× spot and expands the input;
+closing reverses; desktop unchanged.
+
+### T4 — designer about: `+` toggle + typewriter expand (commit `T4:`, THE BIG ONE)
+Context: the designer "about" is the live Shopify collection description, rendered
+in the catalog header `.hero__catalog-head` (HeroVideo.astro ~L270-283) as a
+baseline flex row `.hero__catalog-title` containing `.hero__catalog-title-text`
+(NAME), `.hero__catalog-description-separator` (currently an em-dash "—", hidden
+until a description exists), and `.hero__catalog-description` (the about text,
+currently `-webkit-line-clamp:2`, global.css ~L624-630). The catalog grid is in
+`.hero__catalog-viewport` (flex:1, scrollable) below. `renderCatalogHeader(title,
+description)` (~L1492-1500) fills these; the FULL description is available as
+`reconciledLiveCollection.description` (~L1828). Head is `flex:0 0` so growing it
+shrinks the scroll viewport (does not reflow the grid).
+
+Requirements:
+1. **Separator → `+`.** Replace the em-dash separator with a `+` that is a
+   PERMANENTLY HIGHLIGHTED icon using the site's existing neon accent color,
+   slightly BIGGER than the current separator, mobile + desktop. It signals the
+   row is clickable.
+2. **Clickable row.** The whole "NAME +" row is the tap target; the `+` is the
+   visual cue. Click toggles expand/collapse of the full description.
+3. **Collapsed state → BUILD BOTH VARIANTS behind a dev switch** so the operator
+   can compare: Variant A "name-only" (collapsed shows just "NAME +", no about
+   text) and Variant B "preview" (collapsed shows "NAME +" plus the current
+   1-2 line clamp preview). Expand/typewriter behavior is IDENTICAL in both; only
+   the collapsed rendering differs. Switch via a URL query param
+   `?about=name` (default, Variant A) vs `?about=preview` (Variant B), read once
+   on load; note the exact mechanism in the commit message + Log.
+4. **Expand animation (elegance is explicitly important).** On click, the full
+   description types out WORD-BY-WORD below the designer name, rapid + elegant. A
+   thin cursor "bar" sits just below the line currently being written; when a line
+   fills it wraps (carriage-return) and the bar drops to the next line, staying
+   under the current line until the whole description is printed. When finished
+   the bar settles into place as the divider between the about section and the
+   catalog, with the site's normal about↔catalog margin (adjusted for the taller
+   about). The catalog animates DOWNWARD to a fixed position FAST as the about
+   grows, then stays put while text types (animate the head height / a max-height,
+   easing ~cubic-bezier(.16,1,.3,1), ~250-400ms). When the about is full, the `+`
+   becomes `−` and LOSES its highlight (dim).
+5. **Sizes.** About text slightly bigger than current (mobile + desktop). Keep the
+   expanded about proportionate — it must not eat too much of the catalog; the
+   viewport shrinks/scrolls but stays usable.
+6. **Collapse.** Clicking `−` reverse-types back to "NAME +" in the same
+   typewriter style but ~1.3-1.5× QUICKER than expand; catalog animates back up;
+   `−` returns to highlighted `+`.
+7. **Reduced motion.** If `prefers-reduced-motion: reduce`, skip the typewriter —
+   show/hide the full about instantly (still toggle + / −).
+8. Applies to every designer catalogue (one shared component). Keep existing
+   catalog open/close, search, and product flows intact.
+Layout note: the about moves from an inline 2-line-clamped element after the name
+to a block BELOW the name that expands. Remove the clamp on the EXPANDED
+description; collapsed hides it (A) or shows a small clamp preview (B). NO overlap
+or clipping with the catalog, the "search all" row, or the × at any size, mobile +
+desktop (the no-overlay principle).
+Risks / review focus: most complex change. Verify typewriter elegance; no overlay/
+clipping at mobile widths; catalog still scrollable and not over-compressed; the
++/− + highlight toggle; reduced-motion path; the variant switch; existing catalog/
+search/product flows unbroken; build + check green. Land ONE cohesive `T4:` commit.
 
 ## PHASE S — functionality-sweep fixes (audit, 2026-07-08)
 
@@ -152,6 +527,10 @@ is that single file. Build + check green. Do not touch the worker, `wrangler.tom
 review that `renderedProgress` is read consistently everywhere after the field
 rename, and that the reduced-motion and track-end timers still behave. Confirm
 `npm run build` and `npx astro check` both green.
+
+## Log (Phase S)
+
+- 2026-07-08 — S1 now-playing functionality-sweep fixes — 2a7df65 — build:green check:green — getEasternHour via Intl.formatToParts (M1, iOS-Safari silent-hide), freshness+progress off local receivedAtMs not visitor clock (M2, dropped staleAfterMs/isFresh), album-art host tightened to i.scdn.co (scdn CSP match). Reviewed clean, only now-playing.js staged. Ready for operator verify; not yet on main.
 
 ## Log (Phase R security/correctness)
 

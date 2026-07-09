@@ -13,6 +13,7 @@ interface Props {
   bare?: boolean;
 }
 const { title = `${site.brand} — independent design`, landing = false, bare = false } = Astro.props;
+const preloadHeroPoster = landing;
 const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
 let nowPlayingOrigin = "";
 if (nowPlayingUrl) {
@@ -45,6 +46,14 @@ const contentSecurityPolicy = [
     <title>{title}</title>
     <meta name="generator" content={Astro.generator} />
     <link rel="icon" type="image/svg+xml" href={withBase("/favicon.svg")} />
+    {
+      preloadHeroPoster && (
+        <>
+          <link rel="preload" as="image" href={withBase("/videos/hero-poster.webp")} media="(min-width:761px)" fetchpriority="high" />
+          <link rel="preload" as="image" href={withBase("/videos/hero-poster-mobile.webp")} media="(max-width:760px)" fetchpriority="high" />
+        </>
+      )
+    }
     {
       import.meta.env.PROD && (
         <meta http-equiv="Content-Security-Policy" content={`${contentSecurityPolicy};`} />

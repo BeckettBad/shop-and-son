@@ -5,7 +5,12 @@ workers_dev = true
 
 [vars]
 SPOTIFY_CLIENT_ID = "8890a3933d484ade825a44278a8f5792"
-ALLOWED_DEVICES = "Benjamin's iPad"
+# Spotify's playback API reports this iPad's device name as "iPad" (its iOS
+# device name, still the default), even though audio outputs to the shop's Fosi
+# Audio BT30D PRO amp over Bluetooth — the amp label shown in Spotify's Connect
+# menu is NOT what the API returns. Verified byte-for-byte live 2026-07-08. If
+# the iPad is renamed for a more specific/narrow gate, update this to match.
+ALLOWED_DEVICES = "iPad"
 
 [[kv_namespaces]]
 binding = "NOW_PLAYING_KV"

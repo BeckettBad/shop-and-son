@@ -93,6 +93,7 @@ if (nowPlayingRoot) {
   const hideNowPlaying = () => {
     nowPlayingRoot.hidden = true;
     setMenuLinkState();
+    link?.removeAttribute("href");
     renderedProgress = undefined;
     clearTrackEndTimer();
     stopProgress();
@@ -317,6 +318,7 @@ if (nowPlayingRoot) {
     stopProgress();
     abortController?.abort();
     abortController = undefined;
+    link?.removeAttribute("href");
     hideNowPlaying();
   };
 

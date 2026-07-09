@@ -20,6 +20,8 @@ const catalogData: Record<string, CatalogProduct[]> = Object.fromEntries(catalog
 const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
 const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
+const heroVideoPriorityAttrs: Record<string, string> = { fetchpriority: "high" };
+const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low" };
 
 // Block 1 — desktop: vertical left menu; mobile: horizontal tabs over fullscreen video.
 ---
@@ -51,24 +53,26 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
 
   <video
     class="hero-video__media hero-video__media--desktop"
-    autoplay
     muted
     loop
     playsinline
-    preload="metadata"
+    preload="none"
+    {...heroVideoPriorityAttrs}
+    poster={withBase("/videos/hero-poster.webp")}
   >
-    <source src={withBase("/videos/homepage-hero.mp4")} type="video/mp4" />
+    <source data-src={withBase("/videos/homepage-hero.mp4")} type="video/mp4" />
   </video>
 
   <video
     class="hero-video__media hero-video__media--mobile"
-    autoplay
     muted
     loop
     playsinline
-    preload="metadata"
+    preload="none"
+    {...heroVideoPriorityAttrs}
+    poster={withBase("/videos/hero-poster-mobile.webp")}
   >
-    <source src={withBase("/videos/homepage-hero-mobile.mp4")} type="video/mp4" />
+    <source data-src={withBase("/videos/homepage-hero-mobile.mp4")} type="video/mp4" />
   </video>
 
   <button
@@ -76,11 +80,11 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     class="hero__stencil"
     data-film-open
     aria-label="about & son"
-    style={`--stencil-mask-url:url("${withBase("/images/hero-stencil.png")}")`}
+    style={`--stencil-mask-url:url("${withBase("/images/hero-stencil.webp")}")`}
   ></button>
 
   <div class="hero__dj dj-content-wrapper" aria-hidden="true">
-    <img class="dj-cutout-image" src={withBase("/images/dj-in-action-cutout.png")} alt="" />
+    <img class="dj-cutout-image" src={withBase("/images/dj-in-action-cutout.webp")} alt="" />
     <span class="music-notes-layer">
       <span class="music-note music-note--single music-note--1" aria-hidden="true">
         <svg viewBox="0 0 24 32" focusable="false">
@@ -269,11 +273,18 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
 
   <aside class="hero__catalog" aria-hidden="true">
     <div class="hero__catalog-head">
-      <h2 class="hero__catalog-title">
-        <span class="hero__catalog-title-text" data-catalog-title></span>
-        <span class="hero__catalog-description-separator" data-catalog-description-separator hidden>—</span>
-        <span class="hero__catalog-description" data-catalog-description hidden></span>
-      </h2>
+      <div class="hero__catalog-about" data-catalog-about>
+        <h2 class="hero__catalog-title">
+          <button type="button" class="hero__catalog-about-toggle" data-catalog-about-toggle aria-expanded="false">
+            <span class="hero__catalog-title-text" data-catalog-title></span>
+            <span class="hero__catalog-description-separator" data-catalog-description-separator hidden>+</span>
+          </button>
+        </h2>
+        <p class="hero__catalog-description" data-catalog-description hidden>
+          <span data-catalog-description-copy></span>
+          <span class="hero__catalog-description-cursor" data-catalog-description-cursor aria-hidden="true"></span>
+        </p>
+      </div>
       <button type="button" class="hero__search-all-row" data-search-all-row hidden>search all products →</button>
       <button type="button" class="hero__catalog-close" data-catalog-close aria-label="Close catalogue">&times;</button>
     </div>
@@ -301,7 +312,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
 
   <aside class="hero__film" aria-hidden="true">
     <div class="hero__film-frame">
-      <video class="hero__film-video" src={withBase("/videos/about-film.mp4")} preload="metadata" playsinline></video>
+      <video class="hero__film-video" src={withBase("/videos/about-film.mp4")} preload="none" {...sectionVideoPriorityAttrs} playsinline></video>
       <button type="button" class="hero__film-close" data-film-close aria-label="Close">&times;</button>
       <button type="button" class="hero__film-playback" data-film-playback aria-label="Play film">
         <svg class="hero__film-glyph hero__film-glyph--play" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
@@ -317,7 +328,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   </aside>
 
   <aside class="hero__fam" aria-hidden="true">
-    <img class="hero__fam-image" src={withBase("/images/fam-tattoo.jpg")} alt="& fam" />
+    <img class="hero__fam-image" src={withBase("/images/fam-tattoo.webp")} alt="& fam" />
     <p class="hero__fam-copy">
       an interview series that takes an in-depth look at designers we carry like you've never seen them before, unless you're related to them.
     </p>
@@ -351,8 +362,12 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   const stencil = hero?.querySelector<HTMLElement>(".hero__stencil");
   const dj = hero?.querySelector<HTMLElement>(".hero__dj");
   const catalog = hero?.querySelector<HTMLElement>(".hero__catalog");
+  const catalogAbout = hero?.querySelector<HTMLElement>("[data-catalog-about]");
+  const catalogAboutToggle = hero?.querySelector<HTMLButtonElement>("[data-catalog-about-toggle]");
   const catalogTitle = hero?.querySelector<HTMLElement>("[data-catalog-title]");
   const catalogDescription = hero?.querySelector<HTMLElement>("[data-catalog-description]");
+  const catalogDescriptionCopy = hero?.querySelector<HTMLElement>("[data-catalog-description-copy]");
+  const catalogDescriptionCursor = hero?.querySelector<HTMLElement>("[data-catalog-description-cursor]");
   const catalogDescriptionSeparator = hero?.querySelector<HTMLElement>("[data-catalog-description-separator]");
   const catalogViewport = hero?.querySelector<HTMLElement>("[data-catalog-viewport]");
   const catalogTrack = hero?.querySelector<HTMLElement>("[data-catalog-track]");
@@ -380,14 +395,21 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   const catalogDataNode = hero?.querySelector<HTMLScriptElement>("#catalog-data");
   const heroMenuElement = hero?.querySelector<HTMLElement>(".hero__menu");
   const nowPlayingRoot = hero?.querySelector<HTMLElement>("[data-now-playing]");
+  const desktopHeroVideo = hero?.querySelector<HTMLVideoElement>(".hero-video__media--desktop");
+  const mobileHeroVideo = hero?.querySelector<HTMLVideoElement>(".hero-video__media--mobile");
   const menuSections = hero ? Array.from(hero.querySelectorAll<HTMLElement>("[data-hero-dropdown]")) : [];
   const subgroupToggles = hero ? Array.from(hero.querySelectorAll<HTMLButtonElement>("[data-menu-subgroup]")) : [];
   const mobileQuery = window.matchMedia("(max-width: 760px)");
   const desktopQuery = window.matchMedia("(min-width: 761px)");
+  const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   const preorderDesktopWidth = 1160;
   const stageDuration = 550;
   const fallbackCardAspect = 0.75;
   const searchPredictiveDelayMs = 250;
+  const aboutHeadAnimationMs = 150;
+  const aboutExpandWordMs = 9;
+  const aboutCollapseWordMs = 5;
+  const aboutDividerSettleMs = 170;
   const liveCollectionCache = new Map<string, Promise<CollectionDetail | null>>();
   let filmHasStarted = false;
   let stencilReturnCleanup: (() => void) | undefined;
@@ -439,9 +461,51 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   let searchSessionReturnUrl: URL | null = null;
   let searchSessionHasHistoryEntry = false;
   let nowPlayingClose: HTMLButtonElement | undefined;
+  const catalogAboutVariant = new URLSearchParams(window.location.search).get("about") === "preview" ? "preview" : "name";
+  if (hero) hero.dataset.aboutVariant = catalogAboutVariant;
+  let catalogAboutDescription = "";
+  let catalogAboutExpanded = false;
+  let catalogAboutTypingTimer: ReturnType<typeof window.setTimeout> | undefined;
+  let catalogAboutSettleTimer: ReturnType<typeof window.setTimeout> | undefined;
   const sectionCollapseTokens = new WeakMap<HTMLElement, number>();
   const subgroupCollapseTokens = new WeakMap<HTMLElement, number>();
   const menuCollapseAnimations = new WeakMap<HTMLElement, Animation>();
+
+  const loadActiveHeroVideo = () => {
+    if (reducedMotionQuery.matches) return;
+
+    const video = mobileQuery.matches ? mobileHeroVideo : desktopHeroVideo;
+    if (!video || video.dataset.loaded === "true") return;
+
+    const source = video.querySelector<HTMLSourceElement>("source[data-src]");
+    const src = source?.dataset.src;
+    if (!source || !src) return;
+
+    source.src = src;
+    source.removeAttribute("data-src");
+    video.dataset.loaded = "true";
+    video.load();
+    void video.play().catch(() => undefined);
+  };
+
+  const scheduleHeroVideoLoad = () => {
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number;
+    };
+
+    if (idleWindow.requestIdleCallback) {
+      idleWindow.requestIdleCallback(loadActiveHeroVideo, { timeout: 1200 });
+      return;
+    }
+
+    window.setTimeout(loadActiveHeroVideo, 250);
+  };
+
+  if (document.readyState === "complete") {
+    scheduleHeroVideoLoad();
+  } else {
+    window.addEventListener("load", scheduleHeroVideoLoad, { once: true });
+  }
 
   const isCartOpen = () => document.querySelector(".cart-drawer")?.classList.contains("is-open") ?? false;
   const isMobileSearchViewport = () => window.matchMedia("(max-width: 760px)").matches;
@@ -1490,13 +1554,45 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   };
 
   const renderCatalogHeader = (title: string, description = "") => {
-    if (!catalogTitle || !catalogDescription || !catalogDescriptionSeparator) return;
+    if (!catalogTitle || !catalogDescription || !catalogDescriptionCopy || !catalogDescriptionSeparator) return;
 
+    clearCatalogAboutTyping();
+    clearCatalogAboutSettle();
     const trimmedDescription = description.trim();
     catalogTitle.textContent = title;
-    catalogDescription.textContent = trimmedDescription;
-    catalogDescription.hidden = !trimmedDescription;
+    catalogAboutDescription = trimmedDescription;
+    catalogAboutExpanded = false;
+    catalogAboutToggle?.setAttribute("aria-expanded", "false");
+    catalogAboutToggle?.toggleAttribute("disabled", !trimmedDescription);
+    catalogAboutToggle?.classList.toggle("has-description", Boolean(trimmedDescription));
+    catalogDescriptionSeparator.textContent = "+";
+    catalogDescriptionSeparator.classList.remove("is-minus");
     catalogDescriptionSeparator.hidden = !trimmedDescription;
+
+    if (!trimmedDescription) {
+      catalogDescription.hidden = true;
+      catalogDescriptionCopy.textContent = "";
+      setCatalogAboutClasses("empty");
+      setCatalogDescriptionHeight(0);
+      updateCatalogDescriptionCursor();
+      return;
+    }
+
+    if (catalogAboutVariant === "preview") {
+      const previewHeight = getCatalogDescriptionHeight(trimmedDescription, true);
+      catalogDescription.hidden = false;
+      catalogDescriptionCopy.textContent = trimmedDescription;
+      setCatalogAboutClasses("preview");
+      setCatalogDescriptionHeight(previewHeight);
+      updateCatalogDescriptionCursor();
+      return;
+    }
+
+    catalogDescription.hidden = true;
+    catalogDescriptionCopy.textContent = "";
+    setCatalogAboutClasses("collapsed");
+    setCatalogDescriptionHeight(0);
+    updateCatalogDescriptionCursor();
   };
 
   const renderCatalogGrid = (products: CatalogProduct[], targetScrollTop = 0) => {
@@ -1541,6 +1637,284 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
 
   const getSortedProducts = (products: CatalogProduct[]) =>
     [...products].sort((a, b) => Number(a.available === false) - Number(b.available === false));
+
+  const getCatalogAboutTokens = (description: string) => description.match(/\S+\s*/g) ?? [];
+
+  const clearCatalogAboutTyping = () => {
+    if (!catalogAboutTypingTimer) return;
+
+    window.clearTimeout(catalogAboutTypingTimer);
+    catalogAboutTypingTimer = undefined;
+  };
+
+  const clearCatalogAboutSettle = () => {
+    if (catalogAboutSettleTimer) {
+      window.clearTimeout(catalogAboutSettleTimer);
+      catalogAboutSettleTimer = undefined;
+    }
+
+    catalogAbout?.classList.remove("is-divider-settled");
+  };
+
+  const setCatalogAboutClasses = (state: "empty" | "collapsed" | "preview" | "typing" | "expanded") => {
+    catalogAbout?.classList.toggle("has-description", state !== "empty");
+    catalogAbout?.classList.toggle("is-preview", state === "preview");
+    catalogAbout?.classList.toggle("is-typing", state === "typing");
+    catalogAbout?.classList.toggle("is-expanded", state === "expanded");
+    catalogDescription?.classList.toggle("is-preview", state === "preview");
+    catalogDescription?.classList.toggle("is-typing", state === "typing");
+    catalogDescription?.classList.toggle("is-finished", state === "expanded");
+  };
+
+  const getCatalogDescriptionHeight = (description: string, preview = false) => {
+    if (!catalogDescription || !catalogDescriptionCopy) return 0;
+
+    const wasHidden = catalogDescription.hidden;
+    const previousText = catalogDescriptionCopy.textContent ?? "";
+    const previousHeight = catalogDescription.style.height;
+    const previousPreview = catalogDescription.classList.contains("is-preview");
+    const previousTyping = catalogDescription.classList.contains("is-typing");
+    const previousFinished = catalogDescription.classList.contains("is-finished");
+
+    catalogDescription.hidden = false;
+    catalogDescription.style.height = "auto";
+    catalogDescription.classList.toggle("is-preview", preview);
+    catalogDescription.classList.remove("is-typing", "is-finished");
+    catalogDescription.classList.add("is-measuring");
+    catalogDescriptionCopy.textContent = description;
+    const height = Math.ceil(catalogDescription.scrollHeight);
+
+    catalogDescriptionCopy.textContent = previousText;
+    catalogDescription.style.height = previousHeight;
+    catalogDescription.hidden = wasHidden;
+    catalogDescription.classList.toggle("is-preview", previousPreview);
+    catalogDescription.classList.toggle("is-typing", previousTyping);
+    catalogDescription.classList.toggle("is-finished", previousFinished);
+    catalogDescription.classList.remove("is-measuring");
+    return height;
+  };
+
+  const setCatalogDescriptionHeight = (height: number | "auto") => {
+    if (!catalogDescription) return;
+
+    if (height === "auto") {
+      catalogDescription.style.height = "auto";
+      return;
+    }
+
+    catalogDescription.style.height = `${Math.max(0, Math.ceil(height))}px`;
+  };
+
+  const updateCatalogDescriptionCursor = () => {
+    if (!catalogDescription || !catalogDescriptionCopy || !catalogDescriptionCursor) return;
+    if (catalogDescription.classList.contains("is-finished")) {
+      const descriptionRect = catalogDescription.getBoundingClientRect();
+      const catalogHeadRect = catalogDescription.closest(".hero__catalog-head")?.getBoundingClientRect();
+      const dividerY = catalogHeadRect
+        ? Math.max(0, catalogHeadRect.bottom - descriptionRect.top - 1)
+        : Math.max(0, catalogDescription.getBoundingClientRect().height - 1);
+
+      catalogDescriptionCursor.style.setProperty("--hero-catalog-cursor-finish-y", `${Math.ceil(dividerY)}px`);
+      if (catalogHeadRect) {
+        catalogDescriptionCursor.style.setProperty(
+          "--hero-catalog-cursor-finish-left",
+          `${Math.floor(catalogHeadRect.left - descriptionRect.left)}px`,
+        );
+        catalogDescriptionCursor.style.setProperty(
+          "--hero-catalog-cursor-finish-right",
+          `${Math.floor(descriptionRect.right - catalogHeadRect.right)}px`,
+        );
+      } else {
+        catalogDescriptionCursor.style.removeProperty("--hero-catalog-cursor-finish-left");
+        catalogDescriptionCursor.style.removeProperty("--hero-catalog-cursor-finish-right");
+      }
+      catalogDescriptionCursor.style.removeProperty("transform");
+      return;
+    }
+
+    const descriptionRect = catalogDescription.getBoundingClientRect();
+    const textNode = catalogDescriptionCopy.firstChild;
+    catalogDescriptionCursor.style.removeProperty("--hero-catalog-cursor-finish-y");
+    catalogDescriptionCursor.style.removeProperty("--hero-catalog-cursor-finish-left");
+    catalogDescriptionCursor.style.removeProperty("--hero-catalog-cursor-finish-right");
+
+    if (!textNode || !catalogDescriptionCopy.textContent?.length) {
+      catalogDescriptionCursor.style.transform = "translateY(1.45em)";
+      return;
+    }
+
+    const range = document.createRange();
+    range.setStart(textNode, 0);
+    range.setEnd(textNode, catalogDescriptionCopy.textContent.length);
+    const rects = Array.from(range.getClientRects());
+
+    const lastRect = rects[rects.length - 1];
+    if (!lastRect) return;
+
+    const top = Math.max(0, lastRect.bottom - descriptionRect.top + 3);
+    catalogDescriptionCursor.style.transform = `translateY(${top}px)`;
+  };
+
+  const finishCatalogAboutExpand = () => {
+    catalogAboutExpanded = true;
+    catalogDescriptionSeparator?.classList.add("is-minus");
+    if (catalogDescriptionSeparator) catalogDescriptionSeparator.textContent = "\u2212";
+    setCatalogAboutClasses("expanded");
+    setCatalogDescriptionHeight("auto");
+    updateCatalogDescriptionCursor();
+
+    if (reducedMotionQuery.matches) {
+      catalogAbout?.classList.add("is-divider-settled");
+      return;
+    }
+
+    clearCatalogAboutSettle();
+    catalogAboutSettleTimer = window.setTimeout(() => {
+      catalogAbout?.classList.add("is-divider-settled");
+      catalogAboutSettleTimer = undefined;
+    }, aboutDividerSettleMs);
+  };
+
+  const collapseCatalogAboutInstantly = () => {
+    if (!catalogDescription || !catalogDescriptionCopy || !catalogDescriptionSeparator) return;
+
+    catalogAboutExpanded = false;
+    catalogDescriptionSeparator.textContent = "+";
+    catalogDescriptionSeparator.classList.remove("is-minus");
+    catalogAboutToggle?.setAttribute("aria-expanded", "false");
+
+    if (catalogAboutVariant === "preview") {
+      const previewHeight = getCatalogDescriptionHeight(catalogAboutDescription, true);
+      catalogDescription.hidden = false;
+      catalogDescriptionCopy.textContent = catalogAboutDescription;
+      setCatalogAboutClasses("preview");
+      setCatalogDescriptionHeight(previewHeight);
+      updateCatalogDescriptionCursor();
+      return;
+    }
+
+    catalogDescription.hidden = true;
+    catalogDescriptionCopy.textContent = "";
+    setCatalogAboutClasses(catalogAboutDescription ? "collapsed" : "empty");
+    setCatalogDescriptionHeight(0);
+    updateCatalogDescriptionCursor();
+  };
+
+  const expandCatalogAbout = () => {
+    if (!catalogDescription || !catalogDescriptionCopy || !catalogDescriptionSeparator || !catalogAboutDescription) return;
+
+    clearCatalogAboutTyping();
+    clearCatalogAboutSettle();
+    catalogAboutExpanded = true;
+    catalogAboutToggle?.setAttribute("aria-expanded", "true");
+    catalogDescriptionSeparator.textContent = "+";
+    catalogDescriptionSeparator.classList.remove("is-minus");
+
+    const startHeight = catalogDescription.hidden ? 0 : catalogDescription.getBoundingClientRect().height;
+    const fullHeight = getCatalogDescriptionHeight(catalogAboutDescription);
+    catalogDescription.hidden = false;
+    catalogDescriptionCopy.textContent = reducedMotionQuery.matches ? catalogAboutDescription : "";
+    setCatalogAboutClasses(reducedMotionQuery.matches ? "expanded" : "typing");
+    setCatalogDescriptionHeight(startHeight);
+    updateCatalogDescriptionCursor();
+
+    window.requestAnimationFrame(() => {
+      setCatalogDescriptionHeight(fullHeight);
+
+      if (reducedMotionQuery.matches) {
+        finishCatalogAboutExpand();
+        return;
+      }
+
+      const tokens = getCatalogAboutTokens(catalogAboutDescription);
+      let tokenIndex = 0;
+      const typeNextToken = () => {
+        catalogDescriptionCopy.textContent = tokens.slice(0, tokenIndex).join("");
+        updateCatalogDescriptionCursor();
+
+        if (tokenIndex >= tokens.length) {
+          finishCatalogAboutExpand();
+          return;
+        }
+
+        tokenIndex += 1;
+        catalogAboutTypingTimer = window.setTimeout(typeNextToken, aboutExpandWordMs);
+      };
+
+      catalogAboutTypingTimer = window.setTimeout(typeNextToken, aboutHeadAnimationMs);
+    });
+  };
+
+  const collapseCatalogAbout = () => {
+    if (!catalogDescription || !catalogDescriptionCopy || !catalogDescriptionSeparator || !catalogAboutDescription) return;
+
+    clearCatalogAboutTyping();
+    clearCatalogAboutSettle();
+    catalogAboutExpanded = false;
+    catalogAboutToggle?.setAttribute("aria-expanded", "false");
+
+    if (reducedMotionQuery.matches) {
+      collapseCatalogAboutInstantly();
+      return;
+    }
+
+    const tokens = getCatalogAboutTokens(catalogAboutDescription);
+    let tokenIndex = tokens.length;
+    catalogDescription.hidden = false;
+    catalogDescriptionCopy.textContent = catalogAboutDescription;
+    setCatalogDescriptionHeight(catalogDescription.getBoundingClientRect().height);
+    setCatalogAboutClasses("typing");
+    updateCatalogDescriptionCursor();
+
+    const eraseNextToken = () => {
+      catalogDescriptionCopy.textContent = tokens.slice(0, tokenIndex).join("");
+      updateCatalogDescriptionCursor();
+
+      if (tokenIndex <= 0) {
+        const collapsedHeight =
+          catalogAboutVariant === "preview" ? getCatalogDescriptionHeight(catalogAboutDescription, true) : 0;
+
+        catalogAboutExpanded = false;
+        catalogDescriptionSeparator.textContent = "+";
+        catalogDescriptionSeparator.classList.remove("is-minus");
+
+        if (catalogAboutVariant === "preview") {
+          catalogDescriptionCopy.textContent = catalogAboutDescription;
+          setCatalogAboutClasses("preview");
+          setCatalogDescriptionHeight(collapsedHeight);
+          updateCatalogDescriptionCursor();
+          return;
+        }
+
+        setCatalogAboutClasses("collapsed");
+        setCatalogDescriptionHeight(0);
+        window.setTimeout(() => {
+          if (catalogAboutExpanded) return;
+          catalogDescription.hidden = true;
+        }, aboutHeadAnimationMs);
+        return;
+      }
+
+      tokenIndex -= 1;
+      catalogAboutTypingTimer = window.setTimeout(eraseNextToken, aboutCollapseWordMs);
+    };
+
+    catalogAboutTypingTimer = window.setTimeout(eraseNextToken, aboutCollapseWordMs);
+  };
+
+  const syncCatalogAboutHeight = () => {
+    if (!catalogAboutDescription || !catalogDescription) return;
+
+    if (catalogAboutExpanded) {
+      setCatalogDescriptionHeight("auto");
+      updateCatalogDescriptionCursor();
+      return;
+    }
+
+    if (catalogAboutVariant === "preview" && !catalogDescription.hidden) {
+      setCatalogDescriptionHeight(getCatalogDescriptionHeight(catalogAboutDescription, true));
+    }
+  };
 
   const renderSearchGrid = (
     query: string,
@@ -2073,6 +2447,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
       hero.classList.contains("is-now-playing-open");
 
     clearStageCleanup({ preserveMobileNowPlayingOpen: shouldCollapseMobileNowPlaying });
+    clearCatalogAboutTyping();
     if (shouldCollapseMobileNowPlaying) collapseMobileNowPlayingToLanding();
     filmVideo?.pause();
     resetFilmMute();
@@ -2178,6 +2553,16 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
       return;
     }
     closeStage();
+  });
+  catalogAboutToggle?.addEventListener("click", () => {
+    if (!catalogAboutDescription) return;
+
+    if (catalogAboutExpanded) {
+      collapseCatalogAbout();
+      return;
+    }
+
+    expandCatalogAbout();
   });
   productClose?.addEventListener("click", closeProduct);
   preorderClose?.addEventListener("click", () => {
@@ -2295,8 +2680,11 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
       const isFamSection = section.dataset.fam === "true";
       const isMusicSection = section.dataset.music === "true";
       const isOpen = trigger.getAttribute("aria-expanded") !== "true";
+      const isMobileNowPlayingOpen = Boolean(
+        mobileQuery.matches && hero?.classList.contains("is-now-playing-open"),
+      );
       const collapseMobileNowPlaying = Boolean(
-        isMusicSection && !isOpen && mobileQuery.matches && hero?.classList.contains("is-now-playing-open"),
+        isMusicSection && !isOpen && isMobileNowPlayingOpen,
       );
 
       closeMobileSearchForNavigation();
@@ -2320,7 +2708,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
       }
 
       setMenuSectionState(isOpen ? section : null);
-      if (!mobileQuery.matches || !isOpen) {
+      if (!mobileQuery.matches || !isOpen || isMobileNowPlayingOpen) {
         closeStage({ collapseMobileNowPlaying });
       }
     });
@@ -2334,8 +2722,10 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     preorderObserver?.observe(preorderShell);
     window.addEventListener("resize", resizePreorderFrame);
   }
+  window.addEventListener("resize", syncCatalogAboutHeight);
   ensureMobileNowPlayingClose();
   mobileQuery.addEventListener("change", () => {
+    syncCatalogAboutHeight();
     if (mobileQuery.matches) {
       ensureMobileNowPlayingClose();
       setCurrentMenuSection(hero?.dataset.activeCollection ?? null);
