@@ -52,7 +52,7 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
   </div>
 
   <video
-    class="hero-video__media hero-video__media--desktop"
+    class="hero-video__media"
     autoplay
     muted
     loop
@@ -61,59 +61,9 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
     {...heroVideoPriorityAttrs}
     poster={withBase("/videos/hero-poster.webp")}
   >
-    <source data-src={withBase("/videos/homepage-hero.mp4")} type="video/mp4" />
+    <source src={withBase("/videos/homepage-hero-mobile.mp4")} media="(max-width: 760px)" type="video/mp4" />
+    <source src={withBase("/videos/homepage-hero.mp4")} type="video/mp4" />
   </video>
-
-  <video
-    class="hero-video__media hero-video__media--mobile"
-    autoplay
-    muted
-    loop
-    playsinline
-    preload="auto"
-    {...heroVideoPriorityAttrs}
-    poster={withBase("/videos/hero-poster-mobile.webp")}
-  >
-    <source data-src={withBase("/videos/homepage-hero-mobile.mp4")} type="video/mp4" />
-  </video>
-
-  <script is:inline>
-    (() => {
-      const video = document.querySelector(
-        window.matchMedia("(max-width: 760px)").matches
-          ? ".hero-video__media--mobile"
-          : ".hero-video__media--desktop",
-      );
-      if (!video) return;
-
-      const source = video.querySelector("source[data-src]");
-      const src = source?.getAttribute("data-src");
-      if (!source || !src) return;
-
-      const playHeroVideo = () => {
-        const playPromise = video.play();
-        if (playPromise) playPromise.catch(() => undefined);
-      };
-
-      source.setAttribute("src", src);
-      source.removeAttribute("data-src");
-      video.load();
-      playHeroVideo();
-      video.addEventListener("canplay", playHeroVideo, { once: true });
-
-      const interactionEvents = ["pointerdown", "touchstart", "scroll"];
-      const playAfterInteraction = () => {
-        interactionEvents.forEach((eventName) => {
-          window.removeEventListener(eventName, playAfterInteraction);
-        });
-        playHeroVideo();
-      };
-
-      interactionEvents.forEach((eventName) => {
-        window.addEventListener(eventName, playAfterInteraction, { once: true, passive: true });
-      });
-    })();
-  </script>
 
   <button
     type="button"
