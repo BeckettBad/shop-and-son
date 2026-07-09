@@ -1654,12 +1654,20 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   const updateCatalogDescriptionCursor = () => {
     if (!catalogDescription || !catalogDescriptionCopy || !catalogDescriptionCursor) return;
     if (catalogDescription.classList.contains("is-finished")) {
-      catalogDescriptionCursor.removeAttribute("style");
+      const descriptionRect = catalogDescription.getBoundingClientRect();
+      const catalogHeadRect = catalogDescription.closest(".hero__catalog-head")?.getBoundingClientRect();
+      const dividerY = catalogHeadRect
+        ? Math.max(0, catalogHeadRect.bottom - descriptionRect.top - 1)
+        : Math.max(0, catalogDescription.getBoundingClientRect().height - 1);
+
+      catalogDescriptionCursor.style.setProperty("--hero-catalog-cursor-finish-y", `${Math.ceil(dividerY)}px`);
+      catalogDescriptionCursor.style.removeProperty("transform");
       return;
     }
 
     const descriptionRect = catalogDescription.getBoundingClientRect();
     const textNode = catalogDescriptionCopy.firstChild;
+    catalogDescriptionCursor.style.removeProperty("--hero-catalog-cursor-finish-y");
 
     if (!textNode || !catalogDescriptionCopy.textContent?.length) {
       catalogDescriptionCursor.style.transform = "translateY(1.45em)";
