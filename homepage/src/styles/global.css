@@ -17,7 +17,7 @@
 }
 *{box-sizing:border-box; margin:0; padding:0}
 html{scroll-behavior:smooth}
-html.landing,html.landing body{overflow-x:hidden}
+html.landing,html.landing body{overflow:hidden; height:100%}
 body{
   font-family:var(--mono); font-size:15px; color:var(--ink); background:var(--paper);
   text-transform:lowercase;            /* the catalog register — matches shopandson.com */
@@ -465,7 +465,7 @@ body{
   box-sizing:border-box; display:flex; flex-direction:column;
   width:42vw; min-width:280px; max-width:560px;
   height:100vh; height:100dvh; padding:8vh 4vw 6vh 5.7vw;
-  overflow-x:hidden; overflow-y:auto; overscroll-behavior-y:auto;
+  overflow-x:hidden; overflow-y:auto; overscroll-behavior-y:contain;
   -webkit-overflow-scrolling:touch;
   font-family:"Helvetica Now","Helvetica Neue",Helvetica,Arial,sans-serif;
   color:#000000;
@@ -483,7 +483,7 @@ body{
 .hero__catalog{left:max(30vw,240px); padding:5vh 2.25vw 5vh 1.25vw}
 .hero__product{
   left:max(30vw,240px); padding:5vh 2.25vw 5vh 1.25vw;
-  overflow-y:auto; overscroll-behavior:auto;
+  overflow-y:auto; overscroll-behavior:contain;
   -webkit-overflow-scrolling:touch;
 }
 .hero__preorder{
@@ -723,7 +723,7 @@ body{
   font-size:clamp(30px,4.2vw,62px);
 }
 .hero__catalog-viewport{
-  flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:auto;
+  flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain;
   padding:clamp(12px,1.7vw,24px) 0 0;
   scroll-behavior:smooth;
   -webkit-overflow-scrolling:touch;
@@ -861,7 +861,7 @@ body{
     color:var(--neon-green);
   }
   .hero__overlay{
-    overflow-x:hidden; overflow-y:auto; overscroll-behavior-y:auto;
+    overflow-x:hidden; overflow-y:auto; overscroll-behavior-y:contain;
     -webkit-overflow-scrolling:touch;
   }
   .hero__catalog-title{margin-top:clamp(20px,3vh,32px)}
@@ -1071,7 +1071,7 @@ body{
     width:100%; max-width:none; min-width:0;
     height:auto; max-height:100%; max-height:100dvh;
     padding:max(4vh, env(safe-area-inset-top)) 4vw max(4vh, env(safe-area-inset-bottom));
-    overflow-x:hidden; overflow-y:auto; overscroll-behavior-y:auto; background:none;
+    overflow-x:hidden; overflow-y:auto; overscroll-behavior-y:contain; background:none;
     -webkit-overflow-scrolling:touch;
   }
   .hero__menu{
@@ -1141,7 +1141,7 @@ body{
     padding:0 4vw max(5vh, env(safe-area-inset-bottom));
   }
   .hero__product{
-    overflow-y:auto; overscroll-behavior:auto;
+    overflow-y:auto; overscroll-behavior:contain;
   }
   .hero__preorder{overflow:hidden}
   .hero__preorder-close{
@@ -1853,7 +1853,7 @@ html.cart-ready .cart-drawer.is-open{transition:transform .55s ease-in-out,visib
   .hero__product .product-detail__panel{
     position:static; top:auto;
     min-height:0; max-height:100%;
-    overflow-y:auto; overscroll-behavior:auto;
+    overflow-y:auto; overscroll-behavior:contain;
     -webkit-overflow-scrolling:touch;
     padding-left:clamp(8px,0.6vw,14px);
     padding-top:clamp(18px,2.6vw,42px);
@@ -1903,7 +1903,7 @@ html.cart-ready .cart-drawer.is-open{transition:transform .55s ease-in-out,visib
   .product-detail--standalone .product-detail__panel{
     position:static; top:auto;
     min-height:0; max-height:100%;
-    overflow-y:auto; overscroll-behavior:auto;
+    overflow-y:auto; overscroll-behavior:contain;
     -webkit-overflow-scrolling:touch;
     padding-left:clamp(8px,0.6vw,14px);
     padding-top:clamp(18px,2.6vw,42px);
@@ -2284,67 +2284,4 @@ html.cart-ready .cart-drawer.is-open{transition:transform .55s ease-in-out,visib
   .policy-page__back::after,
   .product-detail__back::after,
   .product-detail__home-link::after{inset:-16px -4px}
-}
-
-/* ============================================================
-   site footer / newsletter  (the &son Chronicle + subscribe)
-   white, minimal, flows out of the page with no divider
-   ============================================================ */
-.site-footer{width:100%; margin:0; background:var(--paper)}
-.site-footer__panel{
-  background:var(--paper);
-  padding:clamp(12px,2.2vw,22px) clamp(16px,4vw,40px) clamp(16px,2.6vw,28px);
-  display:flex; flex-direction:column; align-items:center;
-  gap:clamp(10px,1.4vw,16px);
-}
-.site-footer__chronicle{
-  display:block; margin:0 auto; width:min(320px,64vw); height:auto;
-}
-.site-footer__form{
-  display:flex; align-items:stretch;
-  width:min(760px,94vw);
-  border:2px solid #000;
-  background:transparent;
-}
-.site-footer__email{
-  flex:1 1 auto; min-width:0;
-  border:0; background:transparent; outline:none;
-  font-family:var(--mono-ui); font-size:clamp(15px,1.5vw,18px);
-  letter-spacing:.03em; color:#000;
-  padding:13px 18px;
-}
-.site-footer__email::placeholder{
-  font-family:var(--mono-ui); color:#000; opacity:.6;
-  text-transform:lowercase; letter-spacing:.03em;
-}
-.site-footer__email:read-only{opacity:.7}
-.site-footer__subscribe{
-  flex:0 0 auto;
-  border:0; border-left:2px solid #000;
-  background:transparent; cursor:pointer;
-  font-family:var(--mono-ui); font-size:clamp(15px,1.5vw,18px);
-  letter-spacing:.05em; color:#000; text-transform:lowercase;
-  padding:13px clamp(20px,2.6vw,38px);
-  transition:background-color .18s ease, border-color .18s ease;
-}
-.site-footer__subscribe:hover{background:rgba(0,0,0,.06)}
-/* success: box highlights neon, text stays black */
-.site-footer__subscribe.is-subscribed,
-.site-footer__subscribe.is-subscribed:hover{
-  background:var(--neon-green);
-  border-color:var(--neon-green);
-  color:#000;
-  cursor:default;
-}
-@media (max-width:600px){
-  /* smaller masthead on phones so the footer shrinks vertically */
-  .site-footer__chronicle{width:min(232px,54vw)}
-  .site-footer__panel{gap:clamp(9px,2.6vw,14px)}
-}
-@media (max-width:480px){
-  .site-footer__form{flex-direction:column; width:min(420px,94vw)}
-  .site-footer__subscribe{
-    border-left:0; border-top:2px solid #000;
-    text-align:center; padding:12px;
-  }
 }
