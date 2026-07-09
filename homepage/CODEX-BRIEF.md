@@ -67,7 +67,13 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — T14 @ 4194d59 DONE + VERIFIED (chromium w/ prod CSP:
+> **ACTIVE SUB-TASK: (none) — T15 @ 5b24468 SHIPPING: single 1080p source + CSP-safe interaction fallback (play on first tap/scroll) for iOS autoplay-decline/Low Power Mode. Chromium-verified plays+single-load+no CSP. Operator to confirm on iPhone (+ check Low Power Mode).**
+> its native PLAY BUTTON = autoplay DECLINED (Low Power Mode blocks all autoplay).
+> Fix: single unconditional <source> + CSP-SAFE interaction fallback in the BUNDLED
+> module script (play on first tap/scroll, window-level). One commit `T15:`, spec in
+> "PHASE T15" below. Dispatch to Codex; deploy to main immediately when fixed.
+> — Prior (all failed on real iOS): T14 no-JS <source media> (autoplay still
+> declined), T13 inline (CSP-blocked), T12/T8 deferred JS. T14 note: — T14 @ 4194d59 DONE + VERIFIED (chromium w/ prod CSP:
 > single <video> native autoplay plays/loops, only mobile 720p source loads, zero
 > inline JS, no CSP violations). ROOT CAUSE of the whole hero saga: prod CSP
 > `script-src 'self'` blocks ALL inline scripts, so every JS approach (T8/T12/T13)
@@ -129,6 +135,49 @@ Done when: the hero poster is preloaded high-priority on the homepage only; hero
 videos carry fetchpriority high and section videos fetchpriority low; the hero still
 loads/plays as before (deferred, one device video, behind poster); no other page
 preloads the hero poster; build + check green.
+
+## PHASE T15 — hero: interaction fallback for iOS autoplay-decline (operator-critical, 2026-07-09)
+
+NEW EVIDENCE: on the operator's real iPhone the hero shows iOS's native centered
+PLAY BUTTON = iOS is DECLINING autoplay entirely (almost certainly Low Power Mode,
+which blocks ALL autoplay until a user gesture — no HTML attribute overrides it;
+also the play button sits under the .hero__stencil so the tap is intercepted).
+T14's `<source media>` may also be unreliable on Safari. Every prior fix assumed
+autoplay would fire — it won't in this state. Fix = remove the media-source
+variable + add a CSP-SAFE interaction fallback (play on first user gesture).
+
+KEY: the fallback goes in the EXISTING BUNDLED module `<script>` in HeroVideo.astro
+(Astro bundles it to /_astro/*.js served from 'self' → ALLOWED by the CSP). Do NOT
+use `<script is:inline>` (CSP blocks inline). The bundled module script already
+runs on the live site (menus/catalog work), so this is safe.
+
+ONE commit `T15:`, scope = `src/components/blocks/HeroVideo.astro` (+ global.css only
+if needed). Build + check green.
+
+Changes:
+1. Hero `<video>`: keep `autoplay muted loop playsinline preload="auto"` + poster +
+   fetchpriority. Add the legacy `webkit-playsinline` attribute too (older iOS).
+   Replace the two `<source media>` sources with ONE unconditional source:
+   `<source src={withBase("/videos/homepage-hero.mp4")} type="video/mp4" />`
+   (single 1080p file for all — removes the Safari `<source media>` risk; getting
+   it to PLAY takes priority over per-device sizing, which we can revisit later).
+2. In the existing bundled module `<script>` in HeroVideo.astro, add a robust hero
+   play routine (runs on script load):
+   - `const heroVideo = hero?.querySelector<HTMLVideoElement>("video.hero-video__media");`
+   - if present: set `heroVideo.muted = true` (iOS needs the muted *property*, not
+     just the attribute, for programmatic play), then a `tryPlay()` that calls
+     `heroVideo.play()` and swallows rejection; call `tryPlay()` once immediately.
+   - Add a ONE-TIME first-gesture fallback bound to the WINDOW (so any tap works
+     even though the stencil overlaps the play button):
+     `["pointerdown","touchstart","click","scroll","keydown"].forEach(ev =>
+       window.addEventListener(ev, tryPlay, { once: true, passive: true }));`
+     (tryPlay is idempotent — safe if autoplay already succeeded.)
+3. Keep everything else (CSP unchanged, poster preload, section-video preload=none).
+   The mobile 720p file becomes unused — leave it (cleanup later).
+Done when: single hero `<video>` with one source; the bundled module script forces
+muted+play and plays on first interaction; build + check green; NO inline script,
+CSP untouched. (Real test = operator's iPhone: the loop should start on load, and
+if iOS blocks autoplay, on the first tap/scroll anywhere.)
 
 ## PHASE T14 — mobile hero autoplay, NO-JS / CSP-safe (operator-critical, 2026-07-09)
 

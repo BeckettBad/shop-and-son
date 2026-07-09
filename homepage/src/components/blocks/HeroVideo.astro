@@ -57,11 +57,11 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
     muted
     loop
     playsinline
+    webkit-playsinline
     preload="auto"
     {...heroVideoPriorityAttrs}
     poster={withBase("/videos/hero-poster.webp")}
   >
-    <source src={withBase("/videos/homepage-hero-mobile.mp4")} media="(max-width: 760px)" type="video/mp4" />
     <source src={withBase("/videos/homepage-hero.mp4")} type="video/mp4" />
   </video>
 
@@ -349,6 +349,7 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
   const BASE = import.meta.env.BASE_URL ?? "/";
   const mobileNowPlayingCollapsingClass = "is-now-playing-collapsing";
   const hero = document.querySelector<HTMLElement>(".hero-video");
+  const heroVideo = hero?.querySelector<HTMLVideoElement>("video.hero-video__media");
   const stencil = hero?.querySelector<HTMLElement>(".hero__stencil");
   const dj = hero?.querySelector<HTMLElement>(".hero__dj");
   const catalog = hero?.querySelector<HTMLElement>(".hero__catalog");
@@ -462,6 +463,24 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
   const isCartOpen = () => document.querySelector(".cart-drawer")?.classList.contains("is-open") ?? false;
   const isMobileSearchViewport = () => window.matchMedia("(max-width: 760px)").matches;
   const getViewportSearchScope = (scope: SearchScope | null) => (isMobileSearchViewport() ? null : scope);
+  const tryPlayHeroVideo = () => {
+    if (!heroVideo) return;
+
+    heroVideo.muted = true;
+    try {
+      heroVideo.play().catch(() => {});
+    } catch {
+      // Some mobile engines can throw synchronously when playback is blocked.
+    }
+  };
+
+  if (heroVideo) {
+    heroVideo.muted = true;
+    tryPlayHeroVideo();
+    ["pointerdown", "touchstart", "click", "scroll", "keydown"].forEach((eventName) => {
+      window.addEventListener(eventName, tryPlayHeroVideo, { once: true, passive: true });
+    });
+  }
 
   const setSearchResultsExpanded = (isExpanded: boolean) => {
     search?.setAttribute("aria-expanded", String(isExpanded));
