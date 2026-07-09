@@ -10,6 +10,9 @@
   pointer-events:auto;
   transform:translateX(-2%);
 }
+.hero__now-playing[hidden]{
+  display:none;
+}
 .hero__now-playing-card{
   color:#000;
   background:rgba(255,255,255,.92);

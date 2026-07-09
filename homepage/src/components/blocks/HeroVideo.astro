@@ -2295,8 +2295,11 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
       const isFamSection = section.dataset.fam === "true";
       const isMusicSection = section.dataset.music === "true";
       const isOpen = trigger.getAttribute("aria-expanded") !== "true";
+      const isMobileNowPlayingOpen = Boolean(
+        mobileQuery.matches && hero?.classList.contains("is-now-playing-open"),
+      );
       const collapseMobileNowPlaying = Boolean(
-        isMusicSection && !isOpen && mobileQuery.matches && hero?.classList.contains("is-now-playing-open"),
+        isMusicSection && !isOpen && isMobileNowPlayingOpen,
       );
 
       closeMobileSearchForNavigation();
@@ -2320,7 +2323,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
       }
 
       setMenuSectionState(isOpen ? section : null);
-      if (!mobileQuery.matches || !isOpen) {
+      if (!mobileQuery.matches || !isOpen || isMobileNowPlayingOpen) {
         closeStage({ collapseMobileNowPlaying });
       }
     });
