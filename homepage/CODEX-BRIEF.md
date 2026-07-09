@@ -67,9 +67,13 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — PHASE T COMPLETE, SHIPPING to main per operator
-> ("ship all changes to main + merge pr"). T1-T10 + T3b/T3c + worker-config +
-> monitor all on dev, build+check green. Operator authorized the merge.**
+> **ACTIVE SUB-TASK: (none) — T11 media cleanup + film poster DONE on dev, build+
+> check green. Deleted 10 dead assets (~27MB: about.mp4, new-arrivals.mp4, +block
+> images/posters/chronicle/logo — old block components not rendered on any page).
+> about-film.mp4 31→22M (CRF21, audio kept) + about-film-poster.webp (stencil film
+> now shows a preview still). Landing unchanged (1.87MB; these are on-demand).
+> Awaiting operator go to ship to main. NOTE: preorders piece.mp4 (43M) still
+> uncompressed (separate page, ships as-is per AGENTS).**
 
 ---
 
