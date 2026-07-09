@@ -67,18 +67,72 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — PHASE T COMPLETE ON DEV, awaiting operator verify.
-> T1 @ e1f5425 (fam collision), T2 @ 231f23f (now-playing mobile click bug),
-> T3 @ a72118c (mobile search above cart), T4 @ 540bf07 (designer about +/−
-> typewriter). All reviewed clean, build+check green (Claude re-verified T4).
-> To view: `cd homepage && npm run dev`. T4 collapsed variants: default
-> `?about=name` (name-only) vs `?about=preview` (2-line preview). Do NOT merge to
-> main — wait for operator "ship T" (or per-task) after they verify on dev.**
+> **ACTIVE SUB-TASK: (none) — T5 DONE ON DEV @ 8083181, awaiting operator verify.
+> Full Phase T on dev: T1 e1f5425, T2 231f23f, T3 a72118c, T3b 535a6cc, T4
+> 540bf07, T5 8083181 (typewriter revision: full-width descending separator line,
+> desktop full width, bigger +/−, much faster, collapse<expand). All reviewed
+> clean, build+check green. Assumption to confirm: desktop about TEXT is now full
+> width too (not just the line) — flag if you want narrower text. Do NOT merge —
+> wait for operator "ship T" after dev verify.**
 
 ---
 
+## PHASE T5 — T4 typewriter revision (operator, 2026-07-08)
+
+Revision of the T4 designer-about feature (@ 540bf07). ONE commit `T5:`, scope =
+`src/components/blocks/HeroVideo.astro` (T4 cursor logic + timing constants) and
+`src/styles/global.css` (T4 CSS: `.hero__catalog-description`,
+`.hero__catalog-description-cursor`, `.hero__catalog-description-separator`).
+Build + check green. Do NOT push. Keep everything else about T4 intact (word-by-
+word typing, reduced-motion instant fallback, +→− state + neon highlight, both
+variants ?about=name/preview, catalog drops fast then types, no overlay).
+
+Five changes:
+
+1. **The typewriter line IS the about↔catalogue separator (full-width bar), not a
+   short word-cursor.** Today `.hero__catalog-description-cursor` is a ~word-width
+   bar that tracks the last word and only becomes full-width on `is-finished`.
+   Change it so the cursor is a FULL-WIDTH horizontal line (the separator between
+   the about section and the catalogue) THROUGHOUT the animation: it sits just
+   below the currently-typed last line and descends line-by-line as words print,
+   then rests as the final divider between about and catalogue. JS
+   (`updateCatalogDescriptionCursor`) should keep positioning it vertically under
+   the last typed line, but width is always full (not the last word's width). This
+   matches the original T4 intent ("the bar drops below each line then drops into
+   place as the divider").
+
+2. **Desktop: the line goes full width.** `.hero__catalog-description` is currently
+   `width:min(100%,76ch)`, which caps the line on desktop. Make the about section
+   (and thus the separator line) span the FULL available width on desktop (remove
+   the 76ch cap). Mobile is already full width (`width:100%`) and its spacing is
+   good — leave mobile width as is. The full-width line should read as the divider
+   spanning the about column.
+
+3. **Bigger +/− icons.** Increase `.hero__catalog-description-separator` from
+   `font-size:1.18em` to roughly `1.5em` (tune for balance) so both the highlighted
+   `+` and the dim `−` are clearly bigger, on mobile AND desktop. Keep the neon
+   `var(--neon-green)` highlight on `+` and the dim `.is-minus` on `−`; keep
+   baseline alignment clean.
+
+4. **Much faster typewriter, universally.** Reduce the timing constants in
+   HeroVideo.astro: `aboutExpandWordMs` (28 → ~9), `aboutCollapseWordMs` (19 → ~5),
+   `aboutHeadAnimationMs` (320 → ~150), and lower the CSS `height` transition on
+   `.hero__catalog-description` (`.32s` → ~`.16s`) and the cursor transitions to
+   match. Tune so it feels snappy and elegant, not janky.
+
+5. **Collapse faster than expand.** Keep the collapse per-word interval strictly
+   less than expand (e.g. ~5ms vs ~9ms) so reverse-typing is visibly quicker.
+
+Done when: on desktop the descending typewriter line and final divider span the
+full width of the about column; `+`/`−` are clearly bigger on both platforms;
+typing is much faster with collapse quicker than expand; the descending line is
+the full-width separator throughout (not a word-width bar); no overlay/clipping;
+reduced-motion still instant; build + check green.
+
 ## Log (Phase T)
 
+- 2026-07-08 — T5 about typewriter revision — 8083181 — build:green check:green — cursor now full-width line (left:0/right:0, JS sets translateY only) descending line-by-line then resting as divider; description width min(100%,76ch)→100% (desktop full width); separator +/− 1.18em→1.5em; speeds head 320→150, expand 28→9, collapse 19→5, height transition .32s→.16s. Collapse<expand kept. Reviewed clean, dev hot-reloaded no error.
+- 2026-07-08 — T3b raise mobile search magnifier — 535a6cc — build:green check:green — collapsed magnifier to translateY 0 (var --hero-mobile-search-collapsed-y) for a more even gap above the cart, mobile catalogue/product only. Direct live-tune, operator confirmed mobile spacing.
 - 2026-07-08 — T4 designer about +/− typewriter expand — 540bf07 — build:green check:green (Claude re-ran both) — separator "—"→"+" (var(--neon-green), 1.18em, clickable button row), expands to "−" dim on finish; word-by-word typewriter with a 1px cursor bar (Range-positioned, tracks last line) that becomes the full-width bottom divider on is-finished; description height animates .32s cubic-bezier(.16,1,.3,1) so catalog drops fast to fixed position then types; collapse reverse-types faster (19ms vs 28ms/word); reduced-motion→instant; both collapsed variants via ?about=name(default)/preview; description now flex:0 0 inside head so viewport shrinks (no overlay). Verified --neon-green=#1faa2e exists, no stray refs to old markup. Reviewed clean.
 - 2026-07-08 — T3 relocate mobile search magnifier above cart — a72118c — build:green check:green — gated the left-of-× transform behind .is-search-open for is-catalog/is-product; collapsed falls to base translateY(14px) = one slot above the cart (64px), same x; opens straight to left-of-× via existing .55s transform. Mobile-only, desktop untouched. Reviewed clean, global.css only.
 - 2026-07-08 — T2 now-playing mobile card clickable after renav — 231f23f — build:green check:green — 3-part: HeroVideo section-header handler now calls closeStage when mobile+is-now-playing-open (clears is-music/is-now-playing-open via clearStageCleanup); now-playing.js clears card href in hideNowPlaying+stop; now-playing.css .hero__now-playing[hidden]{display:none}. Traced closeStage for cross-section + collapse + × paths, all correct. Reviewed clean.
