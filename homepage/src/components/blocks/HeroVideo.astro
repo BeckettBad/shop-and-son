@@ -53,6 +53,7 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
 
   <video
     class="hero-video__media hero-video__media--desktop"
+    autoplay
     muted
     loop
     playsinline
@@ -65,6 +66,7 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
 
   <video
     class="hero-video__media hero-video__media--mobile"
+    autoplay
     muted
     loop
     playsinline
@@ -472,8 +474,10 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
   const menuCollapseAnimations = new WeakMap<HTMLElement, Animation>();
 
   const loadActiveHeroVideo = () => {
-    if (reducedMotionQuery.matches) return;
-
+    // Only the viewport-matching hero video gets a source (so just one downloads).
+    // Native `autoplay` on the element then handles robust, self-retrying playback
+    // once the source is set — a one-shot .play() here was fragile on mobile
+    // (fired before the video was ready, failed silently, no loop).
     const video = mobileQuery.matches ? mobileHeroVideo : desktopHeroVideo;
     if (!video || video.dataset.loaded === "true") return;
 
