@@ -20,6 +20,8 @@ const catalogData: Record<string, CatalogProduct[]> = Object.fromEntries(catalog
 const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
 const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
+const heroVideoPriorityAttrs: Record<string, string> = { fetchpriority: "high" };
+const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low" };
 
 // Block 1 — desktop: vertical left menu; mobile: horizontal tabs over fullscreen video.
 ---
@@ -55,6 +57,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     loop
     playsinline
     preload="none"
+    {...heroVideoPriorityAttrs}
     poster={withBase("/videos/hero-poster.webp")}
   >
     <source data-src={withBase("/videos/homepage-hero.mp4")} type="video/mp4" />
@@ -66,6 +69,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     loop
     playsinline
     preload="none"
+    {...heroVideoPriorityAttrs}
     poster={withBase("/videos/hero-poster-mobile.webp")}
   >
     <source data-src={withBase("/videos/homepage-hero-mobile.mp4")} type="video/mp4" />
@@ -308,7 +312,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
 
   <aside class="hero__film" aria-hidden="true">
     <div class="hero__film-frame">
-      <video class="hero__film-video" src={withBase("/videos/about-film.mp4")} preload="none" playsinline></video>
+      <video class="hero__film-video" src={withBase("/videos/about-film.mp4")} preload="none" {...sectionVideoPriorityAttrs} playsinline></video>
       <button type="button" class="hero__film-close" data-film-close aria-label="Close">&times;</button>
       <button type="button" class="hero__film-playback" data-film-playback aria-label="Play film">
         <svg class="hero__film-glyph hero__film-glyph--play" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
