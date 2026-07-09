@@ -67,14 +67,61 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — T6 DONE ON DEV @ bad0887, awaiting operator verify.
-> Full Phase T on dev: T1 e1f5425, T2 231f23f, T3 a72118c, T3b 535a6cc, T4
-> 540bf07, T5 8083181, T6 bad0887 (typewriter bar slides down into the section
-> divider on finish → one bar; head border transparent while expanded; catalogue
-> unchanged). All reviewed clean, build+check green, dev hot-reloaded no error.
-> Do NOT merge — wait for operator "ship T" after dev verify.**
+> **ACTIVE SUB-TASK: (none) — T7 DONE ON DEV @ 9407cea, awaiting operator verify.
+> Full Phase T on dev: T1 e1f5425, T2 231f23f, T3 a72118c, T3b 535a6cc, T4 540bf07,
+> T5 8083181, T6 bad0887, T7 9407cea (about text indent 1.2em; finish bar widens to
+> full head width + hands off to the real border divider; +/− 1.5em→2em). All
+> reviewed clean, build+check green, dev hot-reloaded no error. Do NOT merge — wait
+> for operator "ship T" after dev verify.**
 
 ---
+
+## PHASE T7 — about indent + full-width finish divider + bigger +/− (operator, 2026-07-08)
+
+Follow-up to T4/T5/T6. ONE commit `T7:`, scope = `src/components/blocks/HeroVideo.astro`
++ `src/styles/global.css`. Build + check green. Do NOT push. Keep all other T4-T6
+behavior (word-by-word typing, fast speeds, collapse<expand, variants, reduced-
+motion, the slide-down-to-divider finish).
+
+Three changes:
+
+1. **Slightly indent the about text (universal).** The about description should
+   sit BELOW the designer name AND be slightly indented (shifted right) relative
+   to the name. Add a small left indent to `.hero__catalog-description` (its text),
+   ~1–1.5em, on BOTH variants and BOTH mobile + desktop. The finished divider bar
+   (change 2) must stay FULL width — do NOT indent the bar, only the text.
+
+2. **The finished bar must be a FULL-WIDTH divider, like the original section
+   divider.** Today (T6) the finished typewriter line spans only the about column
+   width (it lives inside `.hero__catalog-description`, which is the flex:1 column,
+   narrower than the head because the × sits to its right). The operator wants the
+   settled bar to be a FULL bar — the same full-head-width line that divides the
+   designer name/about from the catalogue in the collapsed state (the
+   `.hero__catalog-head` `border-bottom`, `1px solid rgba(0,0,0,.5)`), same weight
+   and full width. Behavior: on typewriter finish, the descending typewriter bar
+   "falls into place" and BECOMES this full-width section divider at the (now
+   lower) adjusted position — exactly like the normal divider was before expanding,
+   just lower. Recommended implementation: keep the head `border-bottom` transparent
+   ONLY while actively typing (`.is-typing`); on finish (`.is-expanded`/finished)
+   bring the full-width head `border-bottom` back as the divider and fade the thin
+   typewriter cursor out as it lands on it (or relocate the cursor to be a full-
+   head-width element that ends as the divider) — whichever yields ONE clean full-
+   width line, matching the collapsed divider's width and weight, with the catalogue
+   position unchanged. Collapsed state keeps its full-width divider as now. Collapse
+   reverses cleanly (no double bar, no width pop).
+
+3. **Make +/− even bigger.** The about `+`/`−`
+   (`.hero__catalog-description-separator`) is currently `font-size:1.5em`. Make it
+   noticeably bigger — clearly LARGER than the menu's `+` toggles (which render at
+   the menu header size `clamp(16px,1.6vw,21px)`). Bump to roughly `2em` (tune for
+   balance) and confirm it reads clearly bigger than the menu +/− on BOTH mobile
+   and desktop; keep the neon highlight on `+`, dim on `−`, baseline aligned.
+
+Done when: about text is indented under the name (both variants, both platforms);
+after expanding, the settled divider is ONE full-width line matching the collapsed
+section divider's width + weight, reached by the typewriter falling into place;
+catalogue position unchanged; collapse reverses cleanly; `+`/`−` are clearly bigger
+than the menu +/− on both platforms; build + check green.
 
 ## PHASE T6 — typewriter bar becomes the section divider (operator, 2026-07-08)
 
@@ -175,6 +222,7 @@ reduced-motion still instant; build + check green.
 
 ## Log (Phase T)
 
+- 2026-07-08 — T7 about indent + full-width finish divider + bigger +/− — 9407cea — build:green check:green — description padding-left 1.2em (text indent); on finish the cursor animates left/right to full head width (computed --finish-left/right from head vs description rects) + slides down, then after 170ms is-divider-settled fades the cursor out and restores the full-width head border-bottom as the divider; separator 1.5em→2em. Reviewed clean, dev hot-reloaded no error. Note: separator line-height .58 is tight — operator to eyeball +/− alignment.
 - 2026-07-08 — T6 typewriter bar merges into section divider — bad0887 — build:green check:green — on finish the cursor translateY's down to the head bottom (dividerY computed from head rect) with overflow:visible so it isn't clipped; head border-bottom goes transparent while .is-typing/.is-expanded (via :has) so only one line shows; catalogue position unchanged; collapsed state keeps its border divider. Reviewed clean, dev hot-reloaded no error.
 - 2026-07-08 — T5 about typewriter revision — 8083181 — build:green check:green — cursor now full-width line (left:0/right:0, JS sets translateY only) descending line-by-line then resting as divider; description width min(100%,76ch)→100% (desktop full width); separator +/− 1.18em→1.5em; speeds head 320→150, expand 28→9, collapse 19→5, height transition .32s→.16s. Collapse<expand kept. Reviewed clean, dev hot-reloaded no error.
 - 2026-07-08 — T3b raise mobile search magnifier — 535a6cc — build:green check:green — collapsed magnifier to translateY 0 (var --hero-mobile-search-collapsed-y) for a more even gap above the cart, mobile catalogue/product only. Direct live-tune, operator confirmed mobile spacing.
