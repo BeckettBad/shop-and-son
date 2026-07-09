@@ -67,11 +67,9 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: PHASE T10 — & fam vs hero-info overlap (mobile). Revert T1,
-> then condense .hero-info so the & fam panel + info block coexist. Direct CSS
-> live-tune (global.css). Status: in progress. DONE on dev: … T9 bacd501 (hero
-> fetchpriority high, section low, poster preload scoped to landing) + CRF22 hero
-> 1.9MB. Do NOT merge — wait for operator "ship T".**
+> **ACTIVE SUB-TASK: (none) — PHASE T COMPLETE, SHIPPING to main per operator
+> ("ship all changes to main + merge pr"). T1-T10 + T3b/T3c + worker-config +
+> monitor all on dev, build+check green. Operator authorized the merge.**
 
 ---
 
@@ -308,6 +306,7 @@ reduced-motion still instant; build + check green.
 
 ## Log (Phase T)
 
+- 2026-07-08 — T10 & fam vs hero-info overlap (mobile) — build:green check:green — REVERTED T1 (fam panel back to original: image max-height calc(Xvh-7.5em), copy/kicker natural); condensed .hero-info on mobile (font 10→8px, line-height 1.24, p margin 1em→.3em, legal 9→7px) so the bottom-fixed info block clears the centered & fam panel with no overlay. Direct CSS. NOTE: hero-info is NOT hidden on the is-fam view (unlike other stages), which is why it coexists there.
 - 2026-07-08 — T9 bias hero media priority — bacd501 (+ CRF22 hero/poster assets) — build:green check:green — hero videos fetchpriority=high, about-film fetchpriority=low, hero-poster preload links (device-conditional, high) scoped to landing pages only (Base.astro). Mobile hero re-encoded CRF22 720p (1.0MB→1.9MB, operator chose the higher-quality tier since deferred = no LCP cost). Reviewed clean.
 - 2026-07-08 — T8 media/perf pass (hero delivery + WebP) — 3a632d6 — build:green check:green — measured mobile Lighthouse (sim 4G) BEFORE→AFTER: total 8.9MB→1.87MB (−79%), LCP 7.9s→5.1s, perf 70→75, TBT/CLS 0. Only device hero loads (deferred + poster), mobile hero right-sized 2.5MB→1.0MB, dj-cutout 2MB→150K / fam 929K→192K / stencil 552K→228K WebP. Reviewed clean. PENDING: operator quality-check WebP on preview; then remove original .png/.jpg (cleanup) + optional LCP-image right-size.
 - 2026-07-08 — T7 about indent + full-width finish divider + bigger +/− — 9407cea — build:green check:green — description padding-left 1.2em (text indent); on finish the cursor animates left/right to full head width (computed --finish-left/right from head vs description rects) + slides down, then after 170ms is-divider-settled fades the cursor out and restores the full-width head border-bottom as the divider; separator 1.5em→2em. Reviewed clean, dev hot-reloaded no error. Note: separator line-height .58 is tight — operator to eyeball +/− alignment.
