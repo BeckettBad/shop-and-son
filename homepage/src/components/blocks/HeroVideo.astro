@@ -400,9 +400,9 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
   const stageDuration = 550;
   const fallbackCardAspect = 0.75;
   const searchPredictiveDelayMs = 250;
-  const aboutHeadAnimationMs = 320;
-  const aboutExpandWordMs = 28;
-  const aboutCollapseWordMs = 19;
+  const aboutHeadAnimationMs = 150;
+  const aboutExpandWordMs = 9;
+  const aboutCollapseWordMs = 5;
   const liveCollectionCache = new Map<string, Promise<CollectionDetail | null>>();
   let filmHasStarted = false;
   let stencilReturnCleanup: (() => void) | undefined;
@@ -1662,8 +1662,7 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     const textNode = catalogDescriptionCopy.firstChild;
 
     if (!textNode || !catalogDescriptionCopy.textContent?.length) {
-      catalogDescriptionCursor.style.width = "22px";
-      catalogDescriptionCursor.style.transform = "translate(0, 1.45em)";
+      catalogDescriptionCursor.style.transform = "translateY(1.45em)";
       return;
     }
 
@@ -1675,11 +1674,8 @@ const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
     const lastRect = rects[rects.length - 1];
     if (!lastRect) return;
 
-    const left = Math.max(0, lastRect.left - descriptionRect.left);
     const top = Math.max(0, lastRect.bottom - descriptionRect.top + 3);
-    const width = Math.max(22, lastRect.width);
-    catalogDescriptionCursor.style.width = `${width}px`;
-    catalogDescriptionCursor.style.transform = `translate(${left}px, ${top}px)`;
+    catalogDescriptionCursor.style.transform = `translateY(${top}px)`;
   };
 
   const finishCatalogAboutExpand = () => {
