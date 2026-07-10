@@ -106,8 +106,11 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — AP1+AQ1+AR1 complete, in PR for operator merge. Next: final
-> rehearsal on the fresh Cloudflare deployment, then the cutover run-sheet.**
+> **ACTIVE SUB-TASK: Phase AS, one commit `AS1:` — mobile: mag icon must dodge left past the
+> "x" in the SEARCH stage, per "## PHASE AS". Operator authorized immediate deploy to the live
+> site once verified. Do not push (Claude ships it).**
+> — Prior: AP1+AQ1+AR1 SHIPPED (PR #35). SITE IS LIVE at shopandson.com (cutover completed
+> 2026-07-10: Cloudflare Pages + checkout.shopandson.com primary, test orders verified).
 > Log: 2026-07-10 — AR1 add old Shopify URL redirects — c35c6ec — build:green check:green —
 > dist/_redirects confirmed, rules exact to spec.
 > Log: 2026-07-10 — AQ1 unify catalog routing — b8c52ae — build:green check:green —
@@ -191,6 +194,31 @@ below so Codex has ONE target; everything else in this file is context.
 > now shows a preview still). Landing unchanged (1.87MB; these are on-demand).
 > Awaiting operator go to ship to main. NOTE: preorders piece.mp4 (43M) still
 > uncompressed (separate page, ships as-is per AGENTS).**
+
+---
+
+## PHASE AS — mobile: magnifier icon must dodge left of the "x" in the SEARCH stage (operator, 2026-07-10)
+
+BUG (measured live, iPhone 13 viewport): in the SEARCH results stage the collapsed magnifier
+icon sits at EXACTLY the same box as the "x" close button (both 334-374px) — full overlap. In
+the catalog/product stages it correctly dodges one slot left (284-324) because of the mobile
+rule in `src/styles/global.css` (~line 1067): the dodge selector lists `.is-catalog` and
+`.is-product` (plain + `.is-search-open.` variants) but NOT `.is-search`, which instead falls
+into the translateY-only rule (~line 1050) alongside `.is-preorder`. Desktop measured fine, do
+not touch desktop rules.
+
+FIX, `src/styles/global.css` mobile media block ONLY, one commit `AS1:`:
+1. Remove `.hero-video.is-search .hero__search,` from the translateY-only rule (keep
+   `.is-preorder` there unchanged).
+2. Add `.hero-video.is-search .hero__search,` and
+   `.hero-video.is-search-open.is-search .hero__search,` to the dodge rule so the search stage
+   gets `transform:translate(var(--hero-mobile-search-dodge-x),var(--hero-icon-stage-clearance))`
+   exactly like catalog/product — same transition, same animation.
+3. No markup/JS changes, no other selectors touched.
+
+Done when: build + astro check green; on a 390px viewport in the search-results stage the
+collapsed magnifier's box is one icon slot LEFT of the x (no overlap), the expanded search bar
+in the search stage ends left of the x, and catalog/product behavior is pixel-unchanged.
 
 ---
 
