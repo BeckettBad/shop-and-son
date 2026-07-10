@@ -1,9 +1,9 @@
 ---
 // The preorder site's opening, brought in as a homepage block.
-// Images are referenced from the LIVE preorder site so they share one source:
-// edit public/preorders/images/* (the preorder site's assets) and both update.
-const preordersUrl = "https://beckettbad.github.io/shop-and-son/preorders/";
-const imgBase = "https://beckettbad.github.io/shop-and-son/preorders/images";
+import { withBase } from "../../lib/url.ts";
+
+const preordersUrl = withBase("/preorders/");
+const imgBase = withBase("/preorders/images");
 // all garment images, in the same order as the preorder site
 const slides = [
   { file: "hero.jpg", label: "front" },
