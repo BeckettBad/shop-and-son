@@ -106,10 +106,17 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — AW1 @ 7aae0d4 reviewed CLEAN + verified in the cutover build:
-> description/og/twitter/canonical all absolute on https://shopandson.com, real sitemap.xml
-> with 461 entries (3 static + collections + unique products), robots.txt Sitemap line.
-> SHIPPING via standing process.**
+> **ACTIVE SUB-TASK: (none) — AX1 @ 2a5812d reviewed CLEAN + Claude-verified (throttled iPhone
+> profile): video autoplays after buffering with NO gesture (canplay retry works) AND the
+> source survives a hidden/visible flip (release-guard works, was sabotaging external-link
+> opens). SHIPPING. Operator to confirm on real iPhone: Safari w/ Low Power OFF (true test) +
+> note if failure was in the Instagram in-app browser (hard-block, not code).**
+> Log: 2026-07-10 — AX1 harden hero video autoplay retries — 2a5812d — build:green check:green.
+> — Prior: AW1 @ 7aae0d4 SHIPPED (PR #40) + live-verified: og/twitter/description/canonical
+> absolute on https://shopandson.com, real sitemap.xml 461 entries, robots Sitemap line.
+> AV1 favicon SHIPPED (PR #39). Text-link Astro icon = iMessage CACHE of a pre-fix send (served
+> metadata verified correct via facebookexternalhit crawler: og:image=storefront, favicon.png,
+> zero astro), NOT a code bug — no phase.
 > Log: 2026-07-10 — AW1 add SEO share metadata and sitemap — 7aae0d4 — build:green check:green.
 > — Prior: AV1 @ 4e8dd15 SHIPPED (PR #39) + live-verified byte-identical to the original "&" mark.
 > Log: 2026-07-10 — AV1 restore shop favicon — 4e8dd15 — build:green check:green — original
@@ -228,6 +235,53 @@ below so Codex has ONE target; everything else in this file is context.
 > now shows a preview still). Landing unchanged (1.87MB; these are on-demand).
 > Awaiting operator go to ship to main. NOTE: preorders piece.mp4 (43M) still
 > uncompressed (separate page, ships as-is per AGENTS).**
+
+---
+
+## PHASE AX — mobile hero video: reliable autoplay on external-link opens (operator-critical, 2026-07-10)
+
+SYMPTOM (real iPhone, operator): opening the site from Google / a text link / Instagram, the hero
+background video does NOT autoplay, iOS shows its native center play button over the poster.
+DIAGNOSIS (evidence-based, HeroVideo.astro ~lines 514-568): markup is the correct T15 wiring
+(`<video autoplay muted loop playsinline webkit-playsinline preload="auto">` + single mp4 source).
+Two CODE causes found:
+  (A) The AF1 memory-saver `releaseHeroVideo()` runs on `visibilitychange -> hidden`, stripping the
+      `<source>` and calling `load()`. Opening a link from an external app fires a hidden->visible
+      flip DURING load, so it kills iOS's native autoplay before it can start, then `restoreHeroVideo`
+      re-adds the source and calls play() (often before the video is ready). This churn sabotages the
+      first autoplay specifically on the external-link path.
+  (B) No retry when the video buffers: `tryPlayHeroVideo()` is called at parse (video not yet
+      buffered on cellular, 2.66MB) and only re-fired on user gesture / pageshow / focus. There is
+      NO `loadeddata`/`canplay` retry (verified: zero in file), so on mobile data it sits on the
+      poster until a tap.
+ENVIRONMENTAL CEILING (NOT code-fixable, do not try): iOS Low Power Mode and in-app browsers
+(Instagram/Facebook WKWebView) hard-block autoplay regardless; the existing first-interaction
+fallback is the only path there and must be preserved.
+
+FIX, `src/components/blocks/HeroVideo.astro` client script ONLY, one commit `AX1:`. No markup,
+CSS, or other-file changes. Preserve every existing behavior (interaction fallback, pageshow/focus
+resume, the memory-release-on-background that AF1 added for iOS tab-discard).
+1. Track first successful play: add `let heroVideoHasPlayed = false;` and a listener
+   `heroVideo.addEventListener("playing", () => { heroVideoHasPlayed = true; }, { passive: true });`.
+2. Guard the memory-saver so it NEVER interrupts the initial autoplay: in the
+   `visibilitychange -> hidden` branch, only call `releaseHeroVideo()` if `heroVideoHasPlayed` is
+   true. (Releasing a video that never started buys no memory and kills the pending autoplay.)
+   Leave restore/pageshow/focus as-is.
+3. Add buffer-ready retries: on the video element, attach passive listeners for `loadeddata`,
+   `canplay`, and `canplaythrough` that call `tryPlayHeroVideo()` (NOT once, play() on an
+   already-playing video is a harmless no-op). This makes autoplay fire the instant enough data
+   arrives on cellular, without waiting for a user gesture.
+4. Keep the existing `["pointerdown","touchstart","click","scroll","keydown"]` once-listeners as the
+   true-hard-block fallback (LPM / in-app browser). Unchanged.
+
+Build + astro check green (PUBLIC_SHOPIFY_STORE_DOMAIN=shop-and-son.myshopify.com locally). Do NOT
+reintroduce per-device `<source media>` selection or any inline script (both are documented iOS/CSP
+traps; single source + bundled module only).
+
+Done when: build+check green; in a throttled mobile Chromium profile the video autoplays after
+buffering WITHOUT a user gesture (proves the canplay retry path); code review confirms release only
+fires post-first-play. NOTE: true iOS autoplay (LPM off) can only be confirmed by the operator on a
+real iPhone, in Safari AND from the Instagram in-app browser.
 
 ---
 
