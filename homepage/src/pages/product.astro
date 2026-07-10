@@ -1,45 +1,13 @@
 ---
 import Base from "../layouts/Base.astro";
-import CartDrawer from "../components/CartDrawer.astro";
 ---
 
 <Base bare title="&son">
-  <main class="product-detail product-detail--standalone" data-product-detail>
-    <header class="product-detail__top">
-      <button type="button" class="product-detail__back" data-product-back>← back</button>
-      <button type="button" class="product-detail__cart" data-cart-toggle aria-label="cart">
-        <svg focusable="false" class="icon icon-bag" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 viewBox="0 0 20 20" style="enable-background:new 0 0 24 24;" xml:space="preserve">
-<path fill="currentColor" d="M17.200012,5.519043h-3.573059V4.60791c0-2-1.626953-3.626953-3.626953-3.626953S6.373047,2.60791,6.373047,4.60791
-	v0.911133H2.799988L1,18.519043h18L17.200012,5.519043z M7.373047,4.60791c0-1.44873,1.178223-2.626953,2.626953-2.626953
-	c1.448242,0,2.626953,1.178223,2.626953,2.626953v0.911133H7.373047V4.60791z M3.671082,6.519043h2.701965v1h1v-1h5.253906v1h1v-1
-	h2.701965l1.523071,11H2.14801L3.671082,6.519043z"/>
-</svg>
-        <span class="product-detail__cart-count" data-cart-count hidden></span>
-      </button>
-    </header>
-    <section class="product-detail__state" data-product-state>loading</section>
-  </main>
-  <CartDrawer />
-
   <script>
-    import { mountProductView } from "../lib/product-view";
-
-    const homeUrl = import.meta.env.BASE_URL.replace(/\/$/, "") + "/";
-    const state = document.querySelector<HTMLElement>("[data-product-state]");
-    const back = document.querySelector<HTMLButtonElement>("[data-product-back]");
     const handle = new URLSearchParams(window.location.search).get("handle")?.trim() ?? "";
 
-    back?.addEventListener("click", () => {
-      if (window.history.length > 1) {
-        window.history.back();
-        return;
-      }
-      window.location.assign(homeUrl);
+    import("../lib/url").then(({ withBase }) => {
+      location.replace(handle ? withBase(`/?product=${encodeURIComponent(handle)}`) : withBase("/"));
     });
-
-    if (state) {
-      mountProductView(state, handle);
-    }
   </script>
 </Base>
