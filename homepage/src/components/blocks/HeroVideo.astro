@@ -631,6 +631,7 @@ const shopifyStorefrontVersion = "2025-01";
   };
 
   const catalogData = parseCatalogData();
+  const hasCardImage = (product: CatalogProduct) => Boolean(product.image);
   const searchIndexByHandle = new Map<string, CatalogProduct>();
   Object.values(catalogData).forEach((products) => {
     products.forEach((product) => {
@@ -639,7 +640,7 @@ const shopifyStorefrontVersion = "2025-01";
       searchIndexByHandle.set(product.handle, product);
     });
   });
-  const searchIndex = Array.from(searchIndexByHandle.values());
+  const searchIndex = Array.from(searchIndexByHandle.values()).filter(hasCardImage);
 
   const normalizeSearchText = (value: string) =>
     value
@@ -664,7 +665,7 @@ const shopifyStorefrontVersion = "2025-01";
 
   const getScopeProducts = (scope: SearchScope | null) => {
     const viewportScope = getViewportSearchScope(scope);
-    return viewportScope ? (catalogData[viewportScope.collection] ?? []) : searchIndex;
+    return viewportScope ? (catalogData[viewportScope.collection] ?? []).filter(hasCardImage) : searchIndex;
   };
 
   const getSearchMatches = (query: string, limit = Number.POSITIVE_INFINITY, scope: SearchScope | null = null) => {
@@ -688,7 +689,7 @@ const shopifyStorefrontVersion = "2025-01";
     const mergedProducts: CatalogProduct[] = [];
 
     const appendProduct = (product: CatalogProduct) => {
-      if (!product.handle || seenHandles.has(product.handle) || mergedProducts.length >= limit) return;
+      if (!hasCardImage(product) || !product.handle || seenHandles.has(product.handle) || mergedProducts.length >= limit) return;
 
       seenHandles.add(product.handle);
       mergedProducts.push(product);
@@ -1692,6 +1693,8 @@ const shopifyStorefrontVersion = "2025-01";
   const renderCatalogGrid = (products: CatalogProduct[], targetScrollTop = 0) => {
     if (!catalogTrack) return;
 
+    // Drafts published to the headless channel without images must not render as blank tiles.
+    products = products.filter(hasCardImage);
     catalogTrack.replaceChildren(...getSortedProducts(products).map(createProductCard));
     restoreCatalogScroll(targetScrollTop);
   };
@@ -2019,18 +2022,19 @@ const shopifyStorefrontVersion = "2025-01";
     if (!catalogTrack) return;
 
     const scope = getViewportSearchScope(options.scope ?? null);
-    const fallbackProducts = options.fallbackProducts ?? [];
-    renderedSearchProducts = products;
+    const visibleProducts = products.filter(hasCardImage);
+    const fallbackProducts = (options.fallbackProducts ?? []).filter(hasCardImage);
+    renderedSearchProducts = visibleProducts;
     renderedSearchFallbackProducts = fallbackProducts;
     updateSearchScopeControls(scope);
     renderCatalogHeader(
       scope
-        ? `SEARCH IN ${scope.label} \u2014 "${query}" (${products.length})`
-        : `SEARCH \u2014 "${query}" (${products.length})`,
+        ? `SEARCH IN ${scope.label} \u2014 "${query}" (${visibleProducts.length})`
+        : `SEARCH \u2014 "${query}" (${visibleProducts.length})`,
     );
-    searchStatus?.replaceChildren(`${products.length} ${products.length === 1 ? "result" : "results"} for ${query}`);
+    searchStatus?.replaceChildren(`${visibleProducts.length} ${visibleProducts.length === 1 ? "result" : "results"} for ${query}`);
 
-    if (scope && products.length === 0) {
+    if (scope && visibleProducts.length === 0) {
       const nodes: HTMLElement[] = [
         createSearchMessage(`nothing matches "${query}" in ${scope.label.toLocaleLowerCase("en-US")}`),
       ];
@@ -2043,7 +2047,7 @@ const shopifyStorefrontVersion = "2025-01";
       return;
     }
 
-    renderCatalogGrid(products, targetScrollTop);
+    renderCatalogGrid(visibleProducts, targetScrollTop);
   };
 
   const captureSearchSessionReturn = (): SearchSessionReturn => {

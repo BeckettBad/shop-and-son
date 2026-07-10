@@ -55,12 +55,19 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## ACTIVE BRIEF
 
-> **CURRENT TASK (2026-07-09): Phase AG (TOP PRIORITY) — catalogue preview images load
-> unreliably (partial/intermittent). DIAGNOSED: data is complete (verified live: 48 collections,
-> 1123 products, all with valid cdn.shopify.com image URLs) — NOT a rate-limit/data issue. Cause
-> = native loading="lazy" (no observer) inside the scroll catalog viewport + grid re-render churn
-> + no onerror retry. Fix = reliable image loading (observer rooted on the viewport / eager) +
-> onerror retry. Spec under "## PHASE AG". Dispatch now.**
+> **CURRENT TASK (2026-07-10): Phase AI (TOP PRIORITY) — blank catalogue tiles, TRUE ROOT CAUSE
+> FOUND. It was never a loading/rendering bug (AG1/AH1 chased the wrong layer). On 2026-07-09,
+> 121 old draft products (created 2024–2026, never published to the Online Store — they 404 on
+> shopandson.com) were bulk-published to the headless sales channel in Shopify admin. 95 of them
+> have ZERO images/media in Shopify. The Storefront API now returns them, the live reconcile
+> re-render replaces the (clean, baked) snapshot grid, and every imageless product renders as an
+> off-white blank canvas (the no-image placeholder branch). Verified live: clothing-1 snapshot=342
+> products (all with images), live API=463, 95 with featuredImage:null AND images:[] AND media:[],
+> all 95 publishedAt 2026-07-09. Fix = never render imageless products in grids. Spec under
+> "## PHASE AI". Dispatch now.**
+>
+> **PRIOR: AH1 @ ea6beba / AG1 @ 514cf81 — eager loading + onerror retry. Harmless hardening,
+> kept, but they did NOT fix the blanks (see AI diagnosis above).**
 >
 > **PRIOR: AF1 @ 6f2999f reviewed CLEAN — hero video releases memory on hide, restores+plays on return (reduces iOS tab-discard reloads; cannot guarantee zero). On dev, opening deploy PR.**
 > so iOS is less likely to DISCARD + reload the tab when the user returns from the Instagram app
@@ -99,7 +106,27 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — T15 @ 5b24468 SHIPPING: single 1080p source + CSP-safe interaction fallback (play on first tap/scroll) for iOS autoplay-decline/Low Power Mode. Chromium-verified plays+single-load+no CSP. Operator to confirm on iPhone (+ check Low Power Mode).**
+> **ACTIVE SUB-TASK: (none) — AI1 @ 3d22a4c committed, Claude-reviewed CLEAN, behaviorally
+> VERIFIED (headed Chrome vs live Storefront API on the prod build): SHOP ALL renders 342
+> snapshot → 368 reconciled cards, 0 blank, 0 unloaded; search "norway" = 0 imageless tiles
+> with matching count; deep link to an imageless product renders the placeholder frame, no
+> errors. Status: ready for operator verify on dev. Also for the operator IN SHOPIFY ADMIN:
+> 121 old drafts were published to the headless channel 2026-07-09 (95 imageless, hidden by
+> AI1 until images are uploaded; 26 WITH images are now visible/buyable on the new site while
+> 404ing on the old Online Store — review whether those were staged on purpose).**
+> Log: 2026-07-10 — AI1 filter imageless catalog products — 3d22a4c — build:green check:green — clean; verified as above.
+> MECHANISM CORRECTION (2026-07-10, after operator's admin check found "Sales channel is
+> Headless" = no products): nobody bulk-published drafts to a channel. The 2026-07-09 token
+> swap (CI variable now = the custom app token ending 470c) moved the site onto that custom
+> app's publication, which auto-includes EVERY Active product — publishedAt is 2026-07 for ALL
+> 463 clothing-1 products, and exactly 121 have onlineStoreUrl:null (Active in admin, Online
+> Store channel off, some created back to 2024). The old token's publication matched the Online
+> Store; the new one exposes the store's full Active set. GOVERNANCE RULE going forward: product
+> visible on the new site ⇔ status Active in admin (channel ticks are irrelevant to our token);
+> Ben hides things by setting status Draft. Full list: repo-root
+> HEADLESS-ONLY-PRODUCTS-2026-07-10.md (130 products incl. house, 97 imageless). AI1's imageless
+> filter stands regardless — it is the safety net for exactly this class of product.
+> — Prior: T15 @ 5b24468 SHIPPED: single 1080p source + CSP-safe interaction fallback (play on first tap/scroll) for iOS autoplay-decline/Low Power Mode. Chromium-verified plays+single-load+no CSP. Operator to confirm on iPhone (+ check Low Power Mode).
 > its native PLAY BUTTON = autoplay DECLINED (Low Power Mode blocks all autoplay).
 > Fix: single unconditional <source> + CSP-SAFE interaction fallback in the BUNDLED
 > module script (play on first tap/scroll, window-level). One commit `T15:`, spec in
@@ -130,6 +157,54 @@ below so Codex has ONE target; everything else in this file is context.
 > now shows a preview still). Landing unchanged (1.87MB; these are on-demand).
 > Awaiting operator go to ship to main. NOTE: preorders piece.mp4 (43M) still
 > uncompressed (separate page, ships as-is per AGENTS).**
+
+---
+
+## PHASE AI — never render imageless products in grids (TRUE fix for blank tiles) (TOP PRIORITY) (operator, 2026-07-10)
+
+DIAGNOSIS (verified live, 2026-07-10): the blank tiles are NOT a loading, lazy, srcset, CDN, or
+paint problem. They are products that exist in Shopify with NO images at all. On 2026-07-09,
+121 old draft products were published to the headless sales channel (they remain unpublished on
+the Online Store — `shopandson.com/products/<handle>.json` 404s). 95 of the 121 have
+`featuredImage: null`, `images: []`, `media: []` in the Storefront API. Flow of the bug:
+`renderCatalogContent` renders the baked snapshot (clean, all images), then the live reconcile
+(`getLiveCollection` → `reconcileLiveProducts` → `renderCatalogGrid`) REPLACES the grid with the
+live product list, which now includes the 95 imageless products. `createProductCard` hits its
+`else` branch (no `product.image`) and paints the off-white placeholder background — the "blank
+canvas". The reconcile snapshot-backfill can't help: these handles aren't in the snapshot.
+Product detail for those products likewise has no carousel images.
+
+FIX PRINCIPLE: a product with no preview image must not appear in any grid. When Ben uploads
+images in Shopify admin they reappear automatically (live data already flows). Do NOT hide
+products that HAVE images, and do NOT change fetching, the reconcile backfill, cart, or CSP.
+Scope = `src/components/blocks/HeroVideo.astro`, `src/lib/catalog.ts`, and (only if the guard in
+step 4 is needed) `src/lib/product-view.ts`. ONE commit `AI1:`. Build + astro check green. No
+push/merge.
+
+1. In HeroVideo's client script add one canonical helper near the other card helpers:
+   `const hasCardImage = (product: CatalogProduct) => Boolean(product.image);`
+2. Filter INSIDE `renderCatalogGrid` at its top (`products = products.filter(hasCardImage)`), so
+   every grid render — collection view, live reconcile re-render, search results, designer views —
+   goes through the same gate. If any caller computes a visible results COUNT or empty-state from
+   the products array, make it use the same filtered array so counts match what renders.
+3. Check the search index / suggestion paths built from `catalogData` (e.g. `searchIndex`,
+   `getViewportProducts`): imageless products must not surface as suggestions or search tiles.
+   Filter with the same helper at the point results are ASSEMBLED for display (do not mutate
+   `catalogData` itself — prefetch/handle lookups may rely on full data).
+4. Product detail defense: a user can still deep-link (`?handle=`) to an imageless product. Verify
+   `product-view.ts` renders sanely with zero images (placeholder frame, no broken/empty carousel
+   controls, no thrown errors). If it already degrades gracefully, leave it; otherwise add the
+   minimal guard (placeholder block instead of the carousel).
+5. Build-time consistency: in `src/lib/catalog.ts` `fetchCatalogProducts`, filter mapped products
+   to those with `image` before returning (snapshot currently has none imageless; this keeps the
+   invariant if a future feed changes).
+6. Comment the filter with WHY in one line (drafts published to the headless channel without
+   images must not render as blank tiles).
+
+Done when: build + `npx astro check` green; opening SHOP ALL against the LIVE Storefront API
+renders zero blank off-white tiles after the reconcile re-render (95 imageless products dropped,
+368 with images shown); search for "norway" surfaces no imageless tiles; a direct product link to
+an imageless product does not render a broken view.
 
 ---
 
