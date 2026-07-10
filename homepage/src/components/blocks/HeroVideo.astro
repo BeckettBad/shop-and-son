@@ -768,6 +768,9 @@ const shopifyStorefrontVersion = "2025-01";
   const getHomepageProductUrl = (handle: string) => {
     const url = new URL(location.href);
     url.pathname = BASE;
+    url.searchParams.delete("search");
+    url.searchParams.delete("scope");
+    url.searchParams.delete("collection");
     url.searchParams.set("product", handle);
     url.hash = "";
     return url;
@@ -778,12 +781,24 @@ const shopifyStorefrontVersion = "2025-01";
     const viewportScope = getViewportSearchScope(scope);
     url.pathname = BASE;
     url.searchParams.delete("product");
+    url.searchParams.delete("collection");
     url.searchParams.set("search", query.trim());
     if (viewportScope?.collection) {
       url.searchParams.set("scope", viewportScope.collection);
     } else {
       url.searchParams.delete("scope");
     }
+    url.hash = "";
+    return url;
+  };
+
+  const getHomepageCollectionUrl = (collection: string) => {
+    const url = new URL(location.href);
+    url.pathname = BASE;
+    url.searchParams.delete("product");
+    url.searchParams.delete("search");
+    url.searchParams.delete("scope");
+    url.searchParams.set("collection", collection);
     url.hash = "";
     return url;
   };
@@ -799,6 +814,8 @@ const shopifyStorefrontVersion = "2025-01";
 
   const getCurrentSearchScopeParam = () => new URL(location.href).searchParams.get("scope");
 
+  const getCurrentCollectionParam = () => new URL(location.href).searchParams.get("collection");
+
   const stripProductParamFromUrl = () => {
     const url = new URL(location.href);
     if (!url.searchParams.has("product")) return;
@@ -813,6 +830,14 @@ const shopifyStorefrontVersion = "2025-01";
 
     url.searchParams.delete("search");
     url.searchParams.delete("scope");
+    history.replaceState(null, "", url);
+  };
+
+  const stripCollectionParamFromUrl = () => {
+    const url = new URL(location.href);
+    if (!url.searchParams.has("collection")) return;
+
+    url.searchParams.delete("collection");
     history.replaceState(null, "", url);
   };
 
@@ -2341,12 +2366,19 @@ const shopifyStorefrontVersion = "2025-01";
     });
   }
 
-  const openCatalog = (collection: string, label: string) => {
+  const openCatalog = (collection: string, label: string, options: { pushState?: boolean; scrollTop?: number } = {}) => {
     if (!hero || !catalog || !catalogTitle || !catalogTrack) return;
 
     prepareToLeaveProductForStage();
-    stripSearchParamFromUrl();
-    transitionToStage("catalog", () => renderCatalogContent(collection, label));
+    if (options.pushState !== false) {
+      history.pushState({ collection, label }, "", getHomepageCollectionUrl(collection));
+    } else {
+      stripSearchParamFromUrl();
+    }
+    transitionToStage("catalog", () => {
+      renderCatalogContent(collection, label);
+      restoreCatalogScroll(options.scrollTop ?? 0);
+    });
   };
 
   const openDesignerCollection = (vendor: string) => {
@@ -2374,6 +2406,7 @@ const shopifyStorefrontVersion = "2025-01";
 
     prepareToLeaveProductForStage();
     stripSearchParamFromUrl();
+    stripCollectionParamFromUrl();
     activeSearchQuery = "";
     renderedSearchProducts = [];
     renderedSearchFallbackProducts = [];
@@ -2390,6 +2423,7 @@ const shopifyStorefrontVersion = "2025-01";
     setMobileNowPlayingOpen(false);
     prepareToLeaveProductForStage();
     stripSearchParamFromUrl();
+    stripCollectionParamFromUrl();
     activeSearchQuery = "";
     renderedSearchProducts = [];
     renderedSearchFallbackProducts = [];
@@ -2405,6 +2439,7 @@ const shopifyStorefrontVersion = "2025-01";
 
     prepareToLeaveProductForStage();
     stripSearchParamFromUrl();
+    stripCollectionParamFromUrl();
     activeSearchQuery = "";
     renderedSearchProducts = [];
     renderedSearchFallbackProducts = [];
@@ -2420,6 +2455,7 @@ const shopifyStorefrontVersion = "2025-01";
 
     prepareToLeaveProductForStage();
     stripSearchParamFromUrl();
+    stripCollectionParamFromUrl();
     activeSearchQuery = "";
     renderedSearchProducts = [];
     renderedSearchFallbackProducts = [];
@@ -2565,6 +2601,7 @@ const shopifyStorefrontVersion = "2025-01";
   const closeStage = (options: { collapseMobileNowPlaying?: boolean } = {}) => {
     if (!hero) return;
 
+    stripCollectionParamFromUrl();
     const shouldCollapseMobileNowPlaying =
       options.collapseMobileNowPlaying === true &&
       mobileQuery.matches &&
@@ -2631,6 +2668,23 @@ const shopifyStorefrontVersion = "2025-01";
       return;
     }
 
+    const collectionParam = getCurrentCollectionParam()?.trim();
+    if (collectionParam) {
+      const stageReturn =
+        activeStage === "product" &&
+        savedStageReturn?.stage === "catalog" &&
+        savedStageReturn.collection === collectionParam
+          ? savedStageReturn
+          : null;
+      if (activeStage !== "catalog" || hero?.dataset.activeCollection !== collectionParam) {
+        openCatalog(collectionParam, stageReturn?.label || getCollectionLabel(collectionParam), {
+          pushState: false,
+          scrollTop: stageReturn?.scrollTop ?? 0,
+        });
+      }
+      return;
+    }
+
     if (activeStage === "product") {
       actualCloseProduct();
       return;
@@ -2638,6 +2692,11 @@ const shopifyStorefrontVersion = "2025-01";
 
     if (activeStage === "search") {
       restoreSearchSession(false);
+      return;
+    }
+
+    if (activeStage === "catalog") {
+      closeStage();
     }
   };
 

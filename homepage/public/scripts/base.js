@@ -198,7 +198,7 @@ document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
   const createThrowawayPassword = () => {
     if (!globalThis.crypto?.getRandomValues) return "";
 
-    const bytes = new Uint8Array(24);
+    const bytes = new Uint8Array(16);
     globalThis.crypto.getRandomValues(bytes);
     return `sns-${Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
   };
@@ -248,8 +248,13 @@ document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
     const userErrors = Array.isArray(result?.customerUserErrors) ? result.customerUserErrors : [];
     const isAlreadyRegistered = userErrors.some((error) => {
       const code = String(error?.code ?? "").toUpperCase();
-      return code === "TAKEN" || code === "CUSTOMER_DISABLED";
+      return code === "TAKEN";
     });
+    const hasBlockingUserError = userErrors.some((error) => {
+      const code = String(error?.code ?? "").toUpperCase();
+      return code !== "TAKEN";
+    });
+    if (hasBlockingUserError) return false;
 
     return Boolean(customer?.id || isAlreadyRegistered);
   };

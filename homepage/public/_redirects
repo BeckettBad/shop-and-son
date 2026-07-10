@@ -1,0 +1,10 @@
+# old Shopify theme URLs -> new-site equivalents; Cloudflare Pages consumes this file
+/products/:handle /?product=:handle 301
+/collections/:collection/products/:handle /?product=:handle 301
+/collections/:handle /?collection=:handle 301
+/policies/refund-policy /policies/?policy=refund-policy 301
+/policies/privacy-policy /policies/?policy=privacy-policy 301
+/policies/terms-of-service /policies/?policy=terms-of-service 301
+/pages/* / 302
+/account https://checkout.shopandson.com/account 302
+/cart / 302
