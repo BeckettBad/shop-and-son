@@ -106,9 +106,11 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: Phase AS, one commit `AS1:` — mobile: mag icon must dodge left past the
-> "x" in the SEARCH stage, per "## PHASE AS". Operator authorized immediate deploy to the live
-> site once verified. Do not push (Claude ships it).**
+> **ACTIVE SUB-TASK: (none) — AS1 @ 2da0538 SHIPPED (PR #36, operator-authorized auto-deploy)
+> and VERIFIED LIVE on shopandson.com mobile: mag 284-324, x 334-374, zero overlap; expanded
+> bar ends left of the x; catalog/product stages pixel-unchanged.**
+> Log: 2026-07-10 — AS1 dodge search icon on mobile search — 2da0538 — build:green check:green
+> — live-verified post-deploy.
 > — Prior: AP1+AQ1+AR1 SHIPPED (PR #35). SITE IS LIVE at shopandson.com (cutover completed
 > 2026-07-10: Cloudflare Pages + checkout.shopandson.com primary, test orders verified).
 > Log: 2026-07-10 — AR1 add old Shopify URL redirects — c35c6ec — build:green check:green —
