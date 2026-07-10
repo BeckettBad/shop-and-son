@@ -1858,8 +1858,12 @@ html.cart-ready .cart-drawer.is-open{transition:transform .55s ease-in-out,visib
   color:#000;
 }
 .product-detail__vendor{
-  margin:0 0 12px; font-family:var(--mono-ui); font-size:11px;
-  letter-spacing:.08em; text-transform:uppercase; color:rgba(0,0,0,.55);
+  display:block; margin:0 0 12px; font-family:var(--mono-ui); font-size:11px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--neon-green);
+  cursor:pointer; text-decoration:none; text-underline-offset:3px;
+}
+.product-detail__vendor:hover{
+  text-decoration:underline;
 }
 .product-detail__title{
   margin:0 0 16px; max-width:16ch;
