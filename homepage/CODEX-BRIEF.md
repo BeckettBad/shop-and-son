@@ -55,7 +55,12 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## ACTIVE BRIEF
 
-> **CURRENT TASK (2026-07-09): (none active). AD1 @ 8981c1c reviewed CLEAN — designer/vendor now
+> **CURRENT TASK (2026-07-09): (none active). AE1 @ d97e097 reviewed CLEAN — hero video resumes
+> on return (visibilitychange/pageshow/focus -> tryPlayHeroVideo). Pushed to dev, now IN PR #27.
+> PR #27 (dev->main) is ONE merge from deploying: in-app designer link (AD1) + subscribe box
+> fix (AC1, + CI token corrected to write-scoped) + hero-video resume (AE1). Operator merges.**
+>
+> **PRIOR: AD1 @ 8981c1c reviewed CLEAN — designer/vendor now
 > opens the collection IN-APP (openCatalog, fallback to in-app search), ZERO shopandson.com
 > links added. AC1 subscribe fix @ 4a3a61e reviewed CLEAN. Both awaiting operator dev/phone verify.
 > QUEUED next: search-bar left-relocation + spacing (catalogue "x"). Later: convert nav + policy
@@ -113,6 +118,26 @@ below so Codex has ONE target; everything else in this file is context.
 > now shows a preview still). Landing unchanged (1.87MB; these are on-demand).
 > Awaiting operator go to ship to main. NOTE: preorders piece.mp4 (43M) still
 > uncompressed (separate page, ships as-is per AGENTS).**
+
+---
+
+## PHASE AE — hero video resumes when the user returns to the site (operator, 2026-07-09)
+
+Bug: on mobile, tapping the Instagram icon opens instagram.com in a new tab (backgrounds the
+site). The browser pauses the hero background video, and on return it never resumes, the
+background sits frozen. Fix: replay the hero video whenever the site becomes visible/focused
+again. Scope = `src/components/blocks/HeroVideo.astro` ONLY (the bundled hero script). No CSP
+change. ONE commit `AE1:`. Build + astro check green. No push/merge.
+
+- Reuse the existing `tryPlayHeroVideo()` helper (it sets `muted=true` and calls
+  `heroVideo.play().catch(...)`).
+- After the existing interaction-fallback listener setup (the `["pointerdown","touchstart",
+  "click","scroll","keydown"]` block), add resume handlers:
+  - `document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") tryPlayHeroVideo(); });`
+  - `window.addEventListener("pageshow", () => tryPlayHeroVideo());` (bfcache restore)
+  - `window.addEventListener("focus", () => tryPlayHeroVideo());` (extra robustness)
+- Do not change the video attributes (keep `autoplay muted playsinline`) or break the existing
+  first-interaction fallback. Guard on `heroVideo` existing (tryPlayHeroVideo already does).
 
 ---
 
