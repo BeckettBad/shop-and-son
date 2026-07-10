@@ -106,7 +106,20 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — AN1 @ 50bc3da reviewed CLEAN + Claude-verified live: SHOP ALL
+> **ACTIVE SUB-TASK: (none) — AP1+AQ1+AR1 complete, in PR for operator merge. Next: final
+> rehearsal on the fresh Cloudflare deployment, then the cutover run-sheet.**
+> Log: 2026-07-10 — AR1 add old Shopify URL redirects — c35c6ec — build:green check:green —
+> dist/_redirects confirmed, rules exact to spec.
+> Log: 2026-07-10 — AQ1 unify catalog routing — b8c52ae — build:green check:green —
+> Claude-verified full matrix: cold-load ?collection restore (342 cards, hero chrome, no
+> flash), URL updates on shop-all/designer/product opens, back/forward chain
+> landing<->catalog<->designer<->product, refresh restore, /product/?handle redirect lands
+> in-app, search interplay intact. syncStageFromUrl = single URL->stage source for popstate+init.
+> Log: 2026-07-10 — AP1 fix newsletter signup failures — 7576462 — build:green check:green —
+> Claude-verified: real signup from the built site returns customer created, zero userErrors
+> (was TOO_LONG 52-char password, silently masked as success). Non-TAKEN userErrors now fail
+> honestly.
+> — Prior: AN1 @ 50bc3da reviewed CLEAN + Claude-verified live: SHOP ALL
 > renders exactly the 342-product online set (POS-only items gone), search excludes POS items
 > (0 results for a POS-only title), deep link to a POS handle shows "no longer listed".
 > Dev stack ready to ship: AI1+AJ1+AK1+AL1+AN1, held for PR #32 merge.**
@@ -178,6 +191,97 @@ below so Codex has ONE target; everything else in this file is context.
 > now shows a preview still). Landing unchanged (1.87MB; these are on-demand).
 > Awaiting operator go to ship to main. NOTE: preorders piece.mp4 (43M) still
 > uncompressed (separate page, ships as-is per AGENTS).**
+
+---
+
+## PHASE AQ — routing unification: shareable catalog URLs + retire the standalone product page (operator-approved, 2026-07-10)
+
+CONTEXT: the site is already a query-param router on `/`: `?product=<handle>` (pushState at
+~line 2749, restored on load ~line 2612, popstate handled) and `?search=/?scope=` likewise. Two
+gaps: (1) the CATALOG stage (shop all / collections / designers, all collection handles) never
+touches the URL, so those views cannot be shared/refreshed; (2) `/product/?handle=` renders a
+bare standalone page whose look predates the hero experience, direct links land there. Operator
+approved: extend the param router with `?collection=`, retire the standalone page via redirect.
+ZERO visual/design/interaction changes. ONE commit `AQ1:`. Build + astro check green. No push.
+
+1. `src/components/blocks/HeroVideo.astro` client script:
+   a. Add `?collection=<handle>` to the URL machinery, mirroring the existing product param
+      helpers (get/set/strip). When `openCatalog(collection, label)` runs from a user action,
+      `history.pushState({ collection, label }, "", url-with-?collection=handle)`. When leaving
+      the catalog stage (X back to landing, or switching to product/search which set their own
+      params), strip/replace the param exactly the way product/search transitions already manage
+      the URL. Params are mutually exclusive: product > search > collection when parsing.
+   b. On-load restore: in the same init block that restores `?product` (~line 2612), if no
+      product/search param but `?collection=` present, open that catalog directly, BEFORE the
+      landing reveal so there is NO flash of landing (match how product restore behaves). Resolve
+      the label from the SSR'd menu button (`[data-collection="<handle>"]`'s
+      `data-collection-label`), falling back to the handle itself if no button matches (live-only
+      collections still open; getLiveCollection resolves any handle).
+   c. popstate: extend the existing handler so back/forward walks correctly across
+      landing <-> catalog <-> product <-> search using the pushed state objects. Reuse the
+      existing stage-transition functions; do not invent a parallel path.
+   d. Keep intact: search session restore, scroll restoration on back-to-catalog, the
+      savedStageReturn logic, designer:open flow (it funnels through openCatalog and gains the
+      URL for free).
+2. `src/pages/product.astro`: retire the standalone experience. The route stays but renders no
+   visible UI: an empty shell (bare Base layout, blank body is fine) plus a BUNDLED module
+   `<script>` (CSP: script-src 'self', NO inline) that reads `?handle` and immediately
+   `location.replace(withBase("/?product=" + encodeURIComponent(handle)))`, or
+   `location.replace(withBase("/"))` when absent. No flash of the old design. Keep
+   `src/lib/product-view.ts` untouched (the hero imports it).
+3. Do NOT touch styles, markup of the hero/product/cart components, or any visual behavior.
+
+Done when: build+check green; `/?collection=clothing-1` cold-load opens SHOP ALL in the full
+design with no landing flash; opening any collection/designer updates the address bar; refresh
+mid-catalog returns to the same collection; back/forward traverses landing/catalog/product/search
+correctly; `/product/?handle=X` lands on the in-app product view with hero chrome.
+
+---
+
+## PHASE AR — day-one redirects for old Shopify URLs (operator-approved, 2026-07-10)
+
+CONTEXT: at cutover shopandson.com stops being the old theme; indexed/shared links to old theme
+URLs must land on the equivalent new-site views. Cloudflare Pages natively reads a `_redirects`
+file from the build output. Dispatch AFTER AQ1 (targets use its params). ONE commit `AR1:`.
+
+1. Create `homepage/public/_redirects` (build copies it to dist root) with EXACTLY:
+   /products/:handle /?product=:handle 301
+   /collections/:collection/products/:handle /?product=:handle 301
+   /collections/:handle /?collection=:handle 301
+   /policies/refund-policy /policies/?policy=refund-policy 301
+   /policies/privacy-policy /policies/?policy=privacy-policy 301
+   /policies/terms-of-service /policies/?policy=terms-of-service 301
+   /pages/* / 302
+   /account https://checkout.shopandson.com/account 302
+   /cart / 302
+2. One comment line at the top (# old Shopify theme URLs -> new-site equivalents; Cloudflare
+   Pages consumes this file). Note: /account depends on the checkout subdomain going live at
+   cutover (documented in DEPLOY-PLAN).
+3. Verify the file lands in dist/ after `npm run build`.
+
+Done when: build green and `dist/_redirects` exists with the rules above.
+
+---
+
+## PHASE AP — newsletter: fix silent signup failure (password over Shopify's 40-char cap) (LAUNCH BLOCKER, operator, 2026-07-10)
+
+DIAGNOSIS (verified on the Cloudflare deployment with a captured API response): every subscribe
+submit fails with `customerUserErrors: TOO_LONG — Password is too long (maximum is 40
+characters)` and the UI still shows success. Cause: `public/scripts/base.js`
+`createThrowawayPassword()` returns `sns-` + 24 random bytes hex = 52 chars; Shopify caps
+customer passwords at 40. Direct API tests with 32-char passwords succeed and subscribe the
+email instantly (single opt-in confirmed working).
+
+FIX: ONE commit `AP1:` in `public/scripts/base.js` only.
+1. Change `createThrowawayPassword()` to `sns-` + 16 random bytes hex (36 chars total, same
+   crypto.getRandomValues entropy source, comfortably under 40).
+2. While there: the submit handler must treat a response with non-empty `customerUserErrors`
+   (other than the existing TAKEN masking) as FAILURE (existing failure/shake path), not
+   success — verify and fix if it currently ignores userErrors.
+3. No UI/visual changes. Build + check green.
+
+Done when: base.js emits a <=40-char password and non-TAKEN userErrors route to the failure
+state.
 
 ---
 
