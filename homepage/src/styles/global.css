@@ -989,32 +989,27 @@ body{
     --hero-icon-size:40px;
     --hero-icon-gap:10px;
     --hero-icon-stage-clearance:14px;
-    --hero-mobile-panel-top:clamp(88px,16vh,132px);
     --hero-mobile-icon-top:max(1.25vh, env(safe-area-inset-top));
-    --hero-mobile-cart-stage-y:calc(var(--hero-icon-stage-clearance) + var(--hero-icon-size) + var(--hero-icon-gap));
-    --hero-mobile-search-stage-x:calc((var(--hero-icon-size) + 8px) * -1);
-    --hero-mobile-search-stage-y:calc(var(--hero-mobile-panel-top) - var(--hero-mobile-icon-top) - var(--hero-icon-size) - var(--hero-icon-gap) - var(--hero-icon-size) - var(--hero-icon-gap));
-    /* Search is two rows below Instagram in the DOM; lift it by one row in
-       catalogue/product states so it swaps with cart while IG stays pinned above. */
-    --hero-mobile-search-collapsed-y:calc(var(--hero-icon-stage-clearance) - var(--hero-icon-size) - var(--hero-icon-gap));
+    --hero-mobile-search-dodge-x:calc((var(--hero-icon-size) + var(--hero-icon-gap)) * -1);
+    --hero-mobile-search-dodge-y:calc((var(--hero-icon-size) + var(--hero-icon-gap)) * -1);
     top:var(--hero-mobile-icon-top); right:4vw;
     flex-direction:column; align-items:flex-end; gap:var(--hero-icon-gap);
   }
   .hero__instagram{
     z-index:5; width:var(--hero-icon-size); height:var(--hero-icon-size);
-    transform:translateY(var(--hero-icon-stage-clearance));
+    transform:none;
     transition:transform .55s ease-in-out,opacity .18s ease,visibility 0s;
   }
   .hero__cart{
     z-index:5; width:var(--hero-icon-size); height:var(--hero-icon-size);
-    transform:translateY(var(--hero-icon-stage-clearance));
+    transform:none;
     transition:transform .55s ease-in-out .08s,opacity .18s ease,visibility 0s;
   }
   .hero__search{
     z-index:5; display:flex; flex-flow:row-reverse wrap;
     justify-content:flex-start; align-items:center; gap:6px 8px;
     max-width:calc(100vw - 8vw);
-    transform:translateY(var(--hero-icon-stage-clearance));
+    transform:none;
     transition:transform .55s ease-in-out,opacity .18s ease,visibility 0s;
   }
   .hero__instagram svg{width:20px; height:20px}
@@ -1046,42 +1041,37 @@ body{
   .hero-video.is-search .hero__instagram,
   .hero-video.is-product .hero__instagram,
   .hero-video.is-preorder .hero__instagram{
-    transform:translateY(var(--hero-icon-stage-clearance));
-    transition-delay:0s,0s,0s;
-  }
-  .hero-video.is-search-open.is-catalog .hero__instagram,
-  .hero-video.is-search-open.is-product .hero__instagram{
-    transform:translateY(var(--hero-mobile-cart-stage-y));
+    transform:none;
     transition-delay:0s,0s,0s;
   }
   .hero-video.is-catalog .hero__cart,
   .hero-video.is-search .hero__cart,
   .hero-video.is-product .hero__cart,
   .hero-video.is-preorder .hero__cart{
-    transform:translateY(var(--hero-mobile-cart-stage-y));
+    transform:none;
     transition-delay:0s,0s,0s;
   }
-  .hero-video.is-catalog .hero__search,
-  .hero-video.is-product .hero__search{
-    transform:translateY(var(--hero-mobile-search-collapsed-y));
-    transition-delay:.08s,0s,0s;
-  }
   .hero-video.is-search .hero__search,
-  .hero-video.is-preorder .hero__search,
-  .hero-video.is-search-open.is-catalog .hero__search,
-  .hero-video.is-search-open.is-product .hero__search{
-    transform:translate(var(--hero-mobile-search-stage-x),var(--hero-mobile-search-stage-y));
-    transition-delay:.08s,0s,0s;
+  .hero-video.is-preorder .hero__search{
+    transform:none;
+    transition-delay:0s,0s,0s;
   }
   .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__cart,
   .hero-video:has(.hero__menu-section.is-search-breadcrumb) .hero__cart{
-    transform:translateY(var(--hero-icon-stage-clearance));
-    transition-delay:.08s,0s,0s;
+    transform:none;
+    transition-delay:0s,0s,0s;
   }
   .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__search,
   .hero-video:has(.hero__menu-section.is-search-breadcrumb) .hero__search{
-    transform:translateY(var(--hero-icon-stage-clearance));
+    transform:none;
     transition-delay:0s,0s,0s;
+  }
+  .hero-video.is-catalog .hero__search,
+  .hero-video.is-product .hero__search,
+  .hero-video.is-search-open.is-catalog .hero__search,
+  .hero-video.is-search-open.is-product .hero__search{
+    transform:translate(var(--hero-mobile-search-dodge-x),var(--hero-mobile-search-dodge-y));
+    transition-delay:.08s,0s,0s;
   }
   .hero-video.is-search-open:not(.is-catalog):not(.is-search):not(.is-product):not(.is-preorder) .hero__menu{
     opacity:0; visibility:hidden; pointer-events:none;
