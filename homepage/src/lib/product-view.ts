@@ -677,13 +677,15 @@ const renderProduct = (container: HTMLElement, product: ProductDetail, options: 
   detail.className = "product-detail__panel";
 
   const vendorName = product.vendor.trim();
-  const vendor = vendorName ? document.createElement("a") : document.createElement("p");
+  const vendor = vendorName ? document.createElement("button") : document.createElement("p");
   vendor.className = "product-detail__vendor";
   setText(vendor, product.vendor);
-  if (vendor instanceof HTMLAnchorElement) {
-    vendor.href = `https://shopandson.com/collections/vendors?q=${encodeURIComponent(product.vendor)}`;
-    vendor.target = "_blank";
-    vendor.rel = "noopener noreferrer";
+  if (vendor instanceof HTMLButtonElement) {
+    vendor.type = "button";
+    vendor.addEventListener("click", (event) => {
+      event.preventDefault();
+      window.dispatchEvent(new CustomEvent("designer:open", { detail: { vendor: product.vendor } }));
+    });
   }
 
   const title = document.createElement("h1");
