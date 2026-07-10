@@ -133,6 +133,37 @@ below so Codex has ONE target; everything else in this file is context.
 
 ---
 
+## PHASE AH — catalogue images load EAGERLY (fix; supersedes AG1) (TOP PRIORITY) (operator, 2026-07-10)
+
+DIAGNOSIS (rigorous): data + token are FINE (runtime live query returns all products with valid
+image URLs; baked data 100% complete). The failure is client-side LAZY image loading. Catalogue
+card images were lazy — native `loading="lazy"` originally, an IntersectionObserver in AG1. BOTH
+defer loading until the browser judges an image "in view." But the catalogue panel slides in via a
+CSS transform, and the grid images are added DURING that transition, so the browser's visibility
+detection (native lazy AND the observer) defers them and never loads them for on-screen tiles (only
+a later scroll re-triggers some). Result: titles/prices render but a good portion of in-view tiles
+stay blank, on mobile AND desktop. AG1 did not fix it because it kept a lazy/deferred mechanism.
+
+FIX: load catalogue preview images EAGERLY — set `src`/`srcset` directly when each card is created,
+NO `loading="lazy"`, NO IntersectionObserver. Eager images load immediately regardless of the
+transition/visibility, guaranteeing every tile renders. Only one collection is shown at a time so
+the cost is bounded. Scope = `src/components/blocks/HeroVideo.astro`. No CSP change. ONE commit
+`AH1:`. Build + astro check green. No push/merge.
+1. In the product-card image creation (`renderProductCard`): set `image.src = product.image` and,
+   if present, `image.srcset = product.imageSrcset` + the existing `image.sizes` DIRECTLY (eager).
+   Set `image.loading = "eager"`, `image.decoding = "async"`, `image.alt = product.title`. Keep an
+   `onerror` handler that retries the URL once, then leaves the no-image placeholder.
+2. REMOVE the AG1 IntersectionObserver machinery entirely: `catalogImageObserver`,
+   `observeCatalogImages()` (and every call to it, e.g. in `renderCatalogGrid`), `loadCatalogImage`,
+   `setCatalogImageSource`, the `data-catalog-image` / `data-src` / `data-srcset` dataset approach,
+   and `catalogEagerImageCount`. Images load directly now.
+3. Leave the reconcile, srcset/sizes, sold-out overlay, and no-image placeholder branch unchanged.
+
+Operator verifies on dev/live: open several collections (including large ones like SHOP ALL), scroll
+each, confirm EVERY tile shows its image immediately with no blanks, on mobile and desktop.
+
+---
+
 ## PHASE AG — catalogue preview images load reliably (TOP PRIORITY) (operator, 2026-07-09)
 
 DIAGNOSIS (Claude, verified against the live baked data): the catalog data is COMPLETE — 48
