@@ -179,7 +179,8 @@ async function fetchCatalogProducts(collection: string): Promise<CatalogProduct[
     page += 1;
   }
 
-  return products.map(mapProduct);
+  // Drafts published to the headless channel without images must not render as blank tiles.
+  return products.map(mapProduct).filter((product) => product.image);
 }
 
 async function fetchCatalogProductPage(collection: string, page: number): Promise<ShopifyProduct[] | null> {

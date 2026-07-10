@@ -299,6 +299,17 @@ const renderProductGallery = (product: ProductDetail, seedImage?: ProductImageSe
   gallery.className = "product-detail__gallery";
   gallery.setAttribute("aria-label", "product images");
 
+  if (product.images.length === 0) {
+    const placeholder = document.createElement("div");
+    placeholder.className = "product-detail__carousel product-detail__carousel--placeholder";
+    placeholder.setAttribute("aria-label", "product image unavailable");
+    placeholder.style.width = "min(100%, 420px)";
+    placeholder.style.aspectRatio = "3 / 4";
+    placeholder.style.background = "rgba(247, 244, 235, 0.72)";
+    gallery.append(placeholder);
+    return gallery;
+  }
+
   const carousel = document.createElement("div");
   carousel.className = "product-detail__carousel";
 
