@@ -106,9 +106,21 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: Phase AS, one commit `AS1:` — mobile: mag icon must dodge left past the
-> "x" in the SEARCH stage, per "## PHASE AS". Operator authorized immediate deploy to the live
-> site once verified. Do not push (Claude ships it).**
+> **ACTIVE SUB-TASK: (none) — AT1 @ 9de1f5a + AT2 @ 92a9e68 verified 10/10 (idle fade at 3s,
+> instant restore on mouse/touch, paused persists, reopen resets, mobile first-tap reveals
+> without pausing, keyboard focus still pins controls). SHIPPING per operator's standing
+> auto-deploy authorization. NOTE for operator review: play/pause control is now visible during
+> playback for 3s before fading (was hidden while playing) — required for the reveal-on-activity
+> pattern; revert available if unwanted.**
+> Log: 2026-07-10 — AT1 auto-hide film controls — 9de1f5a — build:green check:green — structure
+> good, focus-guard bug found in review (mouse click pinned controls forever).
+> Log: 2026-07-10 — AT2 respect keyboard focus for film idle controls — 92a9e68 — build:green
+> check:green — full matrix 10/10.
+> — Prior: AS1 @ 2da0538 SHIPPED (PR #36, operator-authorized auto-deploy)
+> and VERIFIED LIVE on shopandson.com mobile: mag 284-324, x 334-374, zero overlap; expanded
+> bar ends left of the x; catalog/product stages pixel-unchanged.
+> Log: 2026-07-10 — AS1 dodge search icon on mobile search — 2da0538 — build:green check:green
+> — live-verified post-deploy.
 > — Prior: AP1+AQ1+AR1 SHIPPED (PR #35). SITE IS LIVE at shopandson.com (cutover completed
 > 2026-07-10: Cloudflare Pages + checkout.shopandson.com primary, test orders verified).
 > Log: 2026-07-10 — AR1 add old Shopify URL redirects — c35c6ec — build:green check:green —
@@ -194,6 +206,47 @@ below so Codex has ONE target; everything else in this file is context.
 > now shows a preview still). Landing unchanged (1.87MB; these are on-demand).
 > Awaiting operator go to ship to main. NOTE: preorders piece.mp4 (43M) still
 > uncompressed (separate page, ships as-is per AGENTS).**
+
+---
+
+## PHASE AT — film player: auto-hide controls after 3s inactivity, movie-style (operator, 2026-07-10)
+
+SPEC (operator): when the stencil film (`.hero__film` player) is PLAYING, the controls (the "x"
+`[data-film-close]`, the play/pause `[data-film-playback]`, and the sound toggle
+`[data-film-mute]`) fade/blur away after **3 seconds of inactivity** (desktop: no mouse
+movement; mobile: no touch), like YouTube/movie players. Any activity brings them back
+instantly and restarts the timer. ONE commit `AT1:`. No visual redesign: same controls, same
+positions, only visibility choreography.
+
+Behavior rules (standard video-player pattern):
+1. Idle state applies ONLY while the film is actually playing (not before start, not while
+   paused, not ended). On `pause`/`ended` the controls show and stay; on `play` the 3s timer
+   arms.
+2. Activity = `pointermove`, `pointerdown`, `touchstart`, `focusin`, `keydown` scoped to the
+   film player (`.hero__film`). Each occurrence: show controls, restart the 3s timer.
+3. While idle on desktop, also hide the cursor over the player (`cursor:none`).
+4. While idle, controls get `pointer-events:none`, so on mobile the FIRST tap only reveals the
+   controls (it hits the frame, which is activity), the second tap operates a control, standard
+   phone-player behavior.
+5. Keyboard/a11y: `focusin` on any control (tabbing) shows the controls and prevents hiding
+   while a control has focus.
+6. Closing the film stage clears the timer and resets to visible for next open.
+
+Implementation:
+1. HeroVideo client script: a small idle controller (setTimeout id + arm/clear/reset functions)
+   that toggles class `is-controls-idle` on `.hero__film`. Hook film `play`/`pause`/`ended`
+   events (the existing updateFilmPlayback wiring area) + the activity listeners in rule 2.
+   Clean up on film close (existing close path at filmClose / stage transitions).
+7. `src/styles/global.css`: `.hero__film.is-controls-idle` -> the three control selectors get
+   `opacity:0; filter:blur(6px); pointer-events:none;` with `transition: opacity .45s ease,
+   filter .45s ease` on the controls in BOTH states (so fade-in is smooth too), and
+   `.hero__film.is-controls-idle{cursor:none}`. Do not change any existing control styling
+   otherwise.
+
+Done when: build + astro check green; playing film + 3s no input -> controls faded/blurred out
+and unclickable; mouse move / touch -> controls back instantly, timer restarts; pausing shows
+controls persistently; before first play controls never hide; closing + reopening the film
+starts visible.
 
 ---
 

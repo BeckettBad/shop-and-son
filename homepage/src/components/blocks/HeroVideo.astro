@@ -447,7 +447,8 @@ const shopifyStorefrontVersion = "2025-01";
   const aboutDividerSettleMs = 170;
   const productImagePlaceholderBackground = "rgba(247, 244, 235, 0.72)";
   const liveCollectionCache = new Map<string, Promise<CollectionDetail | null>>();
-  let filmHasStarted = false;
+  let filmControlsIdleTimeout: ReturnType<typeof window.setTimeout> | undefined;
+  let suppressNextFilmClick = false;
   let stencilReturnCleanup: (() => void) | undefined;
   let stageCleanup: ReturnType<typeof window.setTimeout> | undefined;
   let mobileNowPlayingCollapseCleanup: ReturnType<typeof window.setTimeout> | undefined;
@@ -1551,6 +1552,8 @@ const shopifyStorefrontVersion = "2025-01";
     if (previousStage === "film") {
       filmVideo?.pause();
       resetFilmMute();
+      suppressNextFilmClick = false;
+      resetFilmControlsIdle();
     }
     if (previousStage === "search" && nextStage !== "search") {
       setSearchResultsExpanded(false);
@@ -2558,10 +2561,60 @@ const shopifyStorefrontVersion = "2025-01";
     if (!filmVideo || !filmPlayback) return;
 
     const isPlaying = !filmVideo.paused && !filmVideo.ended;
-    filmPlayback.hidden = isPlaying;
-    filmPlayback.classList.toggle("is-paused-after-start", filmHasStarted && !isPlaying);
+    filmPlayback.hidden = false;
+    filmPlayback.classList.toggle("is-playing", isPlaying);
     filmPlayback.setAttribute("aria-label", isPlaying ? "Pause film" : "Play film");
     filmPlayback.setAttribute("aria-pressed", String(isPlaying));
+  };
+
+  const isFilmPlaying = () => Boolean(filmVideo && !filmVideo.paused && !filmVideo.ended);
+
+  const isFilmControlFocused = () => {
+    const activeElement = document.activeElement;
+    if (!(activeElement instanceof HTMLElement)) return false;
+    if (!activeElement.matches(":focus-visible")) return false;
+
+    return Boolean(
+      filmClose?.contains(activeElement) ||
+      filmPlayback?.contains(activeElement) ||
+      filmMute?.contains(activeElement),
+    );
+  };
+
+  const clearFilmControlsIdleTimer = () => {
+    if (!filmControlsIdleTimeout) return;
+
+    window.clearTimeout(filmControlsIdleTimeout);
+    filmControlsIdleTimeout = undefined;
+  };
+
+  const showFilmControls = () => {
+    filmPanel?.classList.remove("is-controls-idle");
+  };
+
+  const armFilmControlsIdle = () => {
+    clearFilmControlsIdleTimer();
+    if (!isFilmPlaying()) {
+      showFilmControls();
+      return;
+    }
+    if (isFilmControlFocused()) return;
+
+    filmControlsIdleTimeout = window.setTimeout(() => {
+      filmControlsIdleTimeout = undefined;
+      if (!isFilmPlaying() || isFilmControlFocused()) {
+        showFilmControls();
+        return;
+      }
+
+      filmPanel?.classList.add("is-controls-idle");
+    }, 3000);
+  };
+
+  const resetFilmControlsIdle = () => {
+    clearFilmControlsIdleTimer();
+    showFilmControls();
+    armFilmControlsIdle();
   };
 
   const toggleFilmPlayback = () => {
@@ -2614,6 +2667,8 @@ const shopifyStorefrontVersion = "2025-01";
     filmVideo?.pause();
     resetFilmMute();
     updateFilmPlayback();
+    suppressNextFilmClick = false;
+    resetFilmControlsIdle();
     resetCatalogScroll();
     returnStencilFromRight();
     delete hero.dataset.activeCollection;
@@ -2772,15 +2827,61 @@ const shopifyStorefrontVersion = "2025-01";
   });
   filmVideo?.addEventListener("click", toggleFilmPlayback);
   filmVideo?.addEventListener("play", () => {
-    filmHasStarted = true;
     updateFilmPlayback();
+    resetFilmControlsIdle();
   });
-  filmVideo?.addEventListener("pause", updateFilmPlayback);
-  filmVideo?.addEventListener("ended", updateFilmPlayback);
+  filmVideo?.addEventListener("pause", () => {
+    updateFilmPlayback();
+    resetFilmControlsIdle();
+  });
+  filmVideo?.addEventListener("ended", () => {
+    updateFilmPlayback();
+    resetFilmControlsIdle();
+  });
   filmPlayback?.addEventListener("click", toggleFilmPlayback);
   filmMute?.addEventListener("click", toggleFilmMute);
+  filmPanel?.addEventListener(
+    "pointermove",
+    () => {
+      resetFilmControlsIdle();
+    },
+    { passive: true },
+  );
+  filmPanel?.addEventListener("pointerdown", () => {
+    if (filmPanel.classList.contains("is-controls-idle")) {
+      suppressNextFilmClick = true;
+      window.setTimeout(() => {
+        suppressNextFilmClick = false;
+      }, 700);
+    }
+    resetFilmControlsIdle();
+  });
+  filmPanel?.addEventListener(
+    "touchstart",
+    () => {
+      resetFilmControlsIdle();
+    },
+    { passive: true },
+  );
+  filmPanel?.addEventListener("focusin", resetFilmControlsIdle);
+  filmPanel?.addEventListener("focusout", () => {
+    window.setTimeout(armFilmControlsIdle, 0);
+  });
+  filmPanel?.addEventListener("keydown", resetFilmControlsIdle);
+  filmPanel?.addEventListener(
+    "click",
+    (event) => {
+      if (!suppressNextFilmClick) return;
+
+      suppressNextFilmClick = false;
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    true,
+  );
   resetFilmMute();
   updateFilmPlayback();
+  resetFilmControlsIdle();
 
   catalogTrack?.addEventListener("click", (event) => {
     if (!(event instanceof MouseEvent)) return;
