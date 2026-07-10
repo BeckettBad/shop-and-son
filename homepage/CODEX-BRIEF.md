@@ -106,7 +106,28 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — AI1 @ 3d22a4c committed, Claude-reviewed CLEAN, behaviorally
+> **ACTIVE SUB-TASK: (none) — AN1 @ 50bc3da reviewed CLEAN + Claude-verified live: SHOP ALL
+> renders exactly the 342-product online set (POS-only items gone), search excludes POS items
+> (0 results for a POS-only title), deep link to a POS handle shows "no longer listed".
+> Dev stack ready to ship: AI1+AJ1+AK1+AL1+AN1, held for PR #32 merge.**
+> Log: 2026-07-10 — AN1 filter POS-only products — 50bc3da — build:green check:green —
+> verified grid/search/deep-link against live API.
+> — Staging rehearsal PASSED 14/14 on the cutover build (grids, search, live product, real cart,
+> checkout URL on Shopify primary, policies, subscribe, all API calls on myshopify domain).
+> — AL1 @ 599d82c reviewed CLEAN: 652 lines dead layer deleted, no dangling imports,
+> dist/index.html hash-identical pre/post. content.ts documents heroMenu as the live menu seed.
+> Log: 2026-07-10 — AL1 delete dead homepage content layer — 599d82c — build:green check:green
+> — hash-identical output, verified no dangling refs.
+> Log: 2026-07-10 — AK1 harden cart and catalog failures — 18a5ea9 — build:green check:green —
+> Claude-verified: with ALL storefront API calls blocked, a stored cart id SURVIVES page load
+> (was wiped before); ensureCart correctly refuses to mint a new cart while the stored one is
+> unreachable; catalog build now THROWS on failed page fetch (guard already tripped on a real
+> 429 during Codex's first build, then green on retry). pageshow/bfcache re-hydrate added.
+> Log: 2026-07-10 — AJ1 unify production domains — 9fad0ff — build:green check:green (both
+> default and cutover env) — Claude-verified: cutover dist has zero beckettbad//shop-and-son
+> leftovers, CSP connect-src/form-action carry shop-and-son.myshopify.com, withBase clean at
+> base "/". Cutover = 3 env vars at the host, no code change.
+> — Prior: AI1 @ 3d22a4c committed, Claude-reviewed CLEAN, behaviorally
 > VERIFIED (headed Chrome vs live Storefront API on the prod build): SHOP ALL renders 342
 > snapshot → 368 reconciled cards, 0 blank, 0 unloaded; search "norway" = 0 imageless tiles
 > with matching count; deep link to an imageless product renders the placeholder frame, no
@@ -157,6 +178,171 @@ below so Codex has ONE target; everything else in this file is context.
 > now shows a preview still). Landing unchanged (1.87MB; these are on-demand).
 > Awaiting operator go to ship to main. NOTE: preorders piece.mp4 (43M) still
 > uncompressed (separate page, ships as-is per AGENTS).**
+
+---
+
+## PHASE AN — render ONLY products published to the Online Store channel (POS-only exclusion) (operator, 2026-07-10)
+
+CONTEXT (operator + Ben, 2026-07-10): the ~130 "headless-only" products (Active in admin but not
+on the Online Store channel) are POS/in-store-only inventory: never meant to sell online. They
+must NOT appear on the new site, and must NOT be drafted/deleted (that would break POS). The
+owner's existing workflow is the signal: he publishes a product to the Online Store channel when
+it should sell online. The Storefront API exposes this as `onlineStoreUrl` (null = not published
+to Online Store). Verified live: exactly 130 of 520 products are null and they match the POS-only
+list 1:1; all 390 online products have images. So: filter grids/search/detail to products with a
+non-null onlineStoreUrl. The AI1 imageless filter STAYS as an independent safety net. Owner's
+process is unchanged: tick Online Store = appears on the new site, untick = in-store only.
+ONE commit `AN1:`. Build + astro check green. No push.
+
+1. `src/lib/storefront-client.ts`: add `onlineStoreUrl` to the product fields of COLLECTION_QUERY,
+   the predictive/search product fragments, and PRODUCT_QUERY. Map it into the product objects
+   (CatalogProduct gains `onlineStoreUrl?: string | null`; ProductDetail likewise).
+2. HeroVideo client script: extend the render gate. Where AI1 filters `hasCardImage`, the gate
+   becomes "has image AND is published online". For SNAPSHOT products (baked from the Online
+   Store products.json feed, which by definition only contains published products and carries no
+   onlineStoreUrl field) treat missing property as PUBLISHED (undefined -> allowed); for LIVE
+   products (field present) require non-null. Suggestion/search assembly paths use the same rule.
+3. `src/lib/product-view.ts`: if the live product's `onlineStoreUrl` is null, render the existing
+   "this piece is no longer listed" state instead of the product (POS-only items must not be
+   reachable via deep link).
+4. `src/lib/catalog.ts` (snapshot): no filter change needed (feed is Online-Store-only by
+   definition) — add a one-line comment saying so.
+5. Comment the gate with WHY: POS-only inventory is Active for the register but unpublished from
+   the Online Store channel; the site must mirror the owner's Online Store publish decision.
+   NOTE in code: if the Online Store channel app is ever uninstalled or the old storefront
+   password-protected in a way that nulls onlineStoreUrl, this gate would blank the catalog —
+   revisit before any such admin change (see DEPLOY-PLAN).
+
+Done when: build + check green; against the LIVE API, SHOP ALL renders exactly the online
+product set (~390 across clothing+house, currently 368 clothing-side), zero POS-only items
+(e.g. handle "cle-panel-check-shirt" or any of the 33 with-image POS items) in grids or search,
+and a deep link to a POS-only handle shows "no longer listed".
+
+---
+
+## PHASE AL — delete the dead content/component layer before handoff (operator, 2026-07-10)
+
+CONTEXT: the live site renders ONLY HeroVideo (+ CartDrawer) on index, product-view on
+/product/, policies on /policies/. Base.astro renders TopBar/IndexOverlay only when a page is
+neither `landing` nor `bare`, and NO page qualifies, so they never render. The old block
+components are imported by no page. This dead layer contains a SECOND designer roster and nav
+config that look authoritative but do nothing, a proven trap for future edits. Delete it so
+Ben-era maintenance has one source of truth. Everything is recoverable via git. ONE commit
+`AL1:`. Dispatch AFTER AK1 lands. Build + astro check green. No push.
+
+1. VERIFY with grep before each deletion that the target is imported nowhere outside the dead
+   set itself. Expected dead set (confirm, do not assume):
+   `src/components/TopBar.astro`, `src/components/IndexOverlay.astro`, and
+   `src/components/blocks/About.astro`, `Clothing.astro`, `Objects.astro`, `Music.astro`,
+   `Vault.astro`, `Preorders.astro`, `FlowerDivider.astro` (NOT HeroVideo.astro, NOT
+   CartDrawer.astro). Delete the dead files.
+2. `src/layouts/Base.astro`: remove the TopBar/IndexOverlay imports and their conditional
+   renders (the `!landing && !bare` slots). Keep everything else identical.
+3. `src/data/content.ts`: delete the now-unreferenced exports/properties: `site.nav` (and the
+   `shop()` helper + `shopUrl` if only nav used them), `clothing` (incl. its 28-name designers
+   roster), `about`, `objects`, `vault`, `catalog` (the "+ index" data), and `music.tracks` /
+   `music.dispatch` IF unreferenced. KEEP: `site` basics actually used (brand, hours, contact
+   fields referenced by live code), `heroMenu` (the LIVE menu seed), and `music.nowPlaying`
+   (HeroVideo reads its label). Grep each before removal; keep anything with a live reference.
+4. Add one comment at the top of content.ts: the live menu seed is `heroMenu`, hydrated at
+   runtime from Shopify Navigation `main-menu`; new designer collections are added via Shopify
+   admin Navigation, not here.
+5. Done when: build + astro check green, `npm run build` output byte-identical for
+   dist/index.html vs pre-change build except hash/whitespace differences (the pages never
+   rendered these components, so output should not change materially). Note any unexpected
+   output diff in the log instead of shipping it.
+
+---
+
+## PHASE AK — pre-launch robustness: cart survives flaky API, build refuses empty catalog (operator, 2026-07-10)
+
+CONTEXT (from the 2026-07-10 security review): two real defects to fix before go-live. Dispatch
+AFTER AJ1 lands (both touch catalog.ts). ONE commit `AK1:`. Build + astro check green. No push.
+
+1. **Transient API failure must not wipe the customer's cart.**
+   Today `storefrontFetch` returns `null` for BOTH transport failure (timeout/429/network/HTTP
+   error) AND legitimate "no data", and `cart.ts` treats null as "cart gone" and calls
+   `resetCart()` (clears the localStorage cart id) in `hydrateCart` and `handleMutationPayload`.
+   One flaky request deletes a real cart silently.
+   Fix, minimally invasive:
+   a. In `src/lib/storefront-client.ts` add an exported
+      `storefrontRequest<T>(query, variables): Promise<{ ok: true; data: T | null } | { ok: false }>`
+      containing the current fetch logic (`ok: false` on abort/network/!response.ok/GraphQL
+      errors; `ok: true, data` otherwise). Reimplement the existing `storefrontFetch` as a thin
+      wrapper returning `data ?? null` so every existing caller is untouched.
+   b. In `src/lib/cart.ts`, switch the CART_QUERY hydrate and the cart mutations to
+      `storefrontRequest`. Rules: `ok: false` -> KEEP current cart and stored id, do NOT
+      resetCart, `dispatchCartMessage` a short retryable notice ("cart is unavailable right now,
+      try again"), and for hydrate leave `hydrated` false so a later interaction retries.
+      `ok: true` with unusable/absent cart -> reset exactly as today (cart genuinely gone or
+      expired). userErrors handling unchanged.
+2. **Back-forward cache staleness:** after returning from Shopify checkout via the browser back
+   button, the drawer shows the pre-checkout cart. Add a `window` `pageshow` listener (in cart.ts's
+   init path) that, when `event.persisted` is true, forces re-hydration (reset the hydrated flag /
+   hydration promise and re-run) so the drawer reflects reality.
+3. **The build must refuse to ship an empty catalog.** In `src/lib/catalog.ts`,
+   `fetchCatalogProducts` currently returns `[]` when `fetchCatalogProductPage` exhausts its 3
+   retries (and discards previously fetched pages). Because this runs at BUILD time (HeroVideo
+   frontmatter) and a daily cron redeploys main, one rate-limited morning silently blanks
+   collections on the live site. Fix: when a PAGE fetch definitively fails (returns null), THROW
+   an Error naming the collection instead of returning [] — the Astro build fails, the cron keeps
+   yesterday's good deploy, and the failure is visible in Actions. A collection that legitimately
+   returns zero products (feed 200, empty array) stays allowed.
+4. Do not touch checkout handling, the reconcile, or UI markup beyond the cart message. Scope:
+   `src/lib/storefront-client.ts`, `src/lib/cart.ts`, `src/lib/catalog.ts`.
+
+Done when: build + check green; grep confirms no remaining `resetCart()` on the transport-failure
+paths; a simulated failed fetch (e.g. temporarily point the domain at an unreachable host in a
+local test) leaves localStorage's cart id intact.
+
+---
+
+## PHASE AJ — production domain unification (go-live prep, operator, 2026-07-10)
+
+CONTEXT: the site goes live at shopandson.com SOON, replacing the old Shopify theme. At cutover,
+shopandson.com stops being Shopify and becomes THIS site, so every hardcoded shopandson.com
+reference that expects Shopify to answer must become env-driven. The store's permanent
+Shopify-owned domain is **shop-and-son.myshopify.com** (verified: products.json 200 no-redirect,
+Storefront GraphQL answers with our token). DESIGN RULE: all defaults preserve CURRENT behavior
+exactly — a build with no new env vars must be byte-equivalent in behavior to today (still on
+GitHub Pages). The new env vars only take effect when set at deploy time. ONE commit `AJ1:`.
+Build + astro check green. No push/merge (an unrelated PR is open; Claude holds pushes).
+
+1. `astro.config.mjs`: make site/base env-driven with today's values as defaults:
+   `site: process.env.PUBLIC_SITE_ORIGIN ?? "https://beckettbad.github.io"`,
+   `base: process.env.PUBLIC_BASE_PATH ?? "/shop-and-son"`.
+   Then VERIFY `src/lib/url.ts` withBase() produces correct hrefs when base is "/" (no "//"
+   doubles); fix withBase minimally if needed.
+2. `src/lib/catalog.ts`: replace the hardcoded `PRODUCT_FEED_BASE_URL`/`PRODUCT_PAGE_BASE_URL`
+   ("https://shopandson.com/...") with bases derived from `import.meta.env.PUBLIC_SHOPIFY_STORE_DOMAIN`
+   (fallback "shopandson.com" so current builds are unchanged). Check whether the snapshot
+   `product.url` built from PRODUCT_PAGE_BASE_URL is consumed anywhere live (cards navigate via
+   getProductHref in-app); if truly unused, keep the field but note it, do NOT rip it out in this
+   phase.
+3. `src/layouts/Base.astro`: derive the Shopify origin once from
+   `import.meta.env.PUBLIC_SHOPIFY_STORE_DOMAIN` (fallback "shopandson.com") and use it in:
+   CSP `connect-src` (line ~26), CSP `form-action` (line ~38), and the preconnect link (line ~63).
+   Keep `https://shopandson.com` ALSO present in connect-src during the transition (harmless
+   duplicate when they match). Add `upgrade-insecure-requests` to the CSP (valid in meta).
+4. `src/lib/product-view.ts` (~17-18) and `src/pages/policies.astro` (~37-50): the
+   "buy on shopandson.com" and policy fallback links must use the same env-derived Shopify origin
+   instead of the hardcoded domain. Keep link text generic ("view on the shop") if it currently
+   names the domain.
+5. `src/lib/shopify.ts`: confirm its endpoint/domain is already env-driven; align it to the same
+   var + fallback if not.
+6. `src/components/blocks/Preorders.astro` (~5-6, 22, 36, 49): replace hardcoded
+   `https://beckettbad.github.io/shop-and-son/...` URLs with `withBase("/preorders/...")` links
+   and asset paths.
+7. `.env.example`: document PUBLIC_SITE_ORIGIN, PUBLIC_BASE_PATH, and note
+   PUBLIC_SHOPIFY_STORE_DOMAIN should be shop-and-son.myshopify.com for production cutover.
+8. Do NOT touch: checkoutUrl handling (correct as-is), src/data/content.ts (dead nav cleanup is a
+   separate phase), deploy.yml (outside scope).
+
+Done when: `npm run build` + `npx astro check` green with NO new env vars set AND with
+`PUBLIC_SITE_ORIGIN=https://shopandson.com PUBLIC_BASE_PATH=/ PUBLIC_SHOPIFY_STORE_DOMAIN=shop-and-son.myshopify.com npm run build`
+— and in that second build's dist/, `grep -r "beckettbad\|/shop-and-son/" dist | grep -v preorders`
+returns no live-page hits, and `grep -r "shopandson.com" dist/index.html` shows only the
+transition connect-src entry and mailto links.
 
 ---
 

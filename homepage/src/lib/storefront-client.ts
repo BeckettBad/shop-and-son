@@ -19,6 +19,8 @@ interface GraphQLResponse<T> {
   errors?: { message?: string }[];
 }
 
+export type StorefrontRequestResult<T> = { ok: true; data: T | null } | { ok: false };
+
 interface Money {
   amount: string;
   currencyCode: string;
@@ -41,6 +43,7 @@ interface StorefrontCollectionProduct {
   title: string;
   vendor: string;
   availableForSale: boolean;
+  onlineStoreUrl: string | null;
   featuredImage: StorefrontImage | null;
   priceRange: {
     minVariantPrice: Money;
@@ -93,6 +96,7 @@ export interface ProductDetail {
   vendor: string;
   descriptionHtml: string;
   availableForSale: boolean;
+  onlineStoreUrl: string | null;
   images: ProductImage[];
   options: ProductOption[];
   variants: ProductVariant[];
@@ -134,6 +138,7 @@ function mapCatalogProduct(product: StorefrontCollectionProduct): CatalogProduct
     price: formatMoney(money.amount, money.currencyCode),
     url: getProductUrl(product.handle),
     available: product.availableForSale,
+    onlineStoreUrl: product.onlineStoreUrl,
     image: getSizedShopifyImageUrl(product.featuredImage?.url, 1100),
     imageSrcset: getShopifyImageSrcset(product.featuredImage?.url),
     imageAspect: imageWidth && imageHeight ? imageWidth / imageHeight : 0.75,
@@ -213,11 +218,11 @@ function mapMenuItem(item: StorefrontMenuItemRaw): StorefrontMenuItem {
   return mapped;
 }
 
-export async function storefrontFetch<T>(
+export async function storefrontRequest<T>(
   query: string,
   variables: Record<string, unknown> = {},
-): Promise<T | null> {
-  if (!isStorefrontConfigured || !SHOPIFY_DOMAIN || !SHOPIFY_TOKEN) return null;
+): Promise<StorefrontRequestResult<T>> {
+  if (!isStorefrontConfigured || !SHOPIFY_DOMAIN || !SHOPIFY_TOKEN) return { ok: false };
 
   let timeout: ReturnType<typeof globalThis.setTimeout> | undefined;
 
@@ -237,19 +242,27 @@ export async function storefrontFetch<T>(
       },
     );
 
-    if (!response.ok) return null;
+    if (!response.ok) return { ok: false };
 
     const payload = (await response.json()) as GraphQLResponse<T>;
-    if (payload.errors?.length) return null;
+    if (payload.errors?.length) return { ok: false };
 
-    return payload.data ?? null;
+    return { ok: true, data: payload.data ?? null };
   } catch {
-    return null;
+    return { ok: false };
   } finally {
     if (timeout) {
       globalThis.clearTimeout(timeout);
     }
   }
+}
+
+export async function storefrontFetch<T>(
+  query: string,
+  variables: Record<string, unknown> = {},
+): Promise<T | null> {
+  const result = await storefrontRequest<T>(query, variables);
+  return result.ok ? result.data : null;
 }
 
 const COLLECTION_QUERY = /* GraphQL */ `
@@ -267,6 +280,7 @@ const COLLECTION_QUERY = /* GraphQL */ `
           title
           vendor
           availableForSale
+          onlineStoreUrl
           featuredImage {
             url
             altText
@@ -336,6 +350,7 @@ const PRODUCT_SEARCH_QUERY = /* GraphQL */ `
         title
         vendor
         availableForSale
+        onlineStoreUrl
         featuredImage {
           url
           altText
@@ -415,6 +430,7 @@ const PREDICTIVE_SEARCH_QUERY = /* GraphQL */ `
         title
         vendor
         availableForSale
+        onlineStoreUrl
         featuredImage {
           url
           altText
@@ -461,6 +477,7 @@ const PRODUCT_QUERY = /* GraphQL */ `
       vendor
       descriptionHtml
       availableForSale
+      onlineStoreUrl
       images(first: 24) {
         nodes {
           url
@@ -500,6 +517,7 @@ interface ProductQueryData {
     vendor: string;
     descriptionHtml: string;
     availableForSale: boolean;
+    onlineStoreUrl: string | null;
     images: {
       nodes: StorefrontImage[];
     };
@@ -534,6 +552,7 @@ async function fetchProduct(handle: string): Promise<ProductDetail | null> {
       vendor: product.vendor,
       descriptionHtml: product.descriptionHtml,
       availableForSale: product.availableForSale,
+      onlineStoreUrl: product.onlineStoreUrl,
       images: product.images.nodes.map(mapProductImage),
       options: product.options,
       variants: product.variants.nodes.map((variant) => ({

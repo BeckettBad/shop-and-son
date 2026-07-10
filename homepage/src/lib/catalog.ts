@@ -5,6 +5,7 @@ export interface CatalogProduct {
   price: string;
   url: string;
   available: boolean;
+  onlineStoreUrl?: string | null;
   image?: string;
   imageSrcset?: string;
   imageAspect: number;
@@ -33,8 +34,14 @@ interface ShopifyImage {
   height?: number;
 }
 
-const PRODUCT_FEED_BASE_URL = "https://shopandson.com/collections";
-const PRODUCT_PAGE_BASE_URL = "https://shopandson.com/products";
+const normalizeShopifyDomain = (domain: string | undefined): string =>
+  (domain?.trim() || "shopandson.com").replace(/^https?:\/\//, "").replace(/\/+$/, "");
+
+const SHOPIFY_ORIGIN = `https://${normalizeShopifyDomain(
+  import.meta.env.PUBLIC_SHOPIFY_STORE_DOMAIN as string | undefined,
+)}`;
+const PRODUCT_FEED_BASE_URL = `${SHOPIFY_ORIGIN}/collections`;
+const PRODUCT_PAGE_BASE_URL = `${SHOPIFY_ORIGIN}/products`;
 const PRODUCT_CAP = 250;
 const SHOPIFY_IMAGE_WIDTHS = [700, 1100, 1600] as const;
 const FETCH_SPACING_MS = 250;
@@ -171,7 +178,9 @@ async function fetchCatalogProducts(collection: string): Promise<CatalogProduct[
 
   while (true) {
     const pageProducts = await fetchCatalogProductPage(collection, page);
-    if (!pageProducts) return [];
+    if (!pageProducts) {
+      throw new Error(`Failed to fetch Shopify catalog collection "${collection}" page ${page}`);
+    }
 
     products.push(...pageProducts);
     if (pageProducts.length < PRODUCT_CAP) break;
@@ -179,7 +188,7 @@ async function fetchCatalogProducts(collection: string): Promise<CatalogProduct[
     page += 1;
   }
 
-  // Drafts published to the headless channel without images must not render as blank tiles.
+  // The products.json snapshot feed is Online-Store-only by definition; keep the imageless tile guard.
   return products.map(mapProduct).filter((product) => product.image);
 }
 

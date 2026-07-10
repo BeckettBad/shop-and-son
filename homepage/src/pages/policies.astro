@@ -20,6 +20,12 @@ import Base from "../layouts/Base.astro";
 
     const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
     const homeUrl = `${BASE}/`;
+    const shopifyDomain = (
+      (import.meta.env.PUBLIC_SHOPIFY_STORE_DOMAIN as string | undefined)?.trim() || "shopandson.com"
+    )
+      .replace(/^https?:\/\//, "")
+      .replace(/\/+$/, "");
+    const shopifyOrigin = `https://${shopifyDomain}`;
     const allowedPolicies = new Set(["refund-policy", "privacy-policy", "terms-of-service"]);
     const requestedHandle = new URLSearchParams(window.location.search).get("policy")?.trim() ?? "";
     const handle = allowedPolicies.has(requestedHandle) ? requestedHandle : "";
@@ -36,8 +42,8 @@ import Base from "../layouts/Base.astro";
 
     const shopifyPolicyUrl = (policyHandle: string) =>
       policyHandle
-        ? `https://shopandson.com/policies/${encodeURIComponent(policyHandle)}`
-        : "https://shopandson.com/policies/";
+        ? `${shopifyOrigin}/policies/${encodeURIComponent(policyHandle)}`
+        : `${shopifyOrigin}/policies/`;
 
     const renderFallback = () => {
       if (!state) return;
@@ -47,7 +53,7 @@ import Base from "../layouts/Base.astro";
       link.href = shopifyPolicyUrl(handle);
       link.target = "_blank";
       link.rel = "noopener";
-      link.textContent = handle ? `shopandson.com/policies/${handle}` : "shopandson.com/policies";
+      link.textContent = "view on the shop";
 
       state.className = "policy-page__state policy-page__state--message";
       state.replaceChildren(link);

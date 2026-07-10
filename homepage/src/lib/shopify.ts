@@ -7,7 +7,7 @@
  * `${SHOPIFY_STORE_DOMAIN}/products/<handle>`.
  *
  * Configure via environment (e.g. a local `.env`, or your host's env settings):
- *   SHOPIFY_STORE_DOMAIN            = shopandson.com           (or *.myshopify.com)
+ *   PUBLIC_SHOPIFY_STORE_DOMAIN    = shopandson.com           (or *.myshopify.com)
  *   SHOPIFY_STOREFRONT_API_TOKEN   = <public Storefront access token>
  *   SHOPIFY_STOREFRONT_API_VERSION = 2025-01                  (optional)
  *
@@ -20,7 +20,11 @@
  * product-backed blocks can merge in live data without further wiring changes.
  */
 
-const DOMAIN = import.meta.env.SHOPIFY_STORE_DOMAIN as string | undefined;
+const DOMAIN = (
+  (import.meta.env.PUBLIC_SHOPIFY_STORE_DOMAIN as string | undefined)?.trim() || "shopandson.com"
+)
+  .replace(/^https?:\/\//, "")
+  .replace(/\/+$/, "");
 const TOKEN = import.meta.env.SHOPIFY_STOREFRONT_API_TOKEN as string | undefined;
 const API_VERSION =
   (import.meta.env.SHOPIFY_STOREFRONT_API_VERSION as string | undefined) ?? "2025-01";
@@ -71,7 +75,7 @@ export async function shopifyFetch<T>(
 ): Promise<T | null> {
   if (!isShopifyConfigured) {
     console.warn(
-      "[shopify] Not configured — set SHOPIFY_STORE_DOMAIN and SHOPIFY_STOREFRONT_API_TOKEN. Falling back to static content.",
+      "[shopify] Not configured — set PUBLIC_SHOPIFY_STORE_DOMAIN and SHOPIFY_STOREFRONT_API_TOKEN. Falling back to static content.",
     );
     return null;
   }

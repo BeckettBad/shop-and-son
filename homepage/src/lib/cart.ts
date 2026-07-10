@@ -1,5 +1,5 @@
 import { formatMoney, getSizedShopifyImageUrl } from "./catalog";
-import { isStorefrontConfigured, storefrontFetch } from "./storefront-client";
+import { isStorefrontConfigured, storefrontRequest } from "./storefront-client";
 
 declare global {
   interface Window {
@@ -97,6 +97,7 @@ export interface Cart {
 }
 
 const CART_ID_KEY = "andson:cart-id";
+const CART_UNAVAILABLE_MESSAGE = "cart is unavailable right now, try again";
 const EMPTY_CART: Cart = {
   id: "",
   checkoutUrl: "",
@@ -287,6 +288,13 @@ function resetCart(): Cart {
   return currentCart;
 }
 
+function markHydrationRetryable(): Cart {
+  hydrated = false;
+  hydratePromise = undefined;
+  dispatchCartMessage(CART_UNAVAILABLE_MESSAGE);
+  return currentCart;
+}
+
 function isUsableCart(rawCart: CartRaw | null | undefined): rawCart is CartRaw {
   return Boolean(rawCart?.id && rawCart.checkoutUrl);
 }
@@ -358,25 +366,29 @@ async function hydrateCart(): Promise<Cart> {
     return currentCart;
   }
 
-  const data = await storefrontFetch<CartQueryResponse>(CART_QUERY, { id: storedId });
+  const result = await storefrontRequest<CartQueryResponse>(CART_QUERY, { id: storedId });
+  if (!result.ok) {
+    return markHydrationRetryable();
+  }
+
   hydrated = true;
 
-  if (!isUsableCart(data?.cart)) {
+  if (!isUsableCart(result.data?.cart)) {
     resetCart();
     dispatchCartUpdated(currentCart);
     return currentCart;
   }
 
-  const cart = setCurrentCart(data.cart);
+  const cart = setCurrentCart(result.data.cart);
   dispatchCartUpdated(cart);
   return cart;
 }
 
 function getHydratePromise(): Promise<Cart> {
   hydratePromise ??= hydrateCart().catch(() => {
-    hydrated = true;
-    resetCart();
-    dispatchCartUpdated(currentCart);
+    hydrated = false;
+    hydratePromise = undefined;
+    dispatchCartMessage(CART_UNAVAILABLE_MESSAGE);
     return currentCart;
   });
 
@@ -394,9 +406,15 @@ export async function ensureCart(): Promise<string> {
 
   await getHydratePromise();
   if (currentCart.id) return currentCart.id;
+  if (!hydrated && readStoredCartId()) return "";
 
-  const data = await storefrontFetch<CartCreateResponse>(CART_CREATE_MUTATION);
-  const cart = handleMutationPayload(data?.cartCreate);
+  const result = await storefrontRequest<CartCreateResponse>(CART_CREATE_MUTATION);
+  if (!result.ok) {
+    dispatchCartMessage(CART_UNAVAILABLE_MESSAGE);
+    return "";
+  }
+
+  const cart = handleMutationPayload(result.data?.cartCreate);
   return cart?.id ?? "";
 }
 
@@ -409,11 +427,16 @@ export async function addLine(variantId: string, qty = 1): Promise<Cart> {
   const cartId = await ensureCart();
   if (!cartId) return currentCart;
 
-  const data = await storefrontFetch<CartLinesAddResponse>(CART_LINES_ADD_MUTATION, {
+  const result = await storefrontRequest<CartLinesAddResponse>(CART_LINES_ADD_MUTATION, {
     cartId,
     lines: [{ merchandiseId: variantId, quantity }],
   });
-  return handleMutationPayload(data?.cartLinesAdd) ?? currentCart;
+  if (!result.ok) {
+    dispatchCartMessage(CART_UNAVAILABLE_MESSAGE);
+    return currentCart;
+  }
+
+  return handleMutationPayload(result.data?.cartLinesAdd) ?? currentCart;
 }
 
 export async function updateLine(lineId: string, qty: number): Promise<Cart> {
@@ -424,11 +447,16 @@ export async function updateLine(lineId: string, qty: number): Promise<Cart> {
   const cartId = await ensureCart();
   if (!cartId) return currentCart;
 
-  const data = await storefrontFetch<CartLinesUpdateResponse>(CART_LINES_UPDATE_MUTATION, {
+  const result = await storefrontRequest<CartLinesUpdateResponse>(CART_LINES_UPDATE_MUTATION, {
     cartId,
     lines: [{ id: lineId, quantity: Math.floor(qty) }],
   });
-  return handleMutationPayload(data?.cartLinesUpdate) ?? currentCart;
+  if (!result.ok) {
+    dispatchCartMessage(CART_UNAVAILABLE_MESSAGE);
+    return currentCart;
+  }
+
+  return handleMutationPayload(result.data?.cartLinesUpdate) ?? currentCart;
 }
 
 export async function removeLine(lineId: string): Promise<Cart> {
@@ -438,11 +466,16 @@ export async function removeLine(lineId: string): Promise<Cart> {
   const cartId = await ensureCart();
   if (!cartId) return currentCart;
 
-  const data = await storefrontFetch<CartLinesRemoveResponse>(CART_LINES_REMOVE_MUTATION, {
+  const result = await storefrontRequest<CartLinesRemoveResponse>(CART_LINES_REMOVE_MUTATION, {
     cartId,
     lineIds: [lineId],
   });
-  return handleMutationPayload(data?.cartLinesRemove) ?? currentCart;
+  if (!result.ok) {
+    dispatchCartMessage(CART_UNAVAILABLE_MESSAGE);
+    return currentCart;
+  }
+
+  return handleMutationPayload(result.data?.cartLinesRemove) ?? currentCart;
 }
 
 if (hasDocument()) {
@@ -454,6 +487,13 @@ if (hasDocument()) {
   });
 
   queueMicrotask(() => {
+    void getHydratePromise();
+  });
+
+  window.addEventListener("pageshow", (event) => {
+    if (!event.persisted) return;
+    hydrated = false;
+    hydratePromise = undefined;
     void getHydratePromise();
   });
 }

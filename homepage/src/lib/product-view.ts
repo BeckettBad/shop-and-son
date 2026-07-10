@@ -14,8 +14,14 @@ declare global {
 }
 
 const homeUrl = import.meta.env.BASE_URL.replace(/\/$/, "") + "/";
+const shopifyDomain = (
+  (import.meta.env.PUBLIC_SHOPIFY_STORE_DOMAIN as string | undefined)?.trim() || "shopandson.com"
+)
+  .replace(/^https?:\/\//, "")
+  .replace(/\/+$/, "");
+const shopifyOrigin = `https://${shopifyDomain}`;
 const shopifyProductUrl = (handle: string) =>
-  `https://shopandson.com/products/${encodeURIComponent(handle)}`;
+  `${shopifyOrigin}/products/${encodeURIComponent(handle)}`;
 const activeCarouselPreloads = new Set<HTMLImageElement>();
 
 export interface ProductImageSeed {
@@ -55,7 +61,7 @@ const renderStorefrontFallback = (container: HTMLElement, handle: string) => {
   link.href = shopifyProductUrl(handle);
   link.target = "_blank";
   link.rel = "noopener";
-  link.textContent = "buy on shopandson.com";
+  link.textContent = "view on the shop";
   container.className = "product-detail__state product-detail__state--message";
   container.replaceChildren(link);
 };
@@ -95,7 +101,7 @@ const makeButtonOrLink = (product: ProductDetail, variant: ProductVariant | unde
     link.href = shopifyProductUrl(product.handle);
     link.target = "_blank";
     link.rel = "noopener";
-    link.textContent = "buy on shopandson.com";
+    link.textContent = "view on the shop";
     return link;
   }
 
@@ -756,7 +762,7 @@ export function mountProductView(container: HTMLElement, handle: string, options
     }
 
     const product = await getProduct(handle);
-    if (!product) {
+    if (!product || product.onlineStoreUrl === null) {
       renderMessage(container, "this piece is no longer listed");
       return;
     }

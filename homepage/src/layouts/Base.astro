@@ -1,7 +1,5 @@
 ---
 import "../styles/global.css";
-import TopBar from "../components/TopBar.astro";
-import IndexOverlay from "../components/IndexOverlay.astro";
 import { site } from "../data/content.ts";
 import { withBase } from "../lib/url.ts";
 
@@ -12,9 +10,13 @@ interface Props {
   /** Minimal chrome-free layout that still scrolls normally. */
   bare?: boolean;
 }
-const { title = `${site.brand} — independent design`, landing = false, bare = false } = Astro.props;
+const { title = `${site.brand} — independent design`, landing = false } = Astro.props;
 const preloadHeroPoster = landing;
 const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
+const shopifyDomain = (import.meta.env.PUBLIC_SHOPIFY_STORE_DOMAIN?.trim() || "shopandson.com")
+  .replace(/^https?:\/\//, "")
+  .replace(/\/+$/, "");
+const shopifyOrigin = `https://${shopifyDomain}`;
 let nowPlayingOrigin = "";
 if (nowPlayingUrl) {
   try {
@@ -23,7 +25,7 @@ if (nowPlayingUrl) {
     nowPlayingOrigin = "";
   }
 }
-const connectSrc = ["'self'", "https://shopandson.com", nowPlayingOrigin].filter(Boolean).join(" ");
+const connectSrc = ["'self'", shopifyOrigin, "https://shopandson.com", nowPlayingOrigin].filter(Boolean).join(" ");
 const contentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self'",
@@ -35,7 +37,8 @@ const contentSecurityPolicy = [
   "frame-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
-  "form-action 'self' https://shopandson.com",
+  `form-action 'self' ${shopifyOrigin}`,
+  "upgrade-insecure-requests",
 ].join("; ");
 ---
 <!doctype html>
@@ -60,16 +63,14 @@ const contentSecurityPolicy = [
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://cdn.shopify.com" crossorigin />
-    <link rel="preconnect" href="https://shopandson.com" crossorigin />
+    <link rel="preconnect" href={shopifyOrigin} crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Anonymous+Pro:ital,wght@0,400;0,700;1,400&family=Roboto+Mono:ital,wght@0,400;0,500;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Cardo:ital@0;1&display=swap"
       rel="stylesheet"
     />
   </head>
   <body class:list={[{ landing }]} data-open-hour={site.hours.openHour} data-close-hour={site.hours.closeHour}>
-    {!landing && !bare && <TopBar />}
     <slot />
-    {!landing && !bare && <IndexOverlay />}
 
     <script type="module" src={withBase("/scripts/base.js")}></script>
   </body>

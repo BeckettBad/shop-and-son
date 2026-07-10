@@ -386,6 +386,7 @@ const shopifyStorefrontVersion = "2025-01";
     price: string;
     url: string;
     available: boolean;
+    onlineStoreUrl?: string | null;
     image?: string;
     imageSrcset?: string;
     imageAspect: number;
@@ -632,6 +633,13 @@ const shopifyStorefrontVersion = "2025-01";
 
   const catalogData = parseCatalogData();
   const hasCardImage = (product: CatalogProduct) => Boolean(product.image);
+  const isPublishedOnline = (product: CatalogProduct) => product.onlineStoreUrl !== null;
+  // POS-only inventory stays Active for the register but is unpublished from Online Store.
+  // Mirror that owner-controlled channel decision here: snapshot feed items have no
+  // onlineStoreUrl and are allowed; live Storefront items with null are hidden. Revisit
+  // before uninstalling the Online Store app or changing storefront protection in a way
+  // that could null onlineStoreUrl for sellable products.
+  const isRenderableCatalogProduct = (product: CatalogProduct) => hasCardImage(product) && isPublishedOnline(product);
   const searchIndexByHandle = new Map<string, CatalogProduct>();
   Object.values(catalogData).forEach((products) => {
     products.forEach((product) => {
@@ -640,7 +648,7 @@ const shopifyStorefrontVersion = "2025-01";
       searchIndexByHandle.set(product.handle, product);
     });
   });
-  const searchIndex = Array.from(searchIndexByHandle.values()).filter(hasCardImage);
+  const searchIndex = Array.from(searchIndexByHandle.values()).filter(isRenderableCatalogProduct);
 
   const normalizeSearchText = (value: string) =>
     value
@@ -665,7 +673,7 @@ const shopifyStorefrontVersion = "2025-01";
 
   const getScopeProducts = (scope: SearchScope | null) => {
     const viewportScope = getViewportSearchScope(scope);
-    return viewportScope ? (catalogData[viewportScope.collection] ?? []).filter(hasCardImage) : searchIndex;
+    return viewportScope ? (catalogData[viewportScope.collection] ?? []).filter(isRenderableCatalogProduct) : searchIndex;
   };
 
   const getSearchMatches = (query: string, limit = Number.POSITIVE_INFINITY, scope: SearchScope | null = null) => {
@@ -689,7 +697,7 @@ const shopifyStorefrontVersion = "2025-01";
     const mergedProducts: CatalogProduct[] = [];
 
     const appendProduct = (product: CatalogProduct) => {
-      if (!hasCardImage(product) || !product.handle || seenHandles.has(product.handle) || mergedProducts.length >= limit) return;
+      if (!isRenderableCatalogProduct(product) || !product.handle || seenHandles.has(product.handle) || mergedProducts.length >= limit) return;
 
       seenHandles.add(product.handle);
       mergedProducts.push(product);
@@ -1693,8 +1701,7 @@ const shopifyStorefrontVersion = "2025-01";
   const renderCatalogGrid = (products: CatalogProduct[], targetScrollTop = 0) => {
     if (!catalogTrack) return;
 
-    // Drafts published to the headless channel without images must not render as blank tiles.
-    products = products.filter(hasCardImage);
+    products = products.filter(isRenderableCatalogProduct);
     catalogTrack.replaceChildren(...getSortedProducts(products).map(createProductCard));
     restoreCatalogScroll(targetScrollTop);
   };
@@ -2022,8 +2029,8 @@ const shopifyStorefrontVersion = "2025-01";
     if (!catalogTrack) return;
 
     const scope = getViewportSearchScope(options.scope ?? null);
-    const visibleProducts = products.filter(hasCardImage);
-    const fallbackProducts = (options.fallbackProducts ?? []).filter(hasCardImage);
+    const visibleProducts = products.filter(isRenderableCatalogProduct);
+    const fallbackProducts = (options.fallbackProducts ?? []).filter(isRenderableCatalogProduct);
     renderedSearchProducts = visibleProducts;
     renderedSearchFallbackProducts = fallbackProducts;
     updateSearchScopeControls(scope);
