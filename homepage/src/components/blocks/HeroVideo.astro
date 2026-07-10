@@ -444,10 +444,8 @@ const shopifyStorefrontVersion = "2025-01";
   const aboutExpandWordMs = 9;
   const aboutCollapseWordMs = 5;
   const aboutDividerSettleMs = 170;
-  const catalogEagerImageCount = 15;
   const productImagePlaceholderBackground = "rgba(247, 244, 235, 0.72)";
   const liveCollectionCache = new Map<string, Promise<CollectionDetail | null>>();
-  let catalogImageObserver: IntersectionObserver | undefined;
   let filmHasStarted = false;
   let stencilReturnCleanup: (() => void) | undefined;
   let stageCleanup: ReturnType<typeof window.setTimeout> | undefined;
@@ -832,7 +830,7 @@ const shopifyStorefrontVersion = "2025-01";
 
   const getProductSeedImage = (card: HTMLAnchorElement): ProductImageSeed | undefined => {
     const image = card.querySelector<HTMLImageElement>(".product-card__media img");
-    const seedUrl = image?.currentSrc || image?.src || image?.dataset.src;
+    const seedUrl = image?.currentSrc || image?.src;
     if (!image || !seedUrl) return undefined;
 
     const width = image.naturalWidth || undefined;
@@ -866,91 +864,10 @@ const shopifyStorefrontVersion = "2025-01";
       })
       .join(", ");
 
-  const setCatalogImageSource = (image: HTMLImageElement, retry = false) => {
-    const src = image.dataset.src;
-    if (!src) return;
-
-    const srcset = image.dataset.srcset;
-    if (srcset) {
-      image.srcset = retry ? getRetrySrcset(srcset) : srcset;
-    }
-    image.src = retry ? getRetryImageUrl(src) : src;
-    image.dataset.catalogImageLoaded = "true";
-  };
-
   const showCatalogImagePlaceholder = (image: HTMLImageElement) => {
     const media = image.closest<HTMLElement>(".product-card__media");
     if (media) media.style.background = productImagePlaceholderBackground;
     image.remove();
-  };
-
-  const handleCatalogImageError = (event: Event) => {
-    const image = event.currentTarget;
-    if (!(image instanceof HTMLImageElement)) return;
-
-    if (image.dataset.catalogImageRetried === "true") {
-      image.removeEventListener("error", handleCatalogImageError);
-      showCatalogImagePlaceholder(image);
-      return;
-    }
-
-    image.dataset.catalogImageRetried = "true";
-    image.removeAttribute("src");
-    image.removeAttribute("srcset");
-    setCatalogImageSource(image, true);
-  };
-
-  const loadCatalogImage = (image: HTMLImageElement, observer?: IntersectionObserver) => {
-    if (image.dataset.catalogImageLoaded === "true") return;
-
-    const unobserve = () => {
-      observer?.unobserve(image);
-      image.removeEventListener("load", unobserve);
-      image.removeEventListener("error", unobserve);
-    };
-
-    if (observer) {
-      image.addEventListener("load", unobserve, { once: true });
-      image.addEventListener("error", unobserve, { once: true });
-    }
-
-    setCatalogImageSource(image);
-
-    if (observer && image.complete) unobserve();
-  };
-
-  const observeCatalogImages = () => {
-    catalogImageObserver?.disconnect();
-    catalogImageObserver = undefined;
-    if (!catalogTrack) return;
-
-    const images = Array.from(catalogTrack.querySelectorAll<HTMLImageElement>("img[data-catalog-image]"));
-    if (!images.length) return;
-
-    if (!catalogViewport || !("IntersectionObserver" in window)) {
-      images.forEach((image) => loadCatalogImage(image));
-      return;
-    }
-
-    catalogImageObserver = new IntersectionObserver(
-      (entries, observer) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-
-          loadCatalogImage(entry.target as HTMLImageElement, observer);
-        });
-      },
-      {
-        root: catalogViewport,
-        rootMargin: "400px",
-      },
-    );
-
-    images.forEach((image) => {
-      if (image.dataset.catalogImageLoaded === "true") return;
-
-      catalogImageObserver?.observe(image);
-    });
   };
 
   const getCollectionButtons = () =>
@@ -1664,7 +1581,7 @@ const shopifyStorefrontVersion = "2025-01";
     }
   };
 
-  const createProductCard = (product: CatalogProduct, index = 0) => {
+  const createProductCard = (product: CatalogProduct) => {
     const card = document.createElement("a");
     card.className = "product-card";
     card.href = getProductHref(product.handle);
@@ -1675,19 +1592,27 @@ const shopifyStorefrontVersion = "2025-01";
     media.className = "product-card__media";
     if (product.image) {
       const image = document.createElement("img");
-      image.dataset.catalogImage = "true";
-      image.dataset.src = product.image;
-      if (product.imageSrcset) {
-        image.dataset.srcset = product.imageSrcset;
+      const imageSrc = product.image;
+      const imageSrcset = product.imageSrcset;
+      let imageRetried = false;
+      if (imageSrcset) {
         image.sizes = "(max-width: 420px) 92vw, (max-width: 760px) 46vw, 22vw";
+        image.srcset = imageSrcset;
       }
+      image.src = imageSrc;
+      image.loading = "eager";
       image.alt = product.title;
       image.decoding = "async";
-      image.addEventListener("error", handleCatalogImageError);
-      if (index < catalogEagerImageCount) {
-        image.loading = "eager";
-        setCatalogImageSource(image);
-      }
+      image.addEventListener("error", () => {
+        if (imageRetried) {
+          showCatalogImagePlaceholder(image);
+          return;
+        }
+
+        imageRetried = true;
+        if (imageSrcset) image.srcset = getRetrySrcset(imageSrcset);
+        image.src = getRetryImageUrl(imageSrc);
+      });
       media.append(image);
     } else {
       media.style.background = productImagePlaceholderBackground;
@@ -1768,7 +1693,6 @@ const shopifyStorefrontVersion = "2025-01";
     if (!catalogTrack) return;
 
     catalogTrack.replaceChildren(...getSortedProducts(products).map(createProductCard));
-    observeCatalogImages();
     restoreCatalogScroll(targetScrollTop);
   };
 
@@ -2115,7 +2039,6 @@ const shopifyStorefrontVersion = "2025-01";
         nodes.push(...getSortedProducts(fallbackProducts).map(createProductCard));
       }
       catalogTrack.replaceChildren(...nodes);
-      observeCatalogImages();
       restoreCatalogScroll(targetScrollTop);
       return;
     }
