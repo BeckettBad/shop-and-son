@@ -43,6 +43,7 @@ interface StorefrontCollectionProduct {
   title: string;
   vendor: string;
   availableForSale: boolean;
+  onlineStoreUrl: string | null;
   featuredImage: StorefrontImage | null;
   priceRange: {
     minVariantPrice: Money;
@@ -95,6 +96,7 @@ export interface ProductDetail {
   vendor: string;
   descriptionHtml: string;
   availableForSale: boolean;
+  onlineStoreUrl: string | null;
   images: ProductImage[];
   options: ProductOption[];
   variants: ProductVariant[];
@@ -136,6 +138,7 @@ function mapCatalogProduct(product: StorefrontCollectionProduct): CatalogProduct
     price: formatMoney(money.amount, money.currencyCode),
     url: getProductUrl(product.handle),
     available: product.availableForSale,
+    onlineStoreUrl: product.onlineStoreUrl,
     image: getSizedShopifyImageUrl(product.featuredImage?.url, 1100),
     imageSrcset: getShopifyImageSrcset(product.featuredImage?.url),
     imageAspect: imageWidth && imageHeight ? imageWidth / imageHeight : 0.75,
@@ -277,6 +280,7 @@ const COLLECTION_QUERY = /* GraphQL */ `
           title
           vendor
           availableForSale
+          onlineStoreUrl
           featuredImage {
             url
             altText
@@ -346,6 +350,7 @@ const PRODUCT_SEARCH_QUERY = /* GraphQL */ `
         title
         vendor
         availableForSale
+        onlineStoreUrl
         featuredImage {
           url
           altText
@@ -425,6 +430,7 @@ const PREDICTIVE_SEARCH_QUERY = /* GraphQL */ `
         title
         vendor
         availableForSale
+        onlineStoreUrl
         featuredImage {
           url
           altText
@@ -471,6 +477,7 @@ const PRODUCT_QUERY = /* GraphQL */ `
       vendor
       descriptionHtml
       availableForSale
+      onlineStoreUrl
       images(first: 24) {
         nodes {
           url
@@ -510,6 +517,7 @@ interface ProductQueryData {
     vendor: string;
     descriptionHtml: string;
     availableForSale: boolean;
+    onlineStoreUrl: string | null;
     images: {
       nodes: StorefrontImage[];
     };
@@ -544,6 +552,7 @@ async function fetchProduct(handle: string): Promise<ProductDetail | null> {
       vendor: product.vendor,
       descriptionHtml: product.descriptionHtml,
       availableForSale: product.availableForSale,
+      onlineStoreUrl: product.onlineStoreUrl,
       images: product.images.nodes.map(mapProductImage),
       options: product.options,
       variants: product.variants.nodes.map((variant) => ({

@@ -5,6 +5,7 @@ export interface CatalogProduct {
   price: string;
   url: string;
   available: boolean;
+  onlineStoreUrl?: string | null;
   image?: string;
   imageSrcset?: string;
   imageAspect: number;
@@ -187,7 +188,7 @@ async function fetchCatalogProducts(collection: string): Promise<CatalogProduct[
     page += 1;
   }
 
-  // Drafts published to the headless channel without images must not render as blank tiles.
+  // The products.json snapshot feed is Online-Store-only by definition; keep the imageless tile guard.
   return products.map(mapProduct).filter((product) => product.image);
 }
 

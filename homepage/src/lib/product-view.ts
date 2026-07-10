@@ -762,7 +762,7 @@ export function mountProductView(container: HTMLElement, handle: string, options
     }
 
     const product = await getProduct(handle);
-    if (!product) {
+    if (!product || product.onlineStoreUrl === null) {
       renderMessage(container, "this piece is no longer listed");
       return;
     }
