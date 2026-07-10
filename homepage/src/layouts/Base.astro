@@ -25,10 +25,13 @@ if (nowPlayingUrl) {
     nowPlayingOrigin = "";
   }
 }
-const connectSrc = ["'self'", shopifyOrigin, "https://shopandson.com", nowPlayingOrigin].filter(Boolean).join(" ");
+// Cloudflare Web Analytics beacon (auto-injected by Pages).
+const connectSrc = ["'self'", shopifyOrigin, "https://shopandson.com", "https://cloudflareinsights.com", nowPlayingOrigin]
+  .filter(Boolean)
+  .join(" ");
 const contentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self'",
+  "script-src 'self' https://static.cloudflareinsights.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data: https://cdn.shopify.com https://i.scdn.co",

@@ -106,7 +106,10 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — AT1 @ 9de1f5a + AT2 @ 92a9e68 verified 10/10 (idle fade at 3s,
+> **ACTIVE SUB-TASK: (none) — AU1 @ f9f6a3d reviewed CLEAN (script-src + connect-src gain the
+> Cloudflare insights origins, verified in dist CSP). SHIPPING via standing auto-deploy.**
+> Log: 2026-07-10 — AU1 allow Cloudflare analytics CSP — f9f6a3d — build:green check:green.
+> — Prior: AT1 @ 9de1f5a + AT2 @ 92a9e68 verified 10/10 (idle fade at 3s,
 > instant restore on mouse/touch, paused persists, reopen resets, mobile first-tap reveals
 > without pausing, keyboard focus still pins controls). SHIPPING per operator's standing
 > auto-deploy authorization. NOTE for operator review: play/pause control is now visible during
@@ -206,6 +209,22 @@ below so Codex has ONE target; everything else in this file is context.
 > now shows a preview still). Landing unchanged (1.87MB; these are on-demand).
 > Awaiting operator go to ship to main. NOTE: preorders piece.mp4 (43M) still
 > uncompressed (separate page, ships as-is per AGENTS).**
+
+---
+
+## PHASE AU — allow Cloudflare Web Analytics beacon through the CSP (operator-approved, 2026-07-10)
+
+CONTEXT: Cloudflare auto-injects its Web Analytics beacon (`https://static.cloudflareinsights.com/beacon.min.js`)
+into the deployed pages; our CSP `script-src 'self'` blocks it, so no analytics are collected.
+Operator wants viewership data. ONE commit `AU1:`. No visual change.
+
+1. `src/layouts/Base.astro` CSP: add `https://static.cloudflareinsights.com` to `script-src`,
+   and add `https://cloudflareinsights.com` to `connect-src` (the beacon POSTs its metrics
+   there). Touch nothing else in the policy.
+2. Comment (one line): Cloudflare Web Analytics beacon (auto-injected by Pages).
+
+Done when: build + astro check green (use PUBLIC_SHOPIFY_STORE_DOMAIN=shop-and-son.myshopify.com
+locally if the feed 429s); dist/index.html CSP contains both new origins.
 
 ---
 
