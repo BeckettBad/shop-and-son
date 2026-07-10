@@ -106,9 +106,23 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — AU1 @ f9f6a3d reviewed CLEAN (script-src + connect-src gain the
-> Cloudflare insights origins, verified in dist CSP). SHIPPING via standing auto-deploy.**
-> Log: 2026-07-10 — AU1 allow Cloudflare analytics CSP — f9f6a3d — build:green check:green.
+> **ACTIVE SUB-TASK: (none) — AV1 @ 4e8dd15 reviewed CLEAN, shipping via standing process.**
+> Log: 2026-07-10 — AV1 restore shop favicon — 4e8dd15 — build:green check:green — original
+> "&" logo (exact Shopify center-crop renditions) replaces Astro logo; apple-touch-icon added;
+> svg/ico leftovers deleted.
+> Prior AV spec: restore the original &son favicon (operator:
+> the Chrome tab currently shows the Astro logo; must show the old shopandson.com "&" logo).
+> The correct assets are ALREADY STAGED (untracked) in `public/`: `favicon.png` (64x64, the
+> exact Shopify center-crop the old theme served) and `apple-touch-icon.png` (180x180). Steps:
+> 1. `src/layouts/Base.astro`: replace the `<link rel="icon" type="image/svg+xml" ...favicon.svg>`
+>    line with `<link rel="icon" type="image/png" href={withBase("/favicon.png")} />` and add
+>    `<link rel="apple-touch-icon" href={withBase("/apple-touch-icon.png")} />`.
+> 2. Delete `public/favicon.svg` and `public/favicon.ico` (Astro-logo leftovers; grep first to
+>    confirm nothing else references them).
+> 3. Include the two staged PNGs in the commit. Build + check green
+>    (PUBLIC_SHOPIFY_STORE_DOMAIN=shop-and-son.myshopify.com locally). Ship via standing process.**
+> Log: 2026-07-10 — AU1 allow Cloudflare analytics CSP — f9f6a3d — build:green check:green —
+> SHIPPED (PR #38) + live-verified (beacon 200, zero CSP violations).
 > — Prior: AT1 @ 9de1f5a + AT2 @ 92a9e68 verified 10/10 (idle fade at 3s,
 > instant restore on mouse/touch, paused persists, reopen resets, mobile first-tap reveals
 > without pausing, keyboard focus still pins controls). SHIPPING per operator's standing

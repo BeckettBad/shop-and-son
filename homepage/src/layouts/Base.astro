@@ -51,7 +51,8 @@ const contentSecurityPolicy = [
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="generator" content={Astro.generator} />
-    <link rel="icon" type="image/svg+xml" href={withBase("/favicon.svg")} />
+    <link rel="icon" type="image/png" href={withBase("/favicon.png")} />
+    <link rel="apple-touch-icon" href={withBase("/apple-touch-icon.png")} />
     {
       preloadHeroPoster && (
         <link rel="preload" as="image" href={withBase("/videos/hero-poster.webp")} fetchpriority="high" />
