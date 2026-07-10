@@ -1524,8 +1524,6 @@ body{
   pointer-events:none; white-space:nowrap;
 }
 .hero-subscribe.is-active:not(.has-value) .hero-subscribe__placeholder{display:flex}
-.hero-subscribe__placeholder-caret{animation:heroSubscribeCaret .64s steps(1,end) infinite}
-@keyframes heroSubscribeCaret{50%{opacity:0}}
 .hero-subscribe__submit{
   display:flex; flex:0 0 auto; align-items:center; justify-content:center;
   width:0; height:100%; padding:0; border:0; border-left:1px solid #000;
