@@ -55,7 +55,14 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## ACTIVE BRIEF
 
-> **CURRENT TASK (2026-07-09): (none active). AF1 @ 6f2999f reviewed CLEAN — hero video releases memory on hide, restores+plays on return (reduces iOS tab-discard reloads; cannot guarantee zero). On dev, opening deploy PR.**
+> **CURRENT TASK (2026-07-09): Phase AG (TOP PRIORITY) — catalogue preview images load
+> unreliably (partial/intermittent). DIAGNOSED: data is complete (verified live: 48 collections,
+> 1123 products, all with valid cdn.shopify.com image URLs) — NOT a rate-limit/data issue. Cause
+> = native loading="lazy" (no observer) inside the scroll catalog viewport + grid re-render churn
+> + no onerror retry. Fix = reliable image loading (observer rooted on the viewport / eager) +
+> onerror retry. Spec under "## PHASE AG". Dispatch now.**
+>
+> **PRIOR: AF1 @ 6f2999f reviewed CLEAN — hero video releases memory on hide, restores+plays on return (reduces iOS tab-discard reloads; cannot guarantee zero). On dev, opening deploy PR.**
 > so iOS is less likely to DISCARD + reload the tab when the user returns from the Instagram app
 > (root cause = iOS tab discarding, verified not self-inflicted; this reduces it, cannot guarantee).
 > Spec under "## PHASE AF". Dispatch now. Integrates with AE1's resume handlers.**
@@ -123,6 +130,39 @@ below so Codex has ONE target; everything else in this file is context.
 > now shows a preview still). Landing unchanged (1.87MB; these are on-demand).
 > Awaiting operator go to ship to main. NOTE: preorders piece.mp4 (43M) still
 > uncompressed (separate page, ships as-is per AGENTS).**
+
+---
+
+## PHASE AG — catalogue preview images load reliably (TOP PRIORITY) (operator, 2026-07-09)
+
+DIAGNOSIS (Claude, verified against the live baked data): the catalog data is COMPLETE — 48
+collections, 1123 products, every product has a valid `cdn.shopify.com` image URL. So this is
+NOT a rate-limit/data problem. Root cause is client-side image loading in the catalogue grid:
+- Card images use native `loading="lazy"` (HeroVideo.astro ~line 1574) with NO IntersectionObserver,
+  inside the custom scroll catalog viewport (`.hero__catalog-viewport`). Native lazy-loading is
+  unreliable in a just-populated nested scroll container, so images intermittently never load.
+- Compounded by the grid RE-RENDERING on live reconcile (`renderCatalogGrid` ~line 2257 replaces
+  every `<img>` mid-load) and NO `onerror` retry for transient CDN failures.
+
+FIX. Scope = `src/components/blocks/HeroVideo.astro` (+ minimal CSS only if needed). No CSP change.
+ONE commit `AG1:`. Build + astro check green. No push/merge.
+1. Make catalog card images load RELIABLY — do NOT depend on native `loading="lazy"` in the scroll
+   container. Implement a robust loader in `renderProductCard`/the grid:
+   - Eager-load the first ~15 cards of each rendered grid (set `src`/`srcset` directly).
+   - For the rest, lazy-load via an `IntersectionObserver` whose `root` is the catalog scroll
+     viewport (`.hero__catalog-viewport`), `rootMargin: "400px"`, assigning `src`/`srcset` (held in
+     `data-src`/`data-srcset`) when the card approaches; unobserve each image once loaded.
+   - If `IntersectionObserver` is unavailable, fall back to eager (set `src` immediately).
+   - The grid re-renders (snapshot then live reconcile) must RE-OBSERVE the new images each render
+     (create/reuse the observer per grid render; disconnect the old one).
+2. Add an `onerror` handler per image: on the first error, retry once (re-assign the same URL, may
+   cache-bust); on a second failure leave the existing no-image placeholder. Handles transient CDN
+   hiccups.
+3. Preserve the existing `srcset`/`sizes`, `alt`, `decoding="async"`, the sold-out overlay, and the
+   no-image placeholder branch.
+
+Operator verifies on dev/live: open several collections, scroll each, confirm ALL preview tiles
+render reliably (no blank tiles) across repeated opens.
 
 ---
 
