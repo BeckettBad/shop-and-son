@@ -115,6 +115,17 @@ below so Codex has ONE target; everything else in this file is context.
 > AI1 until images are uploaded; 26 WITH images are now visible/buyable on the new site while
 > 404ing on the old Online Store — review whether those were staged on purpose).**
 > Log: 2026-07-10 — AI1 filter imageless catalog products — 3d22a4c — build:green check:green — clean; verified as above.
+> MECHANISM CORRECTION (2026-07-10, after operator's admin check found "Sales channel is
+> Headless" = no products): nobody bulk-published drafts to a channel. The 2026-07-09 token
+> swap (CI variable now = the custom app token ending 470c) moved the site onto that custom
+> app's publication, which auto-includes EVERY Active product — publishedAt is 2026-07 for ALL
+> 463 clothing-1 products, and exactly 121 have onlineStoreUrl:null (Active in admin, Online
+> Store channel off, some created back to 2024). The old token's publication matched the Online
+> Store; the new one exposes the store's full Active set. GOVERNANCE RULE going forward: product
+> visible on the new site ⇔ status Active in admin (channel ticks are irrelevant to our token);
+> Ben hides things by setting status Draft. Full list: repo-root
+> HEADLESS-ONLY-PRODUCTS-2026-07-10.md (130 products incl. house, 97 imageless). AI1's imageless
+> filter stands regardless — it is the safety net for exactly this class of product.
 > — Prior: T15 @ 5b24468 SHIPPED: single 1080p source + CSP-safe interaction fallback (play on first tap/scroll) for iOS autoplay-decline/Low Power Mode. Chromium-verified plays+single-load+no CSP. Operator to confirm on iPhone (+ check Low Power Mode).
 > its native PLAY BUTTON = autoplay DECLINED (Low Power Mode blocks all autoplay).
 > Fix: single unconditional <source> + CSP-SAFE interaction fallback in the BUNDLED
