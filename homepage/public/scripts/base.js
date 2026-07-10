@@ -43,17 +43,12 @@ document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
   const subscribeButton = subForm.querySelector("[data-hero-subscribe-submit]");
   const subscribeEmail = subForm.querySelector("[data-hero-subscribe-email]");
   const placeholderText = subForm.querySelector("[data-hero-subscribe-placeholder-text]");
-  const suggestionButton = subForm.querySelector("[data-hero-subscribe-suggestion]");
   const placeholderValue = "email";
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const commonEmailDomains = "gmail.com googlemail.com yahoo.com ymail.com hotmail.com outlook.com live.com msn.com icloud.com me.com mac.com aol.com proton.me protonmail.com comcast.net verizon.net att.net sbcglobal.net".split(" ");
-  const commonEmailTlds = "com net org edu co io us ca me info".split(" ");
   let placeholderTimer;
-  let suggestionTimer;
   let failureTimer;
   let successResetTimer;
   let hasTypedPlaceholder = false;
-  let suggestedEmail = "";
 
   const stopPlaceholderType = () => {
     if (!placeholderTimer) return;
@@ -90,13 +85,7 @@ document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
     step();
   };
 
-  const getIsValidEmail = () => Boolean(subscribeEmail?.value.trim() && subscribeEmail.checkValidity());
-
-  const updateSubscribeWidth = () => {
-    const valueLength = subscribeEmail?.value.length ?? 0;
-    const visibleLength = Math.max(valueLength + 1, placeholderValue.length + 1);
-    subForm.style.setProperty("--hero-subscribe-value-ch", String(visibleLength));
-  };
+  const getIsValidEmail = () => Boolean(subscribeEmail?.checkValidity());
 
   const clearSubmitFailure = () => {
     if (failureTimer) {
@@ -107,6 +96,16 @@ document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
     subForm.classList.remove("is-submit-failed");
   };
 
+  const fireSubmitFailure = () => {
+    clearSubmitFailure();
+    void subForm.offsetWidth;
+    subForm.classList.add("is-submit-failed");
+    failureTimer = window.setTimeout(() => {
+      failureTimer = undefined;
+      subForm.classList.remove("is-submit-failed");
+    }, 520);
+  };
+
   const clearSuccessReset = () => {
     if (!successResetTimer) return;
 
@@ -114,122 +113,9 @@ document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
     successResetTimer = undefined;
   };
 
-  const hideEmailSuggestion = () => {
-    if (suggestionTimer) {
-      window.clearTimeout(suggestionTimer);
-      suggestionTimer = undefined;
-    }
-
-    suggestedEmail = "";
-    if (!suggestionButton) return;
-
-    suggestionButton.hidden = true;
-    suggestionButton.textContent = "";
-  };
-
-  const getLevenshteinDistance = (value, candidate, maxDistance = 2) => {
-    if (value === candidate) return 0;
-    if (Math.abs(value.length - candidate.length) > maxDistance) return maxDistance + 1;
-
-    let previous = Array.from({ length: candidate.length + 1 }, (_, index) => index);
-    for (let valueIndex = 0; valueIndex < value.length; valueIndex += 1) {
-      const current = [valueIndex + 1];
-      let rowMinimum = current[0];
-
-      for (let candidateIndex = 0; candidateIndex < candidate.length; candidateIndex += 1) {
-        const distance = Math.min(
-          previous[candidateIndex + 1] + 1,
-          current[candidateIndex] + 1,
-          previous[candidateIndex] + (value[valueIndex] === candidate[candidateIndex] ? 0 : 1),
-        );
-        current[candidateIndex + 1] = distance;
-        rowMinimum = Math.min(rowMinimum, distance);
-      }
-
-      if (rowMinimum > maxDistance) return maxDistance + 1;
-      previous = current;
-    }
-
-    return previous[candidate.length];
-  };
-
-  const findNearMatch = (value, candidates) => {
-    let bestMatch = "";
-    let bestDistance = 3;
-
-    candidates.forEach((candidate) => {
-      if (value === candidate) return;
-
-      const distance = getLevenshteinDistance(value, candidate, 2);
-      if (distance > 0 && distance <= 2 && distance < bestDistance) {
-        bestDistance = distance;
-        bestMatch = candidate;
-      }
-    });
-
-    return bestMatch;
-  };
-
-  const getEmailSuggestion = () => {
-    const email = subscribeEmail?.value.trim() ?? "";
-    const atIndex = email.lastIndexOf("@");
-    if (!email || atIndex <= 0 || atIndex === email.length - 1) return "";
-
-    const localPart = email.slice(0, atIndex);
-    const domain = email.slice(atIndex + 1).toLowerCase();
-    const dotIndex = domain.lastIndexOf(".");
-    if (!localPart || dotIndex <= 0 || dotIndex === domain.length - 1) return "";
-    if (commonEmailDomains.includes(domain)) return "";
-
-    const domainMatch = findNearMatch(domain, commonEmailDomains);
-    if (domainMatch) return `${localPart}@${domainMatch}`;
-
-    const domainName = domain.slice(0, dotIndex);
-    const tld = domain.slice(dotIndex + 1);
-    if (commonEmailTlds.includes(tld)) return "";
-
-    const tldMatch = findNearMatch(tld, commonEmailTlds);
-    return tldMatch ? `${localPart}@${domainName}.${tldMatch}` : "";
-  };
-
-  const updateEmailSuggestion = () => {
-    if (!suggestionButton || subForm.classList.contains("is-subscribed")) {
-      hideEmailSuggestion();
-      return;
-    }
-
-    const suggestion = getEmailSuggestion();
-    if (!suggestion) {
-      hideEmailSuggestion();
-      return;
-    }
-
-    suggestedEmail = suggestion;
-    suggestionButton.textContent = `did you mean ${suggestion}?`;
-    suggestionButton.hidden = false;
-  };
-
-  const queueEmailSuggestion = () => {
-    if (suggestionTimer) window.clearTimeout(suggestionTimer);
-
-    const email = subscribeEmail?.value.trim() ?? "";
-    const atIndex = email.lastIndexOf("@");
-    const domain = atIndex >= 0 ? email.slice(atIndex + 1) : "";
-    if (!email || atIndex <= 0 || !domain.includes(".")) {
-      hideEmailSuggestion();
-      return;
-    }
-
-    suggestionTimer = window.setTimeout(() => {
-      suggestionTimer = undefined;
-      updateEmailSuggestion();
-    }, 260);
-  };
-
   const updateSubscribeState = () => {
     const hasValue = Boolean(subscribeEmail?.value);
     const isValid = getIsValidEmail();
-    updateSubscribeWidth();
     subForm.classList.toggle("has-value", hasValue);
     subForm.classList.toggle("is-valid", isValid);
 
@@ -252,7 +138,6 @@ document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
   const resetSubscribeIdle = () => {
     clearSuccessReset();
     clearSubmitFailure();
-    hideEmailSuggestion();
     stopPlaceholderType();
     hasTypedPlaceholder = false;
     if (placeholderText) placeholderText.textContent = "";
@@ -282,7 +167,6 @@ document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
 
   const setSubscribeSuccess = () => {
     clearSubmitFailure();
-    hideEmailSuggestion();
     subForm.classList.remove("is-submitting");
     subForm.classList.add("is-active", "is-valid", "is-subscribed");
     if (subscribeButton) subscribeButton.disabled = true;
@@ -295,15 +179,7 @@ document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
     subForm.classList.remove("is-submitting", "is-subscribed");
     if (subscribeEmail) subscribeEmail.readOnly = false;
     updateSubscribeState();
-    if (getIsValidEmail()) {
-      clearSubmitFailure();
-      void subForm.offsetWidth;
-      subForm.classList.add("is-submit-failed");
-      failureTimer = window.setTimeout(() => {
-        failureTimer = undefined;
-        subForm.classList.remove("is-submit-failed");
-      }, 520);
-    }
+    fireSubmitFailure();
   };
 
   const getShopifyEndpoint = () => {
@@ -392,20 +268,6 @@ document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
     clearSubmitFailure();
     activateSubscribe();
     updateSubscribeState();
-    queueEmailSuggestion();
-  });
-
-  subscribeEmail?.addEventListener("blur", updateEmailSuggestion);
-
-  suggestionButton?.addEventListener("click", () => {
-    if (!subscribeEmail || !suggestedEmail) return;
-
-    subscribeEmail.value = suggestedEmail;
-    hideEmailSuggestion();
-    clearSubmitFailure();
-    activateSubscribe();
-    updateSubscribeState();
-    subscribeEmail.focus({ preventScroll: true });
   });
 
   subForm.addEventListener("submit", async (event) => {
@@ -414,6 +276,7 @@ document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
 
     if (!subscribeEmail || !getIsValidEmail()) {
       updateSubscribeState();
+      fireSubmitFailure();
       subscribeEmail?.reportValidity?.();
       return;
     }

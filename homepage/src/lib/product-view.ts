@@ -676,9 +676,17 @@ const renderProduct = (container: HTMLElement, product: ProductDetail, options: 
   const detail = document.createElement("section");
   detail.className = "product-detail__panel";
 
-  const vendor = document.createElement("p");
+  const vendorName = product.vendor.trim();
+  const vendor = vendorName ? document.createElement("button") : document.createElement("p");
   vendor.className = "product-detail__vendor";
   setText(vendor, product.vendor);
+  if (vendor instanceof HTMLButtonElement) {
+    vendor.type = "button";
+    vendor.addEventListener("click", (event) => {
+      event.preventDefault();
+      window.dispatchEvent(new CustomEvent("designer:open", { detail: { vendor: product.vendor } }));
+    });
+  }
 
   const title = document.createElement("h1");
   title.className = "product-detail__title";

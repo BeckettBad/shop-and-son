@@ -297,7 +297,6 @@ const shopifyStorefrontVersion = "2025-01";
             </svg>
           </button>
         </div>
-        <button class="hero-subscribe__suggestion" data-hero-subscribe-suggestion type="button" hidden></button>
       </form>
       <p class="hero-info__legal">
         <a href={withBase("/policies/?policy=refund-policy")}>refund policy</a><br />
@@ -610,6 +609,7 @@ const shopifyStorefrontVersion = "2025-01";
       .toLocaleLowerCase("en-US")
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
+  const normalizeDesignerLabel = (value: string) => normalizeSearchText(value).replace(/\s+/g, " ");
 
   const getTitleWords = (title: string) => normalizeSearchText(title).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
 
@@ -2261,6 +2261,26 @@ const shopifyStorefrontVersion = "2025-01";
     transitionToStage("catalog", () => renderCatalogContent(collection, label));
   };
 
+  const openDesignerCollection = (vendor: string) => {
+    const vendorLabel = vendor.trim();
+    if (!vendorLabel) return;
+
+    const normalizedVendor = normalizeDesignerLabel(vendorLabel);
+    const matchingButton = getCollectionButtons().find((button) => {
+      const collectionLabel = button.dataset.collectionLabel?.trim();
+      return Boolean(collectionLabel && normalizeDesignerLabel(collectionLabel) === normalizedVendor);
+    });
+    if (matchingButton) {
+      const collection = matchingButton.dataset.collection?.trim();
+      if (collection) {
+        openCatalog(collection, matchingButton.dataset.collectionLabel?.trim() || vendorLabel);
+        return;
+      }
+    }
+
+    openSearchResults(vendorLabel);
+  };
+
   const openPreorder = () => {
     if (!hero || !preorder) return;
 
@@ -2555,6 +2575,13 @@ const shopifyStorefrontVersion = "2025-01";
     if (mobileQuery.matches) {
       setMenuSectionState(null);
     }
+  });
+
+  window.addEventListener("designer:open", (event) => {
+    if (!(event instanceof CustomEvent)) return;
+
+    const vendor = typeof event.detail?.vendor === "string" ? event.detail.vendor : "";
+    openDesignerCollection(vendor);
   });
 
   subgroupToggles.forEach((button) => {

@@ -55,12 +55,12 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## ACTIVE BRIEF
 
-> **CURRENT TASK (2026-07-09): Phase AA — subscribe placeholder: remove the caret "|" and
-> the trailing ".." so it reads exactly "email" (mobile + desktop, same font). Spec under
-> "## PHASE AA". Dispatch now.
-> Prior all on dev, reviewed clean, awaiting operator verify (not pushed): V/W/X series +
-> desktop IG Y1/Y1b/Y1c + mobile Y2→Z1. Operator open items: mobile hero-info__legal 6px;
-> double opt-in; delete test customer. Say 'ship' → Claude pushes dev + opens dev→main PR.**
+> **CURRENT TASK (2026-07-09): (none active). AD1 @ 8981c1c reviewed CLEAN — designer/vendor now
+> opens the collection IN-APP (openCatalog, fallback to in-app search), ZERO shopandson.com
+> links added. AC1 subscribe fix @ 4a3a61e reviewed CLEAN. Both awaiting operator dev/phone verify.
+> QUEUED next: search-bar left-relocation + spacing (catalogue "x"). Later: convert nav + policy
+> browse links to in-app per DEPLOY-PLAN.md (repo root). PR #26 unmerged (needs subscribe verify).
+> Prior on dev reviewed clean: V/W/X + IG Y1/Y1b/Y1c + mobile Y2→Z1. AB1 (7bf4411) superseded by AD1.**
 >
 > **PRIOR, AWAITING OPERATOR VERIFY: Phase V (footer removed + subscribe moved to
 > hero-info) — V1 @ 434b0ef, V2 @ a19324e, Claude-reviewed CLEAN, not pushed/merged.
@@ -113,6 +113,90 @@ below so Codex has ONE target; everything else in this file is context.
 > now shows a preview still). Landing unchanged (1.87MB; these are on-demand).
 > Awaiting operator go to ship to main. NOTE: preorders piece.mp4 (43M) still
 > uncompressed (separate page, ships as-is per AGENTS).**
+
+---
+
+## PHASE AD — designer link opens the in-app collection, not shopandson.com (operator, 2026-07-09)
+
+RULE (operator): this site must NOT send users to the old shopandson.com theme. The
+designer/vendor in the product detail must open that designer's collection IN-APP. This
+reverses AB1 (which linked to `shopandson.com/collections/vendors?q=`). Scope =
+`src/lib/product-view.ts` + `src/components/blocks/HeroVideo.astro` + `src/styles/global.css`.
+No CSP change. ONE commit `AD1:`. Build + astro check green. No push/merge.
+
+1. `product-view.ts` (the `.product-detail__vendor`, currently an `<a>` to shopandson.com from
+   AB1): when `product.vendor` is non-empty, render it as a clickable element that keeps the
+   neon-green `product-detail__vendor` styling and, on click, calls `preventDefault()` and
+   dispatches `window.dispatchEvent(new CustomEvent("designer:open", { detail: { vendor:
+   product.vendor } }))`. REMOVE the shopandson.com href entirely (no external link at all). If
+   `product.vendor` is empty, render plain non-clickable text.
+2. `HeroVideo.astro` (where `openCatalog` and the collection buttons live): add a `window`
+   listener for `"designer:open"` that opens the matching designer collection in-app:
+   - Match `detail.vendor` (case-insensitive, trimmed) to an existing in-app collection by its
+     label, using the collection buttons (`getCollectionButtons()` / `dataset.collectionLabel`).
+     Take that button's `dataset.collection` handle and call `openCatalog(handle, vendorLabel)`.
+   - If no collection matches, fall back to opening the in-app search prefilled with the vendor
+     name IF that is straightforward; otherwise do nothing. NEVER navigate to shopandson.com.
+3. `global.css`: keep the AB1 neon-green vendor styling (`color:var(--neon-green)`,
+   `cursor:pointer`, hover underline).
+
+Operator verifies: on a product, the designer reads neon green and clicking it opens that
+designer's collection within the site, with no jump out to shopandson.com.
+
+---
+
+## PHASE AC — subscribe box: fix regression, remove typo-suggester, loose validation (operator, 2026-07-09)
+
+The hero-info subscribe box is currently broken (operator: on desktop clicking does not
+reveal the email field and the submit/arrow does not work; the mobile focus animation is
+gone; real personal emails won't go through). Fix it and simplify. Scope =
+`src/components/blocks/HeroVideo.astro`, `public/scripts/base.js`, `src/styles/global.css`.
+No CSP change. Build + astro check green. No push/merge. ONE commit `AC1:`.
+
+1. **Fix the regression.** The reveal logic has existed since V2 (a19324e) and worked:
+   `.hero-subscribe.is-active` fades in `.hero-subscribe__input-wrap`, `.is-valid` reveals
+   the arrow. The heavy X2 pass (`200f614`: the `width:clamp(... --hero-subscribe-value-ch ...)`
+   expanding input, the 20s reset, the red-shake) is the likely regression. Diagnose why
+   activation / field visibility broke on desktop and why the mobile focus animation stopped,
+   and fix so: clicking the box reveals the email input, typing a valid email reveals the
+   arrow, Enter or the arrow submits and succeeds, and the mobile focus behavior works again.
+   If it cannot be cleanly repaired in place, restore the box's interaction to the V2
+   baseline and re-add only what still works.
+2. **Remove the typo-suggester ENTIRELY** (X1). Delete the `hero-subscribe__suggestion`
+   button markup, the Levenshtein / common-domain / TLD detection logic and its handlers in
+   base.js, and its CSS. No "did you mean…?" UI at all.
+3. **Keep validation LOOSE.** `getIsValidEmail()` uses ONLY the browser's `checkValidity()`
+   on the `type="email"` input (permissive — all real emails pass). Do NOT add a stricter
+   regex. The error state (the red-shake) fires only when the email clearly isn't valid
+   (fails `checkValidity()`, e.g. no "@") or when an actual submit fails (Shopify / network).
+4. **Placeholder stays "email"** (no caret) — as it is now.
+
+Operator will verify on dev (desktop) and on a real phone (mobile focus). Note: with the
+typo-suggester gone, seriously-misspelled-but-valid-format addresses (e.g. name@gmial.com)
+will submit without a warning; Shopify + double opt-in are the backstop.
+
+---
+
+## PHASE AB — clickable neon-green designer in product detail (operator, 2026-07-09)
+
+In the individual product view, the designer (vendor) shown next to the carousel should
+be neon green (`var(--neon-green)`) to signal it is clickable, and clicking it links to
+that designer's page on shopandson.com. This covers BOTH the hero product overlay and the
+standalone product page (both render via `src/lib/product-view.ts`). Scope =
+`src/lib/product-view.ts` + `src/styles/global.css`. No CSP change (it is a link). ONE
+commit `AB1:`. Build + astro check green. No push/merge.
+1. `product-view.ts` (~line 679, the `product-detail__vendor` element): when
+   `product.vendor` is non-empty, render it as a clickable `<a class="product-detail__vendor">`
+   (keep the class + text) with:
+   - `href = "https://shopandson.com/collections/vendors?q=" + encodeURIComponent(product.vendor)`
+     (Shopify's built-in per-vendor page — reliable for any designer, no handle map needed).
+   - `target="_blank"` + `rel="noopener noreferrer"` (opens the designer's page without
+     losing the product view; match how the existing shopandson.com buy links open).
+   - If `product.vendor` is empty, keep it as plain non-link text.
+2. `global.css` (`.product-detail__vendor`, ~line 1860 + the responsive rules at 1211 /
+   2194): color the vendor `var(--neon-green)`, `cursor:pointer`, and underline on hover
+   (or a subtle persistent underline) to signal clickable. Keep the existing font, size,
+   and positioning.
 
 ---
 
