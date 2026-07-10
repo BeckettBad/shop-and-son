@@ -279,6 +279,7 @@ body{
   display:flex; align-items:center; justify-content:flex-end; gap:var(--hero-icon-gap);
   pointer-events:none;
 }
+.hero__instagram,
 .hero__cart{
   position:relative; z-index:1;
   display:inline-flex; align-items:center; justify-content:center;
@@ -289,8 +290,14 @@ body{
   transform:translateX(var(--hero-icon-stage-clearance));
   transition:transform .55s ease-in-out,opacity .18s ease,visibility 0s;
 }
+.hero__instagram svg{
+  display:block; width:20px; height:20px;
+}
 .hero__cart svg{
   display:block; width:22px; height:22px;
+}
+@media(min-width:761px){
+  .hero__instagram{margin-right:10px}
 }
 .hero__search{
   position:relative; z-index:1;
@@ -349,6 +356,13 @@ body{
 .product-detail__cart-count{
   top:-2px; right:-5px;
 }
+.hero-video.is-catalog .hero__instagram,
+.hero-video.is-search .hero__instagram,
+.hero-video.is-product .hero__instagram,
+.hero-video.is-preorder .hero__instagram{
+  transform:translateX(0);
+  transition-delay:.16s,0s,0s;
+}
 .hero-video.is-catalog .hero__cart,
 .hero-video.is-search .hero__cart,
 .hero-video.is-product .hero__cart,
@@ -363,6 +377,10 @@ body{
   transform:translateX(0);
   transition-delay:0s,0s,0s;
 }
+.hero-video.is-catalog .hero__instagram,
+.hero-video.is-search .hero__instagram,
+.hero-video.is-product .hero__instagram,
+.hero-video.is-preorder .hero__instagram,
 .hero-video.is-catalog .hero__cart,
 .hero-video.is-search .hero__cart,
 .hero-video.is-product .hero__cart,
@@ -813,6 +831,7 @@ body{
 .hero__menu-item--group.is-collapsing .hero__menu-nested{display:block}
 .hero__menu-item--group.is-open .hero__menu-nested{animation:heroPanelReveal .55s cubic-bezier(.16,1,.3,1)}
 @media (hover:hover){
+  .hero__instagram:hover,
   .hero__cart:hover{
     color:var(--neon-green); opacity:1; text-decoration:underline; text-underline-offset:3px;
   }
@@ -970,18 +989,15 @@ body{
     --hero-icon-size:40px;
     --hero-icon-gap:10px;
     --hero-icon-stage-clearance:14px;
-    --hero-mobile-panel-top:clamp(88px,16vh,132px);
     --hero-mobile-icon-top:max(1.25vh, env(safe-area-inset-top));
-    --hero-mobile-cart-stage-y:calc(var(--hero-icon-stage-clearance) + var(--hero-icon-size) + var(--hero-icon-gap));
-    --hero-mobile-search-stage-x:calc((var(--hero-icon-size) + 8px) * -1);
-    --hero-mobile-search-stage-y:calc(var(--hero-mobile-panel-top) - var(--hero-mobile-icon-top) - var(--hero-icon-size) - var(--hero-icon-gap));
-    /* Search is DOM-second (one flex row below the cart), so to land it in the
-       cart's on-load top slot (clearance) we lift it by one icon row. This makes
-       the catalogue/product swap mirror the landing spacing exactly: search takes
-       the top slot, cart the bottom slot, same gap. */
-    --hero-mobile-search-collapsed-y:calc(var(--hero-icon-stage-clearance) - var(--hero-icon-size) - var(--hero-icon-gap));
+    --hero-mobile-search-dodge-x:calc((var(--hero-icon-size) + var(--hero-icon-gap)) * -1);
     top:var(--hero-mobile-icon-top); right:4vw;
     flex-direction:column; align-items:flex-end; gap:var(--hero-icon-gap);
+  }
+  .hero__instagram{
+    z-index:5; width:var(--hero-icon-size); height:var(--hero-icon-size);
+    transform:translateY(var(--hero-icon-stage-clearance));
+    transition:transform .55s ease-in-out,opacity .18s ease,visibility 0s;
   }
   .hero__cart{
     z-index:5; width:var(--hero-icon-size); height:var(--hero-icon-size);
@@ -995,6 +1011,7 @@ body{
     transform:translateY(var(--hero-icon-stage-clearance));
     transition:transform .55s ease-in-out,opacity .18s ease,visibility 0s;
   }
+  .hero__instagram svg{width:20px; height:20px}
   .hero__cart svg{width:22px; height:22px}
   .hero__cart-count{
     top:2px; right:4px;
@@ -1019,34 +1036,41 @@ body{
   .hero__search-all-row{
     display:none !important;
   }
+  .hero-video.is-catalog .hero__instagram,
+  .hero-video.is-search .hero__instagram,
+  .hero-video.is-product .hero__instagram,
+  .hero-video.is-preorder .hero__instagram{
+    transform:translateY(var(--hero-icon-stage-clearance));
+    transition-delay:0s,0s,0s;
+  }
   .hero-video.is-catalog .hero__cart,
   .hero-video.is-search .hero__cart,
   .hero-video.is-product .hero__cart,
   .hero-video.is-preorder .hero__cart{
-    transform:translateY(var(--hero-mobile-cart-stage-y));
+    transform:translateY(var(--hero-icon-stage-clearance));
     transition-delay:0s,0s,0s;
   }
-  .hero-video.is-catalog .hero__search,
-  .hero-video.is-product .hero__search{
-    transform:translateY(var(--hero-mobile-search-collapsed-y));
-    transition-delay:.08s,0s,0s;
-  }
   .hero-video.is-search .hero__search,
-  .hero-video.is-preorder .hero__search,
-  .hero-video.is-search-open.is-catalog .hero__search,
-  .hero-video.is-search-open.is-product .hero__search{
-    transform:translate(var(--hero-mobile-search-stage-x),var(--hero-mobile-search-stage-y));
-    transition-delay:.08s,0s,0s;
+  .hero-video.is-preorder .hero__search{
+    transform:translateY(var(--hero-icon-stage-clearance));
+    transition-delay:0s,0s,0s;
   }
   .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__cart,
   .hero-video:has(.hero__menu-section.is-search-breadcrumb) .hero__cart{
     transform:translateY(var(--hero-icon-stage-clearance));
-    transition-delay:.08s,0s,0s;
+    transition-delay:0s,0s,0s;
   }
   .hero-video:has(.hero__menu-section.is-open:not([data-music="true"]):not([data-fam="true"]):not([data-preorder="true"])) .hero__search,
   .hero-video:has(.hero__menu-section.is-search-breadcrumb) .hero__search{
     transform:translateY(var(--hero-icon-stage-clearance));
     transition-delay:0s,0s,0s;
+  }
+  .hero-video.is-catalog .hero__search,
+  .hero-video.is-product .hero__search,
+  .hero-video.is-search-open.is-catalog .hero__search,
+  .hero-video.is-search-open.is-product .hero__search{
+    transform:translate(var(--hero-mobile-search-dodge-x),var(--hero-icon-stage-clearance));
+    transition-delay:.08s,0s,0s;
   }
   .hero-video.is-search-open:not(.is-catalog):not(.is-search):not(.is-product):not(.is-preorder) .hero__menu{
     opacity:0; visibility:hidden; pointer-events:none;
@@ -1272,6 +1296,7 @@ body{
   .hero__search-input{
     transition:none;
   }
+  .hero__instagram,
   .hero__cart,
   .hero__search{
     transition:none;
@@ -1448,8 +1473,97 @@ body{
 .hero-info p{margin:0 0 1em}
 .hero-info p:last-child{margin-bottom:0}
 .hero-info a{color:inherit; text-decoration:underline; text-underline-offset:2px; pointer-events:auto}
+.hero-subscribe{
+  --hero-subscribe-h:25px;
+  --hero-subscribe-w:138px;
+  --hero-subscribe-valid-w:178px;
+  --hero-subscribe-submit-w:34px;
+  --hero-subscribe-input-max-w:45ch;
+  --hero-subscribe-max-w:calc(var(--hero-subscribe-input-max-w) + var(--hero-subscribe-submit-w) + 24px);
+  --hero-subscribe-value-ch:8;
+  display:block;
+  width:clamp(var(--hero-subscribe-w), calc((var(--hero-subscribe-value-ch) * 1ch) + 24px), var(--hero-subscribe-max-w));
+  max-width:var(--hero-subscribe-max-w); margin:0 0 .9em;
+  color:#000; font-family:var(--mono-ui); pointer-events:auto;
+  transition:width .16s ease;
+}
+.hero-subscribe.is-valid,
+.hero-subscribe.is-subscribed{
+  width:clamp(
+    var(--hero-subscribe-valid-w),
+    calc((var(--hero-subscribe-value-ch) * 1ch) + var(--hero-subscribe-submit-w) + 24px),
+    var(--hero-subscribe-max-w)
+  );
+}
+.hero-subscribe__box{
+  position:relative; display:flex; width:100%; height:var(--hero-subscribe-h);
+  border:1px solid #000; background:rgba(255,255,255,.42); color:#000; overflow:hidden;
+}
+.hero-subscribe__idle{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-size:11px; line-height:1; letter-spacing:0; transition:opacity .08s ease;
+}
+.hero-subscribe.is-active .hero-subscribe__idle,
+.hero-subscribe.is-valid .hero-subscribe__idle,
+.hero-subscribe.is-subscribed .hero-subscribe__idle{opacity:0}
+.hero-subscribe__input-wrap{
+  position:relative; flex:1 1 auto; min-width:0; height:100%; overflow:hidden;
+  opacity:0; transition:opacity .08s ease;
+}
+.hero-subscribe.is-active .hero-subscribe__input-wrap,
+.hero-subscribe.is-valid .hero-subscribe__input-wrap,
+.hero-subscribe.is-subscribed .hero-subscribe__input-wrap{opacity:1}
+.hero-subscribe__input{
+  width:100%; height:100%; padding:0 8px; border:0; border-radius:0;
+  background:transparent; color:#000; font:inherit; font-size:11px; line-height:1;
+  outline:none; appearance:none; -webkit-appearance:none;
+}
+.hero-subscribe__placeholder{
+  position:absolute; top:50%; left:8px; transform:translateY(-50%);
+  display:none; align-items:center; color:rgba(0,0,0,.72); font-size:11px; line-height:1;
+  pointer-events:none; white-space:nowrap;
+}
+.hero-subscribe.is-active:not(.has-value) .hero-subscribe__placeholder{display:flex}
+.hero-subscribe__submit{
+  display:flex; flex:0 0 auto; align-items:center; justify-content:center;
+  width:0; height:100%; padding:0; border:0; border-left:1px solid #000;
+  background:transparent; color:#000; cursor:pointer; opacity:0; overflow:hidden;
+  transform:translateX(100%); transition:width .16s ease,opacity .12s ease,transform .16s ease;
+}
+.hero-subscribe.is-valid .hero-subscribe__submit,
+.hero-subscribe.is-subscribed .hero-subscribe__submit{
+  width:var(--hero-subscribe-submit-w); opacity:1; transform:translateX(0);
+}
+.hero-subscribe__submit:disabled{cursor:default}
+.hero-subscribe.is-submit-failed .hero-subscribe__submit{color:#c80000}
+.hero-subscribe__icon{
+  width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.8;
+  stroke-linecap:round; stroke-linejoin:round;
+}
+.hero-subscribe.is-submit-failed .hero-subscribe__icon--arrow{
+  animation:heroSubscribeArrowShake .38s cubic-bezier(.36,.07,.19,.97);
+}
+.hero-subscribe__icon--check{display:none}
+.hero-subscribe.is-subscribed .hero-subscribe__submit{color:var(--neon-green)}
+.hero-subscribe.is-subscribed .hero-subscribe__icon--arrow{display:none}
+.hero-subscribe.is-subscribed .hero-subscribe__icon--check{display:block}
+@keyframes heroSubscribeArrowShake{
+  10%,90%{transform:translateX(-1px)}
+  20%,80%{transform:translateX(2px)}
+  30%,50%,70%{transform:translateX(-3px)}
+  40%,60%{transform:translateX(3px)}
+}
+.hero-subscribe__suggestion{
+  display:block; width:100%; margin:.34em 0 0; padding:0; border:0; background:transparent;
+  color:rgba(0,0,0,.52); font:inherit; font-size:8px; line-height:1.2; text-align:left;
+  text-transform:none; cursor:pointer;
+}
+.hero-subscribe__suggestion[hidden]{display:none}
+.hero-subscribe__suggestion:hover{
+  color:#000; text-decoration:underline; text-underline-offset:2px;
+}
 .hero-info__legal{
-  font-size:10px; color:rgba(0,0,0,.55);
+  font-size:9px; color:rgba(0,0,0,.55);
 }
 .hero-info__legal a{text-decoration:none}
 .hero-info__legal a:hover{text-decoration:underline}
@@ -1465,7 +1579,23 @@ body{
   /* Condensed on mobile so the fixed bottom info block clears the centered
      & fam panel (tattoo + copy) with no overlay. */
   .hero-info p{margin:0 0 .3em}
-  .hero-info__legal{font-size:7px; margin-top:.2em}
+  .hero-subscribe{
+    --hero-subscribe-h:22px;
+    --hero-subscribe-w:116px;
+    --hero-subscribe-valid-w:150px;
+    --hero-subscribe-submit-w:28px;
+    --hero-subscribe-input-max-w:45ch;
+    --hero-subscribe-max-w:min(88vw, calc(var(--hero-subscribe-input-max-w) + var(--hero-subscribe-submit-w) + 24px));
+    margin:.1em auto .35em;
+  }
+  .hero-subscribe__idle,
+  .hero-subscribe__input,
+  .hero-subscribe__placeholder{font-size:9px}
+  .hero-subscribe__suggestion{font-size:6px; text-align:center}
+  .hero-subscribe__input{padding:0 6px}
+  .hero-subscribe__placeholder{left:6px}
+  .hero-subscribe__icon{width:14px; height:14px}
+  .hero-info__legal{font-size:6px; line-height:1.08; margin-top:.1em}
   .hero-video.is-catalog .hero-info,
   .hero-video.is-search .hero-info,
   .hero-video.is-product .hero-info,

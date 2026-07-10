@@ -55,6 +55,21 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## ACTIVE BRIEF
 
+> **CURRENT TASK (2026-07-09): Phase AA — subscribe placeholder: remove the caret "|" and
+> the trailing ".." so it reads exactly "email" (mobile + desktop, same font). Spec under
+> "## PHASE AA". Dispatch now.
+> Prior all on dev, reviewed clean, awaiting operator verify (not pushed): V/W/X series +
+> desktop IG Y1/Y1b/Y1c + mobile Y2→Z1. Operator open items: mobile hero-info__legal 6px;
+> double opt-in; delete test customer. Say 'ship' → Claude pushes dev + opens dev→main PR.**
+>
+> **PRIOR, AWAITING OPERATOR VERIFY: Phase V (footer removed + subscribe moved to
+> hero-info) — V1 @ 434b0ef, V2 @ a19324e, Claude-reviewed CLEAN, not pushed/merged.
+> Open visual note: mobile hero-info__legal 6px (desktop 9px), operator to refine.
+> Log:
+>   2026-07-09 — V2 hero subscribe box — a19324e — build:green check:green — clean.
+>   2026-07-09 — V1 remove footer entirely — 434b0ef — build:green check:green — clean.
+>   2026-07-09 — U1 footer subscribe wiring — 1cb3651 — SUPERSEDED by Phase V; reused.**
+
 > **Phases G–J are SHIPPED** (merged `dev → main` @ `012f918`, live). Do not re-do
 > any of them; their brief text lives in this file's git history + the sections below.
 
@@ -98,6 +113,360 @@ below so Codex has ONE target; everything else in this file is context.
 > now shows a preview still). Landing unchanged (1.87MB; these are on-demand).
 > Awaiting operator go to ship to main. NOTE: preorders piece.mp4 (43M) still
 > uncompressed (separate page, ships as-is per AGENTS).**
+
+---
+
+## PHASE AA — subscribe placeholder: remove caret, read "email" (operator, 2026-07-09)
+
+The hero-info subscribe box placeholder currently reads "|email.." (a blinking caret
+plus the typed text "email.."). Operator wants it to read EXACTLY "email" — no caret,
+no trailing dots — same font and styling, both mobile and desktop. ONE commit `AA1:`.
+Scope = `src/components/blocks/HeroVideo.astro`, `public/scripts/base.js`,
+`src/styles/global.css`. No CSP change. Build + astro check green. No push/merge.
+1. `HeroVideo.astro` (~line 278): remove the caret span
+   `<span class="hero-subscribe__placeholder-caret">|</span>` from the placeholder; keep
+   the `data-hero-subscribe-placeholder-text` span.
+2. `base.js` (~line 47): change `const placeholderValue = "email..";` to `"email"`.
+3. `global.css`: remove the now-unused `.hero-subscribe__placeholder-caret` rule (~line
+   1527) and its `@keyframes heroSubscribeCaret`.
+Keep the existing fast type-out of the word and everything else unchanged.
+
+---
+
+## PHASE Z — mobile icon stack: correct the search dodge (operator, 2026-07-09)
+
+MOBILE ONLY. Y2 (@ 3078e35) got the mobile icon animation wrong two ways: it set the
+icon bases to `transform:none` (which lost the original stack spacing/placement), and it
+moved the search UP-and-left (`dodge-y`) when it should move LEFT only. Correct it.
+Scope = `src/styles/global.css` (mobile block). No CSP change. Build + astro check green.
+No push/merge. ONE commit `Z1:`.
+
+Desired end state (mobile):
+1. **Restore the pre-Y2 stack spacing/placement.** Set the BASE transform of
+   `.hero__instagram`, `.hero__cart`, `.hero__search` back to
+   `translateY(var(--hero-icon-stage-clearance))` (Y2 changed these to `transform:none`).
+   The stack stays top→bottom Instagram, cart, search with the same spacing and in the
+   same place it had before Y2. Do NOT reintroduce the old cart/search SWAP.
+2. **IG and cart stay STATIC** — `translateY(var(--hero-icon-stage-clearance))` in EVERY
+   state; they never move.
+3. **Search dodges HORIZONTALLY only.** Normally `translateY(var(--hero-icon-stage-clearance))`.
+   When a catalogue or individual listing is open (the "x", `.hero__catalog-close` /
+   `.hero__product-close`, is present — states `is-catalog` / `is-product` /
+   `is-search-open.is-catalog` / `is-search-open.is-product`), move ONLY the search icon
+   LEFT so it sits to the left of the x, keeping the SAME vertical position:
+   `transform:translate(var(--hero-mobile-search-dodge-x), var(--hero-icon-stage-clearance))`.
+   Keep `--hero-mobile-search-dodge-x` = `calc((var(--hero-icon-size) + var(--hero-icon-gap)) * -1)`
+   (this horizontal amount was correct in Y2; tune if needed so it clears the x). Do NOT
+   apply any vertical (`dodge-y`) offset. Return to `translateY(clearance)` when the x closes.
+4. Keep all icons the same size. Do NOT change desktop or the icon group's top/right anchor.
+
+Operator verifies on a real phone; this is the piece we've missed twice, so match the
+above exactly and let the operator tune the horizontal offset.
+
+---
+
+## PHASE Y — icon spacing (desktop) + mobile icon choreography rework (operator, 2026-07-09)
+
+Two sub-tasks. Scope = `src/components/blocks/HeroVideo.astro` + `src/styles/global.css`.
+No CSP change. Build + astro check green. No push/merge.
+
+### Y1 — desktop: even out IG spacing (commit `Y1:`)
+The IG icon sits too close to the cart; the IG↔cart gap should match the cart↔mag gap
+(operator's reference = the desktop cart-to-search spacing). The flex `--hero-icon-gap`
+is uniform, but the search element's internal layout makes cart↔mag read wider, so IG
+needs a touch more space to its right. Add a small `margin-right` to `.hero__instagram`
+on DESKTOP (or equivalent) so the IG↔cart visual gap equals the cart↔mag visual gap —
+i.e. nudge IG left. DESKTOP ONLY; do not change mobile here. Measure against cart↔mag.
+
+### Y2 — mobile: trash the cart/search swap; only search dodges the "x" (commit `Y2:`)
+Operator wants the mobile icon stack simplified. Today the catalog/search states swap
+cart and search vertically (and drop IG) — TRASH all of that. New behavior:
+- The stack is PERMANENTLY, top→bottom: **Instagram, cart, search**. IG and cart NEVER
+  move on mobile. Remove the mobile state transforms that move `.hero__cart`
+  (`--hero-mobile-cart-stage-y`), that lift `.hero__search` to the top slot
+  (`--hero-mobile-search-collapsed-y`), and that drop `.hero__instagram` in
+  `is-search-open`. Keep all three at their natural stacked positions in every normal
+  state.
+- The ONLY mobile icon animation: when a catalog or product is open — i.e. the close
+  "x" (`.hero__catalog-close` / `.hero__product-close`) is present — and it would
+  overlap the now-bottom search icon, animate ONLY `.hero__search` up-and-left to sit to
+  the LEFT of the cart (out of the x's way), keeping its size unchanged. When the x is
+  clicked / the catalog closes, animate the search back down into its bottom slot.
+- Preserve the existing tap-to-open-search-input behavior; only the RESTING position of
+  the search icon changes per the above. All icons stay the same size throughout.
+- Compute the "left of cart" offset from `--hero-icon-size` / `--hero-icon-gap`. This is
+  visual choreography — operator verifies on a real phone and we iterate.
+
+---
+
+## PHASE X — subscribe box UX: typo-suggest, invalid feedback, expand, reset (operator, 2026-07-09)
+
+Edits to the hero-info subscribe box (built in V2). Reuse the existing hooks
+(`data-hero-subscribe-*`, classes `hero-subscribe__*`, state classes
+`is-active`/`has-value`/`is-valid`/`is-submitting`/`is-subscribed`) and the
+customerCreate backend. TWO sub-tasks, one commit each. Scope =
+`src/components/blocks/HeroVideo.astro`, `src/styles/global.css`,
+`public/scripts/base.js`. SAME security gates as V2 (public unauthenticated token
+only, handler in BUNDLED base.js with no inline script, do NOT change the CSP,
+password never logged, defensive parsing). Build + astro check green. No push/merge.
+
+### X1 — email typo-suggestion (mailcheck-style, vanilla, no deps) (commit `X1:`)
+Add a lightweight, self-contained domain/TLD typo suggester in `base.js`. NO npm
+dependency (base.js is static/unbundled) — hand-roll ~1-2KB vanilla, NO network,
+CSP-safe:
+- On blur (or debounced after a complete-looking entry), split the email at "@" and
+  take the domain. If the domain is a near-match (edit distance 1-2, not exact) to a
+  known common domain, or the TLD is a near-match to a common TLD, compute the
+  corrected email and show a clickable suggestion.
+  - Domains: gmail.com, googlemail.com, yahoo.com, ymail.com, hotmail.com, outlook.com,
+    live.com, msn.com, icloud.com, me.com, mac.com, aol.com, proton.me, protonmail.com,
+    comcast.net, verizon.net, att.net, sbcglobal.net.
+  - TLDs: com, net, org, edu, co, io, us, ca, me, info.
+  - Sørensen-Dice or Levenshtein; only suggest when close-but-not-equal.
+- UI: a small clickable "did you mean {corrected}?" hint below the box (`--mono-ui`,
+  small, subtle). Clicking sets the input to the corrected email, re-validates, and
+  hides the hint. Advisory only — it NEVER blocks submit; hides when the email matches
+  a known-good domain or the field is cleared.
+
+### X2 — invalid feedback, expanding input, post-submit reset (commit `X2:`)
+1. **Invalid-submit feedback:** when a submit is attempted with the arrow showing
+   (email passed `checkValidity()`) but the submit FAILS (Shopify userError, network,
+   or otherwise), turn the arrow icon RED and play a brief SHAKE animation, then settle
+   back to the normal arrow so the user can retry. Replaces the current failure
+   handling on the arrow. (True non-existence is not detectable client-side; this fires
+   on real submit failures.)
+2. **Expanding input:** as the user types a longer email, the input grows so the whole
+   email is visible before submit. DESKTOP: grow horizontally to the RIGHT only, capped
+   at ~45 characters wide (`max-width` ~45ch); beyond the cap the input scrolls
+   internally. Do NOT hard-limit the email length — long valid emails must still be
+   fully enterable. MOBILE: keep it fitting within `.hero-info` (your call: cap
+   max-width to available space, scroll beyond). Drive width from value length (JS, ch
+   units) or equivalent, capped.
+3. **Post-submit reset:** after a LEGIT successful submit (green check shown), start a
+   ~20s timer; if the box is untouched for ~20s, return it to the idle "subscribe"
+   state. BUT if the box is clicked/focused again before ~20s, immediately reset to the
+   FRESH input state (clear the field, run the typewriter placeholder, ready for a new
+   email — same as first clicking "subscribe") so the user can submit another address.
+   Cancel the timer on that interaction.
+
+---
+
+## PHASE W — Instagram icon in the hero icon stack (operator, 2026-07-09)
+
+Add an Instagram icon into the existing hero icon stack (`.hero__icon-pair` in
+`HeroVideo.astro`, currently cart + search), linking to
+`https://www.instagram.com/shopandson/` (open in a new tab, `rel="noopener
+noreferrer"`). ONE commit `W1:`. Scope = `src/components/blocks/HeroVideo.astro` +
+`src/styles/global.css` ONLY. Build + astro check green. Do NOT push, do NOT merge,
+do NOT change the CSP (a plain external link needs none).
+
+Icon — inline SVG, matched to the cart/search sizing (~22px, `currentColor` #000):
+```
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+  <rect x="3.2" y="3.2" width="17.6" height="17.6" rx="5"/>
+  <circle cx="12" cy="12" r="4.2"/>
+  <circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" stroke="none"/>
+</svg>
+```
+Markup: add `<a class="hero__instagram" href="https://www.instagram.com/shopandson/"
+target="_blank" rel="noopener noreferrer" aria-label="Instagram">…svg…</a>` as the
+FIRST child of `.hero__icon-pair` (before `.hero__cart`), `pointer-events:auto`.
+
+### Desktop (`.hero__icon-pair` base rules, ~line 274)
+- The pair is a horizontal flex row (justify-end, `gap:var(--hero-icon-gap)`). As the
+  first child, IG lands to the LEFT of cart with the existing gap = uniform spacing.
+- Animation: give `.hero__instagram` the SAME treatment as `.hero__cart` — base
+  `transform:translateX(var(--hero-icon-stage-clearance))` + the same transition, and
+  in the active states (`.hero-video.is-catalog/.is-search/.is-product/.is-preorder
+  .hero__instagram`) `transform:translateX(0)`. Give it a stagger `transition-delay`
+  one step beyond cart (cart .08s → IG ~.16s) so the row cascades in. Mirror cart's
+  opacity/visibility/pointer rules.
+
+### Mobile (`.hero__icon-pair` media block, ~line 969) — the nuanced part
+Goal (operator's words): IG sits at the TOP of the vertical stack at ALL times,
+correctly spaced, and animates ONLY when search opens over a catalog/product. When
+the user taps the mag to open search — the `is-search-open.is-catalog` /
+`is-search-open.is-product` states, where `.hero__search` animates down/away to
+become the input via `translate(var(--hero-mobile-search-stage-x),
+var(--hero-mobile-search-stage-y))` — IG DROPS DOWN by one icon row to fill the slot
+the mag vacated, and returns UP to the top when search is exited.
+
+Integrate WITHOUT breaking the existing choreography: the mobile stack is a column
+(cart DOM-first = top, search DOM-second); in `is-catalog`/`is-product` search lifts
+to the top slot and cart drops to the bottom via `--hero-mobile-cart-stage-y` /
+`--hero-mobile-search-collapsed-y`. Adding IG as a new flex item at the top would
+shift cart/search down a row and throw those vars off, so EITHER (a) add IG as the
+first flex child AND update the `--hero-mobile-*` stage-y vars so cart/search still
+land in the same visual slots, OR (b) anchor IG independently (its own absolute
+position at the stack top) so it does not disturb the cart/search flex flow and
+animate its `translateY` on its own. Pick whichever keeps cart/search pixel-identical.
+
+- Default / landing / catalog (search closed): IG at the very top, static, uniform
+  gap, no movement.
+- On search open (`is-search-open` + catalog/product): IG `translateY` down by one
+  icon row (`--hero-mobile-cart-stage-y` distance = clearance + icon + gap) into the
+  vacated mag slot; transition matching the others (~.55s ease-in-out).
+- On search close: IG returns to the top slot.
+- IG must never overlap cart/search in any state and keep uniform spacing.
+
+Note: the mobile drop choreography is the part most likely to need a visual tune;
+operator verifies on a real phone and we iterate. Build + astro check green. Commit
+`W1: instagram icon in hero icon stack`. Do NOT push, do NOT merge.
+
+### W2 — IG icon uniformity fix: boldness + spacing (operator, commit `W2:`)
+Operator: the IG icon looks bolder and sits too close to its neighbor compared to the
+cart and mag icons; make the three uniform. Scope = `src/components/blocks/HeroVideo.astro`
+(the IG svg) + `src/styles/global.css`. No CSP change.
+1. **Boldness:** the IG glyph is a stroked outline (`stroke-width:1.9`) while cart/search
+   are filled, so it reads heavier. Tone the IG down to match the visual weight of the
+   cart and mag icons — reduce the IG svg `stroke-width` (start ~1.5, go lower if it
+   still looks heavier). Goal: IG does not look bolder than the others.
+2. **Spacing/uniformity:** the flex gap (`--hero-icon-gap`) is already uniform, but the
+   IG glyph fills more of its box than cart/search so it looks crowded. Reduce the IG
+   glyph's rendered footprint to match the cart/mag glyph size (e.g., render the IG svg
+   at ~19–20px instead of 22px, or inset the rect) so the IG↔cart gap VISUALLY equals
+   the cart↔search gap. Reference = the current desktop cart↔mag spacing. Apply the same
+   on mobile, where IG is currently too close to its neighbor. Keep the gap uniform in
+   all states (idle and animated).
+Build + astro check green. Commit `W2: uniform IG icon weight + spacing`. No push/merge.
+
+---
+
+## PHASE V — remove footer, move subscribe into hero-info (operator, 2026-07-09)
+
+Operator decision: kill the footer entirely (NO footer anywhere) and repurpose the
+subscribe into the hero about/contact block (`.hero-info` in `HeroVideo.astro`),
+between the contact email and the legal links. TWO sub-tasks, ONE commit each,
+dispatched separately. Reuse the security-reviewed customerCreate backend from
+commit `1cb3651` (see `git show 1cb3651:homepage/public/scripts/base.js`).
+
+**SECURITY GATES (unchanged from Phase U, hard requirements):** client-side uses
+ONLY the public unauthenticated Storefront token, never Admin creds; subscribe
+handler lives in the BUNDLED `base.js` (no inline `<script>`); do NOT change or
+widen the CSP (stop + flag if it seems needed); random throwaway password per
+submit, never logged; parse responses defensively so a malformed/failed response
+NEVER shows a false success.
+
+### V1 — remove the footer entirely (commit `V1:`)
+Restore the pre-footer state of the shared files and delete the footer assets:
+- `git checkout dc62771 -- src/layouts/Base.astro src/styles/global.css public/scripts/base.js`
+  (dc62771 = the commit before the first footer commit; this removes the
+  `<SiteFooter/>` wiring, the footer CSS, the landing scroll-unlock, and the
+  overscroll-behavior `contain→auto` change, restoring the original hero scroll).
+- `git rm src/components/SiteFooter.astro public/images/chronicle-neon.png public/images/chronicle-neon.webp`
+- Grep to confirm no remaining reference to `SiteFooter` or `chronicle-neon`.
+- `npm run build` + `npx astro check` green. Commit `V1: remove footer entirely (repurposing subscribe)`.
+
+### V2 — subscribe box in hero-info (commit `V2:`)
+Scope: `src/components/blocks/HeroVideo.astro`, `src/styles/global.css`,
+`public/scripts/base.js`.
+
+Placement: inside `.hero-info`, insert the subscribe box BETWEEN the
+`<p>contact:...info@shopandson.com</p>` and `<p class="hero-info__legal">...</p>`.
+
+Box design (single sleek box, `--mono-ui` font, black border/style matching the
+site; SIZING IS A SENSIBLE DEFAULT — the operator will refine sizing later):
+- **Idle:** one box, centered text "subscribe".
+- **On click/focus:** "subscribe" disappears; an email input activates showing a
+  FAST typewriter placeholder of "email.." preceded by a blinking caret "|" (looks
+  like `|email..`). No existing typewriter in the codebase — build a new one (JS
+  types the placeholder quickly + CSS blinking caret). Keep it fast.
+- **On valid email** (use `checkValidity()`/regex — this also filters junk/spam
+  submits): a SECOND segment appears on the right (email field grows, a smaller box
+  appears at right) holding a RIGHT-POINTING ARROW icon. This arrow box appearing IS
+  the "valid email" feedback.
+- **Submit on Enter OR click the arrow** → run customerCreate (reuse the 1cb3651
+  backend: public token, random password, `acceptsMarketing:true`, defensive
+  parsing, `TAKEN`/`CUSTOMER_DISABLED` = success).
+- **On success:** the arrow icon swaps to a GREEN CHECK icon (`var(--neon-green)`) in
+  the same position. On failure: keep the arrow, allow retry, never a false success.
+
+Spacing:
+- **Desktop:** the vertical margin from the bottom of the homepage (footer now gone)
+  to the top of the `hero-info__legal` (ToS) text must stay the SAME as it is now. It
+  is OK to slightly reduce the `hero-info__legal` (refund/privacy/tos) size to make
+  room so nothing looks crowded.
+- **Mobile:** reduce the `hero-info__legal` size so the box fits without taking too
+  much space.
+
+`npm run build` + `npx astro check` green. Commit `V2: subscribe box in hero-info`.
+Do NOT push, do NOT merge.
+
+---
+
+## PHASE U — footer newsletter subscribe (SECURE) (operator, 2026-07-09)
+
+Wire the footer's email field to a real Shopify newsletter signup, securely. The
+footer shell is already on dev @ a4c53c5; this phase ONLY adds the subscribe
+behavior. **ONE commit `U1:`**, scope = `homepage/src/components/SiteFooter.astro`
++ `homepage/public/scripts/base.js` ONLY. Build + check green. Do NOT push, do NOT
+merge, do NOT touch the CSP or any other file.
+
+**Verified Shopify facts (Claude tested the live Storefront API 2026-07-09 — do not
+re-test by creating customers from CI):**
+- Endpoint: `https://{PUBLIC_SHOPIFY_STORE_DOMAIN}/api/2025-01/graphql.json` (domain
+  is `shopandson.com`).
+- The Storefront token in `.env` (`PUBLIC_SHOPIFY_STOREFRONT_API_TOKEN`) has
+  `unauthenticated_write_customers` plus the read scopes. Reads confirmed working.
+- `customerCreate` works in `2025-01`; `acceptsMarketing: true` IS a valid
+  `CustomerCreateInput` field and is what marks the customer subscribed.
+  `emailMarketingConsent` is NOT accepted — do not use it.
+- CSP already permits the call (`connect-src` includes `https://shopandson.com`).
+  **Do NOT change the CSP.**
+
+**Implementation:**
+1. `SiteFooter.astro` frontmatter: read `PUBLIC_SHOPIFY_STORE_DOMAIN` and
+   `PUBLIC_SHOPIFY_STOREFRONT_API_TOKEN` from `import.meta.env`; const
+   `sfVersion = "2025-01"`. Render them on the form as `data-shop-domain`,
+   `data-sf-token`, `data-sf-version`. Remove the placeholder hidden Shopify
+   contact `<input>`s and the `action`/`method` attributes.
+2. `base.js` (BUNDLED/static file — never an inline `<script>`): replace the
+   placeholder subscribe handler with one that:
+   - Reads domain/token/version from the form dataset.
+   - Validates the email (`type=email` + `checkValidity()`); on invalid,
+     `reportValidity()` and stop.
+   - Generates a random throwaway password with `crypto.getRandomValues` (the
+     subscriber never sees or uses it). Never log it.
+   - POSTs `customerCreate(input:{ email, password, acceptsMarketing:true })` with
+     header `X-Shopify-Storefront-Access-Token`.
+   - Success (a `customer` returned, OR a `customerUserErrors` code of `TAKEN` /
+     `CUSTOMER_DISABLED` meaning already registered): add `.is-subscribed`, text →
+     "subscribed", disable the button, set the email read-only.
+   - Other userError or network failure: button text "try again", re-enable; NEVER
+     show a false "subscribed".
+   - If domain/token are absent: flip optimistically (dev fallback), do not error.
+
+**SECURITY REQUIREMENTS (operator's explicit emphasis — treat as hard gates):**
+- Client-side uses ONLY the unauthenticated, public Storefront token. NEVER
+  reference the Admin API key/secret or any Admin token in a component, script, or
+  built page. This is Shopify's sanctioned client-side signup path; the Storefront
+  token is public by design.
+- Handler stays in the BUNDLED/static `base.js`. No inline script (prod CSP
+  `script-src 'self'` blocks inline).
+- Do NOT widen or edit the CSP. If the implementation seems to need a new origin,
+  STOP and flag it in the commit message rather than adding anything.
+- The generated password is random per submit and is never logged, stored, or
+  shown.
+- No secrets in the commit; `.env` stays gitignored. The public token appearing in
+  built HTML via the data attribute is expected and acceptable for an
+  unauthenticated Storefront token.
+- Parse every Shopify response defensively (optional chaining, no assumptions); a
+  malformed/again response lands in "try again", never a false success.
+
+**Done when:** `npm run build` and `npx astro check` both green; one commit `U1:`;
+only the two in-scope files changed; no CSP change; no Admin creds client-side.
+State in the commit that the subscribe was compiled only, not live-fired from CI.
+
+**Operator verify (after Codex + Claude review):** on dev, enter an email → button
+turns neon "subscribed"; Shopify admin → Customers → the email shows Email
+subscription Subscribed (or Pending if double opt-in is on). Then delete the
+earlier `son-newsletter-test@example.com` record.
+
+**Hardening (NOT in U1 — future Phase U2 if the operator wants it):** route the
+signup through the existing Cloudflare Worker so the token lives server-side, and
+add Cloudflare Turnstile + rate limiting to block bot signups (protects list
+quality / deliverability). More infra; flagged, not built here.
 
 ---
 
