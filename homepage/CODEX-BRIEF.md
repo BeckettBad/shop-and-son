@@ -55,7 +55,12 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## ACTIVE BRIEF
 
-> **CURRENT TASK (2026-07-09): (none active). AE1 @ d97e097 reviewed CLEAN — hero video resumes
+> **CURRENT TASK (2026-07-09): (none active). AF1 @ 6f2999f reviewed CLEAN — hero video releases memory on hide, restores+plays on return (reduces iOS tab-discard reloads; cannot guarantee zero). On dev, opening deploy PR.**
+> so iOS is less likely to DISCARD + reload the tab when the user returns from the Instagram app
+> (root cause = iOS tab discarding, verified not self-inflicted; this reduces it, cannot guarantee).
+> Spec under "## PHASE AF". Dispatch now. Integrates with AE1's resume handlers.**
+>
+> **PRIOR: AE1 @ d97e097 reviewed CLEAN — hero video resumes
 > on return (visibilitychange/pageshow/focus -> tryPlayHeroVideo). Pushed to dev, now IN PR #27.
 > PR #27 (dev->main) is ONE merge from deploying: in-app designer link (AD1) + subscribe box
 > fix (AC1, + CI token corrected to write-scoped) + hero-video resume (AE1). Operator merges.**
@@ -118,6 +123,38 @@ below so Codex has ONE target; everything else in this file is context.
 > now shows a preview still). Landing unchanged (1.87MB; these are on-demand).
 > Awaiting operator go to ship to main. NOTE: preorders piece.mp4 (43M) still
 > uncompressed (separate page, ships as-is per AGENTS).**
+
+---
+
+## PHASE AF — release hero video memory while backgrounded (operator, 2026-07-09)
+
+Goal: reduce iOS Safari discarding the backgrounded tab (which causes a full-page reload when
+the user returns from the Instagram app). The hero autoplay video is the page's biggest memory
+user; freeing its decoded memory while the tab is hidden makes the tab far less likely to be
+discarded. Restore + resume it on return. This REDUCES reloads; it cannot guarantee zero (iOS
+controls tab lifetime). Scope = `src/components/blocks/HeroVideo.astro` ONLY (bundled hero
+script). No CSP change. PRESERVE all existing hero behavior (autoplay/muted/playsinline, the
+first-interaction fallback, the poster). ONE commit `AF1:`. Build + astro check green. No push/merge.
+
+Implement near `tryPlayHeroVideo()` and the AE1 visibility/pageshow/focus handlers:
+1. At init, capture the source URL once, e.g.
+   `const heroVideoSource = heroVideo.querySelector("source")?.getAttribute("src") || heroVideo.currentSrc || "";`
+   and a flag `let heroVideoReleased = false;`.
+2. `releaseHeroVideo()`: if not already released and a source exists — `heroVideo.pause();`
+   remove the `<source>` child(ren) (and any `src` attr on the video), then `heroVideo.load();`
+   set `heroVideoReleased = true`. This frees the decoded video memory.
+3. `restoreHeroVideo()`: if `heroVideoReleased` — re-create the `<source>` (`src = heroVideoSource`,
+   `type="video/mp4"`), append it, `heroVideo.load();` set `heroVideoReleased = false;` then
+   `tryPlayHeroVideo()`. If not released, just `tryPlayHeroVideo()`.
+4. Wire into the EXISTING AE1 handlers (do not duplicate):
+   - `visibilitychange`: `document.visibilityState === "hidden"` -> `releaseHeroVideo()`;
+     `=== "visible"` -> `restoreHeroVideo()`.
+   - `pageshow` and `focus` -> `restoreHeroVideo()`.
+5. Guard everything on `heroVideo` existing; handle rapid hidden/visible toggles idempotently.
+   Do not break the first-interaction fallback or leave the video without a source when visible.
+
+Operator verifies on a real iPhone: tap IG, return, confirm the tab survives (no full reload)
+and the background resumes (brief re-buffer is acceptable). Expected to reduce, not eliminate.
 
 ---
 
