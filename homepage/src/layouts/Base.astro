@@ -5,13 +5,21 @@ import { withBase } from "../lib/url.ts";
 
 interface Props {
   title?: string;
+  description?: string;
   /** Opening splash only — no header, no scroll, no index overlay. */
   landing?: boolean;
   /** Minimal chrome-free layout that still scrolls normally. */
   bare?: boolean;
 }
-const { title = `${site.brand} — independent design`, landing = false } = Astro.props;
+const {
+  title = `${site.brand} — independent design`,
+  description = "&son is an independent design shop at 138 Sullivan St, SoHo, New York. Clothing and objects from independent designers, curated by Ben.",
+  landing = false,
+} = Astro.props;
 const preloadHeroPoster = landing;
+const siteUrl = Astro.site ?? new URL("https://beckettbad.github.io");
+const absolutePageUrl = new URL(Astro.url.pathname, siteUrl).toString();
+const absoluteOgImageUrl = new URL(withBase("/og-image.jpg"), siteUrl).toString();
 const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
 const shopifyDomain = (import.meta.env.PUBLIC_SHOPIFY_STORE_DOMAIN?.trim() || "shopandson.com")
   .replace(/^https?:\/\//, "")
@@ -50,6 +58,20 @@ const contentSecurityPolicy = [
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta property="og:site_name" content="&son" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={absolutePageUrl} />
+    <meta property="og:image" content={absoluteOgImageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={absoluteOgImageUrl} />
+    <link rel="canonical" href={absolutePageUrl} />
     <meta name="generator" content={Astro.generator} />
     <link rel="icon" type="image/png" href={withBase("/favicon.png")} />
     <link rel="apple-touch-icon" href={withBase("/apple-touch-icon.png")} />

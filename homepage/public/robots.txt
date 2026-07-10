@@ -1,2 +1,3 @@
 User-agent: *
 Allow: /
+Sitemap: https://shopandson.com/sitemap.xml
