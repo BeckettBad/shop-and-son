@@ -1050,7 +1050,6 @@ body{
     transform:translateY(var(--hero-icon-stage-clearance));
     transition-delay:0s,0s,0s;
   }
-  .hero-video.is-search .hero__search,
   .hero-video.is-preorder .hero__search{
     transform:translateY(var(--hero-icon-stage-clearance));
     transition-delay:0s,0s,0s;
@@ -1067,8 +1066,10 @@ body{
   }
   .hero-video.is-catalog .hero__search,
   .hero-video.is-product .hero__search,
+  .hero-video.is-search .hero__search,
   .hero-video.is-search-open.is-catalog .hero__search,
-  .hero-video.is-search-open.is-product .hero__search{
+  .hero-video.is-search-open.is-product .hero__search,
+  .hero-video.is-search-open.is-search .hero__search{
     transform:translate(var(--hero-mobile-search-dodge-x),var(--hero-icon-stage-clearance));
     transition-delay:.08s,0s,0s;
   }
