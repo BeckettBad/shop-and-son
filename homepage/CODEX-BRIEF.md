@@ -106,7 +106,12 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — AV1 @ 4e8dd15 reviewed CLEAN, shipping via standing process.**
+> **ACTIVE SUB-TASK: (none) — AW1 @ 7aae0d4 reviewed CLEAN + verified in the cutover build:
+> description/og/twitter/canonical all absolute on https://shopandson.com, real sitemap.xml
+> with 461 entries (3 static + collections + unique products), robots.txt Sitemap line.
+> SHIPPING via standing process.**
+> Log: 2026-07-10 — AW1 add SEO share metadata and sitemap — 7aae0d4 — build:green check:green.
+> — Prior: AV1 @ 4e8dd15 SHIPPED (PR #39) + live-verified byte-identical to the original "&" mark.
 > Log: 2026-07-10 — AV1 restore shop favicon — 4e8dd15 — build:green check:green — original
 > "&" logo (exact Shopify center-crop renditions) replaces Astro logo; apple-touch-icon added;
 > svg/ico leftovers deleted.
@@ -223,6 +228,44 @@ below so Codex has ONE target; everything else in this file is context.
 > now shows a preview still). Landing unchanged (1.87MB; these are on-demand).
 > Awaiting operator go to ship to main. NOTE: preorders piece.mp4 (43M) still
 > uncompressed (separate page, ships as-is per AGENTS).**
+
+---
+
+## PHASE AW — SEO/share layer: og tags, meta description, canonical, real sitemap (operator-approved, 2026-07-10)
+
+CONTEXT: the live site exposes ONE title tag and nothing else to crawlers/unfurlers: no meta
+description, no og/twitter tags (shared links show a bare URL, blocks the launch email + IG
+promotion), no canonical, and sitemap.xml is fake (SPA fallback serves the homepage HTML).
+Fix the head + generate a real sitemap at build. ZERO visual changes. The og image asset is
+ALREADY STAGED (untracked): `public/og-image.jpg` (1200x630 from the hero poster). ONE commit
+`AW1:`. Build + check green (PUBLIC_SHOPIFY_STORE_DOMAIN=shop-and-son.myshopify.com locally).
+
+1. `src/layouts/Base.astro` head, using `Astro.site` for all absolute URLs (env-driven, falls
+   back to the GitHub origin on staging, becomes https://shopandson.com in prod builds):
+   a. `<meta name="description" content={description} />` where description is a new optional
+      Base prop defaulting to: "&son is an independent design shop at 138 Sullivan St, SoHo,
+      New York. Clothing and objects from independent designers, curated by Ben."
+   b. Open Graph: og:site_name ("&son"), og:type ("website"), og:title (the page title),
+      og:description (same description), og:url (absolute current URL WITHOUT query params),
+      og:image (absolute URL to /og-image.jpg), og:image:width 1200, og:image:height 630.
+   c. Twitter: twitter:card ("summary_large_image"), twitter:title, twitter:description,
+      twitter:image (same absolute image URL).
+   d. `<link rel="canonical" href={absolute current path WITHOUT query params} />`.
+2. Real sitemap: add `src/pages/sitemap.xml.ts`, a build-time endpoint that emits XML using
+   `Astro.site` (fallback origin ok) with: `/`, `/policies/`, `/preorders/`, one entry per
+   catalog collection (`/?collection=<handle>` for every collection handle referenced in
+   `heroMenu` in src/data/content.ts), and one per product (`/?product=<handle>`) from the
+   build-time snapshot (`getCatalogProducts`, same data HeroVideo bakes; dedupe handles).
+   Escape XML entities (& in URLs -> &amp;). Keep it dependency-free.
+3. `public/robots.txt`: ensure it ends with `Sitemap: https://shopandson.com/sitemap.xml`
+   (hardcoded prod URL is fine here; note Cloudflare prepends its managed block, ours still
+   serves).
+4. Include the staged `public/og-image.jpg` in the commit. Do NOT touch CSP, scripts, styles,
+   or any rendered markup outside `<head>`.
+
+Done when: build green; dist/index.html head contains description/og/twitter/canonical with
+ABSOLUTE https URLs; dist/sitemap.xml is real XML listing 3 static pages + ~48 collections +
+~1100 products with proper escaping; robots.txt carries the Sitemap line.
 
 ---
 
