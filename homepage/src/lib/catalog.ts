@@ -177,7 +177,9 @@ async function fetchCatalogProducts(collection: string): Promise<CatalogProduct[
 
   while (true) {
     const pageProducts = await fetchCatalogProductPage(collection, page);
-    if (!pageProducts) return [];
+    if (!pageProducts) {
+      throw new Error(`Failed to fetch Shopify catalog collection "${collection}" page ${page}`);
+    }
 
     products.push(...pageProducts);
     if (pageProducts.length < PRODUCT_CAP) break;

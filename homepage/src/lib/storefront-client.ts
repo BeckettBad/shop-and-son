@@ -19,6 +19,8 @@ interface GraphQLResponse<T> {
   errors?: { message?: string }[];
 }
 
+export type StorefrontRequestResult<T> = { ok: true; data: T | null } | { ok: false };
+
 interface Money {
   amount: string;
   currencyCode: string;
@@ -213,11 +215,11 @@ function mapMenuItem(item: StorefrontMenuItemRaw): StorefrontMenuItem {
   return mapped;
 }
 
-export async function storefrontFetch<T>(
+export async function storefrontRequest<T>(
   query: string,
   variables: Record<string, unknown> = {},
-): Promise<T | null> {
-  if (!isStorefrontConfigured || !SHOPIFY_DOMAIN || !SHOPIFY_TOKEN) return null;
+): Promise<StorefrontRequestResult<T>> {
+  if (!isStorefrontConfigured || !SHOPIFY_DOMAIN || !SHOPIFY_TOKEN) return { ok: false };
 
   let timeout: ReturnType<typeof globalThis.setTimeout> | undefined;
 
@@ -237,19 +239,27 @@ export async function storefrontFetch<T>(
       },
     );
 
-    if (!response.ok) return null;
+    if (!response.ok) return { ok: false };
 
     const payload = (await response.json()) as GraphQLResponse<T>;
-    if (payload.errors?.length) return null;
+    if (payload.errors?.length) return { ok: false };
 
-    return payload.data ?? null;
+    return { ok: true, data: payload.data ?? null };
   } catch {
-    return null;
+    return { ok: false };
   } finally {
     if (timeout) {
       globalThis.clearTimeout(timeout);
     }
   }
+}
+
+export async function storefrontFetch<T>(
+  query: string,
+  variables: Record<string, unknown> = {},
+): Promise<T | null> {
+  const result = await storefrontRequest<T>(query, variables);
+  return result.ok ? result.data : null;
 }
 
 const COLLECTION_QUERY = /* GraphQL */ `
