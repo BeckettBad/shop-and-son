@@ -525,6 +525,11 @@ const shopifyStorefrontVersion = "2025-01";
     ["pointerdown", "touchstart", "click", "scroll", "keydown"].forEach((eventName) => {
       window.addEventListener(eventName, tryPlayHeroVideo, { once: true, passive: true });
     });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") tryPlayHeroVideo();
+    });
+    window.addEventListener("pageshow", () => tryPlayHeroVideo());
+    window.addEventListener("focus", () => tryPlayHeroVideo());
   }
 
   const setSearchResultsExpanded = (isExpanded: boolean) => {
