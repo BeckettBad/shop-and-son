@@ -2,7 +2,7 @@
 
 > **The studio layer:** this repo is the flagship build inside a larger business —
 > the retail consultancy Beckett is building with Ben (the owner of this shop).
-> The business layer lives at `~/Desktop/Studio/` (STATE.md = live business
+> The business layer lives at `~/Desktop/BADERSITE/` (STATE.md = live business
 > ledger, AGENTS.md = the canonical file map for the whole machine). Read it when
 > a task concerns the business rather than this site.
 
