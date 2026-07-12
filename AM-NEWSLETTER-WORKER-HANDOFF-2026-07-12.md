@@ -3,9 +3,11 @@
 Verified against the repo and the deployed worker. Style: no em dashes.
 
 ## Status in one line
-Worker `/subscribe`: BUILT, DEPLOYED, VERIFIED. AM2 (site repoint): IMPLEMENTED on `dev` at
-`2c4b2c0`, reviewed clean, verification nearly complete (see AM2 section), NOT yet merged to main,
-so the live signup path is still the old direct Storefront call. AM3: waits on AM2 going live.
+AM2 is LIVE (PR #42 merged 2026-07-12, operator "ship AM2"): shopandson.com's subscribe box now
+posts to the worker; post-deploy verification passed (live page carries the worker
+data-subscribe-url + CSP origin, served base.js has zero customerCreate/token refs, live signup
+200 {ok:true}, /now 200). Remaining: operator visual confirm + AM3 (drop
+unauthenticated_write_customers off the Storefront token ending 470c) + test-customer cleanup.
 
 ## AM2 status (2026-07-12, same-day update)
 - Brief: "## PHASE AM2" in `homepage/CODEX-BRIEF.md`. Codex implemented it headless; commit
@@ -107,8 +109,9 @@ succeed. Optional future hardening: retry on a THROTTLED GraphQL error using the
 throttle/cost extensions. Not required for launch.
 
 ## Test customers to DELETE in Shopify admin (Customers -> search `beckettnotbadertscher+`)
-`+amtest`, `+amrace`, `+amdiag2`, `+seqa`, `+seqb`, `+seqc`, `+seqrace`, `+am2verify` @gmail.com,
-plus any `+amfinal1` / `+amfinal2` / `+amdiag` that were created. (Some `+amfinal*` calls were throttled and
+`+amtest`, `+amrace`, `+amdiag2`, `+seqa`, `+seqb`, `+seqc`, `+seqrace`, `+am2verify`, `+am2live`
+@gmail.com, plus any `+amfinal1` / `+amfinal2` / `+amdiag` that were created. (`+am2live` doubles
+as the admin confirmation: it should show as Subscribed before you delete it.) (Some `+amfinal*` calls were throttled and
 may not exist.)
 
 ## Remaining work
