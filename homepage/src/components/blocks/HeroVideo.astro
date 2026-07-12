@@ -20,11 +20,17 @@ const catalogData: Record<string, CatalogProduct[]> = Object.fromEntries(catalog
 const catalogDataJson = JSON.stringify(catalogData).replace(/</g, "\\u003c");
 const isExternalHref = (href: string) => /^https?:\/\//i.test(href);
 const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
+const subscribeUrlOverride = import.meta.env.PUBLIC_SUBSCRIBE_URL?.trim() ?? "";
+let subscribeUrl = subscribeUrlOverride;
+if (!subscribeUrl && nowPlayingUrl) {
+  try {
+    subscribeUrl = new URL(nowPlayingUrl).origin + "/subscribe";
+  } catch {
+    subscribeUrl = "";
+  }
+}
 const heroVideoPriorityAttrs: Record<string, string> = { fetchpriority: "high" };
 const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low" };
-const shopifyStoreDomain = import.meta.env.PUBLIC_SHOPIFY_STORE_DOMAIN?.trim() ?? "";
-const shopifyStorefrontToken = import.meta.env.PUBLIC_SHOPIFY_STOREFRONT_API_TOKEN?.trim() ?? "";
-const shopifyStorefrontVersion = "2025-01";
 
 // Block 1 — desktop: vertical left menu; mobile: horizontal tabs over fullscreen video.
 ---
@@ -267,9 +273,7 @@ const shopifyStorefrontVersion = "2025-01";
       <form
         class="hero-subscribe"
         data-hero-subscribe-form
-        data-shop-domain={shopifyStoreDomain}
-        data-sf-token={shopifyStorefrontToken}
-        data-sf-version={shopifyStorefrontVersion}
+        data-subscribe-url={subscribeUrl}
       >
         <div class="hero-subscribe__box" data-hero-subscribe-box>
           <span class="hero-subscribe__idle" data-hero-subscribe-idle>subscribe</span>
