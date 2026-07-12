@@ -104,7 +104,15 @@ async function handleSubscribe(request, env) {
     if (customerId) {
       await subscribeExistingCustomer(customerId, env);
     } else {
-      await createSubscribedCustomer(email, env);
+      const { taken } = await createSubscribedCustomer(email, env);
+      if (taken) {
+        const retryCustomerId = await findCustomerIdWithRetry(email, env);
+        if (retryCustomerId) {
+          await subscribeExistingCustomer(retryCustomerId, env);
+        } else {
+          console.warn('Shopify newsletter customer lookup remained unavailable after create conflict');
+        }
+      }
     }
   } catch (error) {
     console.error('Shopify newsletter upsert failed', error);
@@ -145,6 +153,21 @@ async function findCustomerId(email, env) {
   return data.customers?.nodes?.[0]?.id || null;
 }
 
+async function findCustomerIdWithRetry(email, env, attempts = 4, delayMs = 800) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const customerId = await findCustomerId(email, env);
+    if (customerId) {
+      return customerId;
+    }
+
+    if (attempt < attempts - 1) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  return null;
+}
+
 async function subscribeExistingCustomer(customerId, env) {
   const data = await shopifyAdminGraphql(env, `
     mutation SubscribeCustomer($input: CustomerEmailMarketingConsentUpdateInput!) {
@@ -169,7 +192,7 @@ async function createSubscribedCustomer(email, env) {
   const data = await shopifyAdminGraphql(env, `
     mutation CreateSubscribedCustomer($input: CustomerInput!) {
       customerCreate(input: $input) {
-        userErrors { field message }
+        userErrors { code field message }
       }
     }
   `, {
@@ -182,7 +205,17 @@ async function createSubscribedCustomer(email, env) {
     },
   });
 
-  throwForUserErrors(data.customerCreate?.userErrors);
+  const userErrors = data.customerCreate?.userErrors;
+  const taken = Array.isArray(userErrors) && userErrors.some(
+    (error) => error?.code === 'TAKEN' || /taken/i.test(error?.message || ''),
+  );
+
+  if (taken) {
+    return { taken: true };
+  }
+
+  throwForUserErrors(userErrors);
+  return { taken: false };
 }
 
 async function shopifyAdminGraphql(env, query, variables) {
