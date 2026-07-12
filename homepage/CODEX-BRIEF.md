@@ -106,10 +106,38 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — AX1 @ 2a5812d reviewed CLEAN + Claude-verified (throttled iPhone
+> **ACTIVE SUB-TASK: (none for the worker) — AM worker COMPLETE + verified. NEXT: AM2 (site
+> base.js -> worker /subscribe) awaiting operator go (live customer-facing change), then AM3
+> (operator drops unauthenticated_write_customers off the public token).**
+> Log: 2026-07-12 — AM1d fix newsletter Admin API query — 08e5d90 — dry-run:green — DEPLOYED
+> (version 8debc6f5). Worker verified live: 3 sequential creates ok, rapid double-submit both ok
+> (AM1c race retry), CORS/405/400/429/now-playing/no-leak all pass. NOTE: concurrent bursts can
+> hit Shopify Admin API THROTTLE -> transient 502 (real signups are sequential, unaffected);
+> optional future hardening = retry-on-THROTTLED. Root causes this session: AM1c added `code`
+> (invalid on Admin customerCreate userErrors, Storefront-only) -> AM1d removed it; the Shopify
+> customer SEARCH is eventually consistent -> AM1c retry-after-taken. Client-credentials auth
+> (AM1b) solid. TEST CUSTOMERS to delete in admin: beckettnotbadertscher+{amtest,amrace,amdiag2,
+> seqa,seqb,seqc,seqrace}@gmail.com (plus any +amfinal/+amdiag that got created).
+> — Prior: AM1c @ 049cdfb handled the create-then-resubmit race, but
+> the worker /subscribe upsert (Shopify customer search is eventually consistent, so a lookup
+> right after a create misses the record, the worker re-creates, Shopify returns TAKEN, and the
+> handler 502s). Per "## PHASE AM1c". Worker-only; deploys via wrangler. Do not push.**
+> Log: 2026-07-12 — AM1b migrate Shopify worker auth — 8085016 — dry-run:green — reviewed CLEAN
+> (client-credentials cache mirrors Spotify pattern, 401 force-refresh+retry, no secret logging);
+> DEPLOYED (version a9216dd9) + verified: CORS ok, 405/400 ok, NEW customer create ok, rate-limit
+> 429 ok, now-playing regression ok, no secret leak. GAP found -> AM1c.
+> — Prior: AM1 @ b2d6f3e reviewed CLEAN (worker /subscribe: Admin-API upsert
+> existing->consent-update / new->create, both SUBSCRIBED+SINGLE_OPT_IN; 5/hr per-IP KV rate
+> limit; CORS incl OPTIONS 204; generic {ok:true} no enumeration; query-escaped; token from
+> secret, never logged). BLOCKED on operator: create son-ops Admin app + `wrangler secret put
+> SHOPIFY_ADMIN_TOKEN`, then Claude runs `wrangler deploy` + verifies live, THEN dispatches AM2
+> (site base.js repoint to worker /subscribe) + AM3 (operator drops write scope off public token).**
+> Log: 2026-07-12 — AM1 worker /subscribe endpoint — b2d6f3e — worker-build:green astro:green —
+> reviewed clean; awaiting operator Admin token to deploy+verify.
+> — Prior: AX1 @ 2a5812d reviewed CLEAN + Claude-verified (throttled iPhone
 > profile): video autoplays after buffering with NO gesture (canplay retry works) AND the
 > source survives a hidden/visible flip (release-guard works, was sabotaging external-link
-> opens). SHIPPING. Operator to confirm on real iPhone: Safari w/ Low Power OFF (true test) +
+> opens). SHIPPED. Operator to confirm on real iPhone: Safari w/ Low Power OFF (true test) +
 > note if failure was in the Instagram in-app browser (hard-block, not code).**
 > Log: 2026-07-10 — AX1 harden hero video autoplay retries — 2a5812d — build:green check:green.
 > — Prior: AW1 @ 7aae0d4 SHIPPED (PR #40) + live-verified: og/twitter/description/canonical
@@ -235,6 +263,143 @@ below so Codex has ONE target; everything else in this file is context.
 > now shows a preview still). Landing unchanged (1.87MB; these are on-demand).
 > Awaiting operator go to ship to main. NOTE: preorders piece.mp4 (43M) still
 > uncompressed (separate page, ships as-is per AGENTS).**
+
+---
+
+## PHASE AM1d — fix AM1c regression (invalid `code` field) + log real GraphQL errors (2026-07-12)
+
+BUG (doc-confirmed + live-verified): AM1c added `code` to `createSubscribedCustomer`'s
+`userErrors { code field message }`. The ADMIN GraphQL API's customerCreate userErrors type has
+only `field` and `message` (the `code` field is on the STOREFRONT API's CustomerUserError, a
+different type). Requesting `code` makes the query invalid, so `shopifyAdminGraphql` sees
+`result.errors` and throws 'Shopify Admin GraphQL request failed' -> the handler 502s on EVERY
+create (confirmed: a brand-new email 502s on the first call; worker log shows the generic throw).
+Worker-only. ONE commit `AM1d:`. Change nothing else (auth, rate limit, CORS, retry logic,
+now-playing all stay).
+
+1. In `createSubscribedCustomer`, change the selection back to `userErrors { field message }`
+   (remove `code`). Change the taken-detection to message-only:
+   `userErrors.some((e) => /taken/i.test(e?.message || ''))`. (Admin's "Email has already been
+   taken" message reliably matches; `code` is unavailable here.)
+2. Diagnostic hardening: in `shopifyAdminGraphql`, immediately BEFORE
+   `throw new Error('Shopify Admin GraphQL request failed')`, add
+   `console.error('Shopify Admin GraphQL errors', JSON.stringify(result.errors || []))`. Log ONLY
+   `result.errors` (Shopify API error objects, safe). Do NOT log the query variables (they contain
+   the customer email = PII) or any token/secret.
+3. Leave the customerEmailMarketingConsentUpdate userErrors selection (already `field message`)
+   and the AM1c retry flow unchanged.
+
+Done when: worker dry-run build green; a brand-new email POST returns 200 {ok:true} (create
+succeeds); a rapid double-POST of a new email returns 200 on both (race path works); any real
+GraphQL error is now logged with its actual content.
+
+---
+
+## PHASE AM1c — worker /subscribe: handle the create-then-resubmit race (operator-approved, 2026-07-12)
+
+BUG (found in live verification): Shopify's customer SEARCH is eventually consistent. In
+`handleSubscribe` (worker/src/index.js), the flow is findCustomerId -> if found update, else
+create. When the SAME email is resubmitted within a few seconds of being created, the lookup
+misses the just-created record (index lag), so it calls `createSubscribedCustomer`, Shopify
+returns a "taken" userError, `throwForUserErrors` throws, and the handler returns 502. The
+create and update paths themselves both work; only this race is unhandled. Fix it gracefully.
+Worker-only. ONE commit `AM1c:`. Do not change auth, rate limit, CORS, or now-playing.
+
+1. In `createSubscribedCustomer`, add `code` to the userErrors selection
+   (`userErrors { code field message }`). Instead of unconditionally throwing, detect the
+   already-taken case: if any userError has `code === 'TAKEN'` or message matches /taken/i,
+   RETURN `{ taken: true }`. For any OTHER userError, still throw (via throwForUserErrors). On
+   success return `{ taken: false }`.
+2. Add `findCustomerIdWithRetry(email, env, attempts = 4, delayMs = 800)`: calls `findCustomerId`;
+   if it returns null, `await` a `delayMs` sleep (`new Promise(r => setTimeout(r, delayMs))`) and
+   retry, up to `attempts` times; return the id or null. This absorbs the search-index lag.
+3. In the handler upsert block: keep lookup-first. If `findCustomerId` finds an id -> update as
+   today. Else call `createSubscribedCustomer`; if it returns `{ taken: true }`, call
+   `findCustomerIdWithRetry` and, if an id is found, `subscribeExistingCustomer(id)`. If still not
+   found after retries, `console.warn` a GENERIC message (do NOT log the email or any PII) and
+   return `{ ok: true }` (the customer provably exists and was created subscribed by the
+   concurrent request; erroring would be worse UX). A genuine create success also returns ok.
+4. Net effect: new email -> create -> ok; existing (settled) -> lookup+update -> ok; rapid
+   resubmit of a just-created email -> create returns taken -> retry-lookup+update -> ok (no 502).
+
+Done when: worker dry-run build green; rapid double-POST of a brand-new email returns 200 {ok:true}
+on BOTH calls (no 502); a single new email still creates+subscribes; a settled existing customer
+still updates; rate limit / CORS / now-playing unchanged.
+
+---
+
+## PHASE AM1b — migrate worker Shopify auth to client-credentials grant (operator-approved, 2026-07-12)
+
+WHY: the AM1 code reads a permanent `env.SHOPIFY_ADMIN_TOKEN` (X-Shopify-Access-Token). Shopify
+closed new admin custom apps; our app is a Dev Dashboard app that authenticates via the CLIENT
+CREDENTIALS grant (verified: doc + live token exchange + a real customer READ succeeded on the
+single `write_customers` scope, which implies read). Migrate the Shopify auth ONLY. ONE commit
+`AM1b:`. Do not change the /subscribe upsert logic, rate limit, CORS, or the now-playing code.
+
+1. Add `getShopifyAdminToken(env, forceRefresh = false)` mirroring the existing `getAccessToken`
+   pattern (module-level cache `shopifyTokenCache = { token: '', expiresAt: 0 }`, reuse
+   `TOKEN_EXPIRY_SKEW_MS`):
+   - If cached and `expiresAt > now + TOKEN_EXPIRY_SKEW_MS` and not forceRefresh, return cached.
+   - Else POST `https://shop-and-son.myshopify.com/admin/oauth/access_token`, `Content-Type:
+     application/x-www-form-urlencoded`, body `grant_type=client_credentials`,
+     `client_id=env.SHOPIFY_CLIENT_ID`, `client_secret=env.SHOPIFY_CLIENT_SECRET` (URLSearchParams).
+   - Parse `access_token` + `expires_in`; cache `expiresAt = now + expires_in*1000`. Throw
+     `AuthError` on missing creds or `!response.ok` or missing access_token. NEVER log the secret
+     or the token.
+2. In the Admin GraphQL call helper (the fetch that currently sets
+   `'X-Shopify-Access-Token': env.SHOPIFY_ADMIN_TOKEN`, ~line 187): set the header to
+   `await getShopifyAdminToken(env)`. On a 401 response, force-refresh once
+   (`getShopifyAdminToken(env, true)`) and retry the call a single time (mirror the Spotify
+   retry at ~line 337-339). Do not retry more than once.
+3. In `handleSubscribe`, replace the `if (!env.SHOPIFY_ADMIN_TOKEN)` guard with
+   `if (!env.SHOPIFY_CLIENT_ID || !env.SHOPIFY_CLIENT_SECRET)` returning the same generic 503.
+   Remove all remaining references to `SHOPIFY_ADMIN_TOKEN`.
+4. Do NOT hardcode any credential. No wrangler.toml [vars] for these (they are wrangler SECRETS
+   set out of band: SHOPIFY_CLIENT_ID, SHOPIFY_CLIENT_SECRET).
+
+Done when: worker dry-run build green; grep shows zero `SHOPIFY_ADMIN_TOKEN` references left; the
+new token function mirrors the Spotify cache/skew/force-refresh shape; upsert/rate-limit/CORS/
+now-playing untouched.
+
+---
+
+## PHASE AM1 — worker /subscribe endpoint: upsert customer marketing consent (operator-approved, 2026-07-12)
+
+GOAL: newsletter signups (new AND existing customers) reliably land on the Shopify email-marketing
+list as Subscribed, via a server-side upsert using an Admin API token, so the PUBLIC storefront
+token can later drop its write scope. Single opt-in (immediate, no confirmation email; double
+opt-in is OFF per operator). Scope: `worker/src/index.js` (+ `worker/wrangler.toml` if a var is
+needed). This worker deploys via `wrangler deploy`, NOT the GitHub pipeline. ONE commit `AM1:`.
+Do NOT touch the existing now-playing endpoints (/now, /toggle, /status) or the site.
+
+Add `POST /subscribe` to the existing `shop-and-son-now-playing` worker:
+1. Accept JSON `{ "email": "..." }`. Validate a basic email shape; reject others with 400 and a
+   generic JSON error. Method other than POST -> 405. Handle CORS preflight (OPTIONS).
+2. CORS: allow origin `https://shopandson.com` (and `https://www.shopandson.com`); respond with
+   `Access-Control-Allow-Origin` accordingly, `Access-Control-Allow-Methods: POST, OPTIONS`,
+   `Access-Control-Allow-Headers: Content-Type`.
+3. Rate limit per IP using the existing `NOW_PLAYING_KV` binding: key on `cf-connecting-ip`, cap
+   e.g. 5 requests / hour (increment a counter with TTL). Over cap -> 429 generic JSON. This is the
+   abuse backstop for a public endpoint.
+4. Upsert via Shopify ADMIN GraphQL API (`https://shop-and-son.myshopify.com/admin/api/2025-01/graphql.json`,
+   header `X-Shopify-Access-Token: <SHOPIFY_ADMIN_TOKEN secret>`):
+   a. Look up: `query { customers(first:1, query:"email:\"<email>\"") { nodes { id } } }`.
+   b. If a customer exists -> `customerEmailMarketingConsentUpdate(input:{ customerId:$id,
+      emailMarketingConsent:{ marketingState: SUBSCRIBED, marketingOptInLevel: SINGLE_OPT_IN } })`.
+   c. If none -> `customerCreate(input:{ email:$email, emailMarketingConsent:{ marketingState:
+      SUBSCRIBED, marketingOptInLevel: SINGLE_OPT_IN } })`.
+   d. Check each mutation's userErrors; on failure return a generic 502 JSON (log server-side).
+5. RESPONSE PRIVACY: always return the SAME generic `{ "ok": true }` on success whether the email
+   was created or already existed (never reveal existence; no enumeration).
+6. SECRET: read `env.SHOPIFY_ADMIN_TOKEN` (a wrangler secret the operator sets; never hardcode,
+   never log the token). If the secret is missing, return 503 generic (do not crash).
+7. Keep the worker's existing structure/style; add a short comment block above the handler.
+
+Done when: worker builds; `wrangler deploy` succeeds (operator/Claude runs it after the secret is
+set); a POST with a fresh email returns `{ok:true}` and the customer appears Subscribed in admin;
+a POST with an existing non-subscribed customer flips them to Subscribed; over-rate returns 429;
+now-playing endpoints unchanged. NOTE: verification needs the SHOPIFY_ADMIN_TOKEN secret, which is
+operator-provided; do not proceed to the site repoint (AM2) until this endpoint is verified live.
 
 ---
 
