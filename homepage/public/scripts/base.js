@@ -182,81 +182,21 @@ document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
     fireSubmitFailure();
   };
 
-  const getShopifyEndpoint = () => {
-    const rawDomain = subForm.dataset.shopDomain?.trim();
-    const version = subForm.dataset.sfVersion?.trim() || "2025-01";
-    if (!rawDomain) return "";
-
-    try {
-      const url = new URL(rawDomain.startsWith("http") ? rawDomain : `https://${rawDomain}`);
-      return `https://${url.hostname}/api/${encodeURIComponent(version)}/graphql.json`;
-    } catch (_) {
-      return "";
-    }
-  };
-
-  const createThrowawayPassword = () => {
-    if (!globalThis.crypto?.getRandomValues) return "";
-
-    const bytes = new Uint8Array(16);
-    globalThis.crypto.getRandomValues(bytes);
-    return `sns-${Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
-  };
-
   const submitSubscriber = async (email) => {
-    const token = subForm.dataset.sfToken?.trim();
-    const endpoint = getShopifyEndpoint();
-    const password = createThrowawayPassword();
-    if (!endpoint || !token || !password) return false;
+    const endpoint = subForm.dataset.subscribeUrl?.trim();
+    if (!endpoint) return false;
 
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Shopify-Storefront-Access-Token": token,
       },
-      body: JSON.stringify({
-        query: `
-          mutation HeroNewsletterSubscribe($input: CustomerCreateInput!) {
-            customerCreate(input: $input) {
-              customer {
-                id
-              }
-              customerUserErrors {
-                code
-                field
-                message
-              }
-            }
-          }
-        `,
-        variables: {
-          input: {
-            email,
-            password,
-            acceptsMarketing: true,
-          },
-        },
-      }),
+      body: JSON.stringify({ email }),
     });
 
-    const payload = await response.json().catch(() => null);
     if (!response.ok) return false;
-
-    const result = payload?.data?.customerCreate;
-    const customer = result?.customer;
-    const userErrors = Array.isArray(result?.customerUserErrors) ? result.customerUserErrors : [];
-    const isAlreadyRegistered = userErrors.some((error) => {
-      const code = String(error?.code ?? "").toUpperCase();
-      return code === "TAKEN";
-    });
-    const hasBlockingUserError = userErrors.some((error) => {
-      const code = String(error?.code ?? "").toUpperCase();
-      return code !== "TAKEN";
-    });
-    if (hasBlockingUserError) return false;
-
-    return Boolean(customer?.id || isAlreadyRegistered);
+    const payload = await response.json().catch(() => null);
+    return payload?.ok === true;
   };
 
   subForm.addEventListener("click", (event) => {
