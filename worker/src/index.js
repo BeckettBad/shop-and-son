@@ -1,8 +1,16 @@
 const SPOTIFY_PLAYER_URL = 'https://api.spotify.com/v1/me/player';
 const SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token';
+const SHOPIFY_ADMIN_GRAPHQL_URL = 'https://shop-and-son.myshopify.com/admin/api/2025-01/graphql.json';
 const NOW_CACHE_MS = 8000;
 const TOKEN_EXPIRY_SKEW_MS = 60000;
 const STATUS_STAMP_THROTTLE_MS = 60000;
+const SUBSCRIBE_RATE_LIMIT = 5;
+const SUBSCRIBE_RATE_WINDOW_SECONDS = 60 * 60;
+
+const SUBSCRIBE_ORIGINS = new Set([
+  'https://shopandson.com',
+  'https://www.shopandson.com',
+]);
 
 const KV_KEYS = {
   toggle: 'toggle',
@@ -28,6 +36,10 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    if (url.pathname === '/subscribe') {
+      return handleSubscribe(request, env);
+    }
+
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders() });
     }
@@ -47,6 +59,168 @@ export default {
     return json({ error: 'not_found' }, 404, corsHeaders());
   },
 };
+
+// Public newsletter endpoint. It keeps Shopify Admin credentials server-side,
+// rate-limits callers, and never reveals whether a customer already existed.
+async function handleSubscribe(request, env) {
+  const headers = subscribeCorsHeaders(request);
+
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers });
+  }
+
+  if (request.method !== 'POST') {
+    return json({ error: 'request_failed' }, 405, headers);
+  }
+
+  if (!env.SHOPIFY_ADMIN_TOKEN) {
+    return json({ error: 'service_unavailable' }, 503, headers);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'invalid_request' }, 400, headers);
+  }
+
+  const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
+  if (!isBasicEmail(email)) {
+    return json({ error: 'invalid_request' }, 400, headers);
+  }
+
+  if (!(await subscribeRateLimitAllows(request, env))) {
+    return json({ error: 'rate_limited' }, 429, headers);
+  }
+
+  try {
+    const customerId = await findCustomerId(email, env);
+    if (customerId) {
+      await subscribeExistingCustomer(customerId, env);
+    } else {
+      await createSubscribedCustomer(email, env);
+    }
+  } catch (error) {
+    console.error('Shopify newsletter upsert failed', error);
+    return json({ error: 'request_failed' }, 502, headers);
+  }
+
+  return json({ ok: true }, 200, headers);
+}
+
+function isBasicEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+async function subscribeRateLimitAllows(request, env) {
+  const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+  const key = `subscribe-rate:${ip}`;
+  const count = Number(await env.NOW_PLAYING_KV.get(key)) || 0;
+
+  if (count >= SUBSCRIBE_RATE_LIMIT) {
+    return false;
+  }
+
+  await env.NOW_PLAYING_KV.put(key, String(count + 1), {
+    expirationTtl: SUBSCRIBE_RATE_WINDOW_SECONDS,
+  });
+  return true;
+}
+
+async function findCustomerId(email, env) {
+  const data = await shopifyAdminGraphql(env, `
+    query FindCustomer($query: String!) {
+      customers(first: 1, query: $query) {
+        nodes { id }
+      }
+    }
+  `, { query: `email:"${email.replace(/["\\]/g, '\\$&')}"` });
+
+  return data.customers?.nodes?.[0]?.id || null;
+}
+
+async function subscribeExistingCustomer(customerId, env) {
+  const data = await shopifyAdminGraphql(env, `
+    mutation SubscribeCustomer($input: CustomerEmailMarketingConsentUpdateInput!) {
+      customerEmailMarketingConsentUpdate(input: $input) {
+        userErrors { field message }
+      }
+    }
+  `, {
+    input: {
+      customerId,
+      emailMarketingConsent: {
+        marketingState: 'SUBSCRIBED',
+        marketingOptInLevel: 'SINGLE_OPT_IN',
+      },
+    },
+  });
+
+  throwForUserErrors(data.customerEmailMarketingConsentUpdate?.userErrors);
+}
+
+async function createSubscribedCustomer(email, env) {
+  const data = await shopifyAdminGraphql(env, `
+    mutation CreateSubscribedCustomer($input: CustomerInput!) {
+      customerCreate(input: $input) {
+        userErrors { field message }
+      }
+    }
+  `, {
+    input: {
+      email,
+      emailMarketingConsent: {
+        marketingState: 'SUBSCRIBED',
+        marketingOptInLevel: 'SINGLE_OPT_IN',
+      },
+    },
+  });
+
+  throwForUserErrors(data.customerCreate?.userErrors);
+}
+
+async function shopifyAdminGraphql(env, query, variables) {
+  const response = await fetch(SHOPIFY_ADMIN_GRAPHQL_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Shopify-Access-Token': env.SHOPIFY_ADMIN_TOKEN,
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Shopify Admin API returned ${response.status}`);
+  }
+
+  const result = await response.json();
+  if (result.errors?.length || !result.data) {
+    throw new Error('Shopify Admin GraphQL request failed');
+  }
+
+  return result.data;
+}
+
+function throwForUserErrors(userErrors) {
+  if (Array.isArray(userErrors) && userErrors.length > 0) {
+    throw new Error('Shopify Admin mutation returned user errors');
+  }
+}
+
+function subscribeCorsHeaders(request) {
+  const origin = request.headers.get('origin') || '';
+  const headers = {
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    Vary: 'Origin',
+  };
+
+  if (SUBSCRIBE_ORIGINS.has(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+  }
+
+  return headers;
+}
 
 async function getNow(env, ctx) {
   const now = Date.now();
