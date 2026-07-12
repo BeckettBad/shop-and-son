@@ -3,9 +3,46 @@
 Verified against the repo and the deployed worker. Style: no em dashes.
 
 ## Status in one line
-The Cloudflare Worker `/subscribe` endpoint is BUILT, DEPLOYED, and VERIFIED. Remaining: AM2 (point
-the live site's subscribe box at it) and AM3 (drop the write scope off the public Storefront token).
-The worker is NOT wired to the site yet, so no real customer signup path has changed.
+Worker `/subscribe`: BUILT, DEPLOYED, VERIFIED. AM2 (site repoint): IMPLEMENTED on `dev` at
+`2c4b2c0`, reviewed clean, verification nearly complete (see AM2 section), NOT yet merged to main,
+so the live signup path is still the old direct Storefront call. AM3: waits on AM2 going live.
+
+## AM2 status (2026-07-12, same-day update)
+- Brief: "## PHASE AM2" in `homepage/CODEX-BRIEF.md`. Codex implemented it headless; commit
+  `2c4b2c0` "AM2: route newsletter signup through worker" on `dev` (2 files: `homepage/public/
+  scripts/base.js`, `homepage/src/components/blocks/HeroVideo.astro`). Claude reviewed the diff
+  clean against the spec.
+- Design: endpoint is env-driven, never hardcoded. `PUBLIC_SUBSCRIBE_URL` overrides; otherwise
+  derived as `new URL(PUBLIC_NOW_PLAYING_URL).origin + "/subscribe"`. Production needs NO new
+  repo variable (the Actions var `PUBLIC_NOW_PLAYING_URL` already points at the worker host, and
+  the CSP `connect-src` in `Base.astro` already derives from it, so no CSP change). The form
+  carries one attribute `data-subscribe-url`; the three old attributes (`data-shop-domain`,
+  `data-sf-token`, `data-sf-version`) and the throwaway-password/customerCreate logic are gone
+  from the subscribe path. The catalog layer's read-only Storefront usage is untouched.
+- Verified so far: Codex build + `npx astro check` green on the commit (Claude re-ran check,
+  green). Live worker, exact browser request shape (Origin https://shopandson.com, JSON
+  `{"email":...}`): 200 `{ok:true}` happy path, 400 invalid email, CORS allow-origin present on
+  both, OPTIONS 204, GET 405, `/now` 200 (no regression). `dist/scripts/base.js` contains zero
+  `Storefront-Access-Token`.
+- Final gate PASSED (Claude's own green build): `dist/index.html` carries
+  `data-subscribe-url="https://shop-and-son-now-playing.shop-and-son.workers.dev/subscribe"` and
+  its CSP `connect-src` includes the worker origin; zero `customerCreate` anywhere in `dist/`;
+  zero `Storefront-Access-Token` in `dist/scripts/base.js`; old form attrs gone. AM2 verification
+  COMPLETE; awaiting operator dev verify + "ship AM2".
+- Build-machine 429 lesson: the build's catalog source is the PUBLIC products.json snapshot feed
+  (`/collections/<handle>/products.json`), per-IP throttled much harder than GraphQL. 5 rapid
+  full builds tripped a throttle window that outlasted 30 minutes. If a local build 429s at the
+  sitemap/catalog step, wait and retry; single curls recovering first is the un-throttle signal.
+  CI builds from a different IP and is unaffected.
+- Config changes this session (both 2026-07-12): added `PUBLIC_NOW_PLAYING_URL` to gitignored
+  `homepage/.env` (public worker URL, needed so local builds emit the subscribe URL); deleted KV
+  key `subscribe-rate:98.13.213.51` (remote namespace) to un-throttle live verification.
+- Local-dev caveat for operator verify: the worker's `/subscribe` CORS allows ONLY
+  https://shopandson.com and https://www.shopandson.com, so a real submit from `npm run dev`
+  (localhost) is blocked by the browser and shows the shake. Local verify covers the UX states;
+  the submit success path is verified live post-merge (plus Claude's curl matrix above).
+- One MORE test customer to delete: `beckettnotbadertscher+am2verify@gmail.com` (add to the
+  list below).
 
 ## What AM1b / AM1c / AM1d changed (all in `worker/src/index.js`, on `dev`)
 - AM1 `b2d6f3e`: added the initial `POST /subscribe` endpoint (upsert customer marketing consent),
@@ -70,12 +107,15 @@ succeed. Optional future hardening: retry on a THROTTLED GraphQL error using the
 throttle/cost extensions. Not required for launch.
 
 ## Test customers to DELETE in Shopify admin (Customers -> search `beckettnotbadertscher+`)
-`+amtest`, `+amrace`, `+amdiag2`, `+seqa`, `+seqb`, `+seqc`, `+seqrace` @gmail.com, plus any
-`+amfinal1` / `+amfinal2` / `+amdiag` that were created. (Some `+amfinal*` calls were throttled and
+`+amtest`, `+amrace`, `+amdiag2`, `+seqa`, `+seqb`, `+seqc`, `+seqrace`, `+am2verify` @gmail.com,
+plus any `+amfinal1` / `+amfinal2` / `+amdiag` that were created. (Some `+amfinal*` calls were throttled and
 may not exist.)
 
 ## Remaining work
 ### AM2 (site repoint) — through the pipeline (dev -> main), operator merges
+> DONE on `dev` @ `2c4b2c0` (see "AM2 status" above); the spec below is kept as the record of
+> what was asked. Remaining for AM2: final dist gate check, push dev, operator merges dev -> main,
+> then post-deploy live-signup verification.
 Point the subscribe box at the worker instead of calling Shopify directly.
 - File: `homepage/public/scripts/base.js`. Today it POSTs a Storefront `customerCreate` mutation
   (grep finds 3 refs to `customerCreate` / `X-Shopify-Storefront-Access-Token`). Replace that call

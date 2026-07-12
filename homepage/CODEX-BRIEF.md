@@ -106,9 +106,23 @@ each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none for the worker) — AM worker COMPLETE + verified. NEXT: AM2 (site
-> base.js -> worker /subscribe) awaiting operator go (live customer-facing change), then AM3
-> (operator drops unauthenticated_write_customers off the public token).**
+> **ACTIVE SUB-TASK: (none) — AM2 committed @ 2c4b2c0, reviewed CLEAN, fully verified. Status:
+> ready for operator verify on dev, then operator says "ship AM2" -> PR dev -> main -> merge
+> flips the LIVE signup path to the worker. After AM2 is live, AM3 = operator drops
+> unauthenticated_write_customers off the public Storefront token (ending 470c).**
+> Log: 2026-07-12 — AM2 route newsletter signup through worker — 2c4b2c0 — build:green check:green
+> — reviewed CLEAN. Endpoint env-driven: PUBLIC_SUBSCRIBE_URL override else derived from
+> PUBLIC_NOW_PLAYING_URL origin + /subscribe (prod needs NO new repo var; CSP connect-src already
+> carries the worker origin, NO CSP change). Verified: dist data-subscribe-url exact worker URL,
+> zero customerCreate in dist, zero Storefront token in dist/scripts/base.js, old form attrs gone;
+> live worker with browser-identical requests: 200 {ok:true}, 400 invalid, CORS headers on both,
+> OPTIONS 204, GET 405, /now 200. CAVEATS: (1) local `npm run dev` submit shows the SHAKE because
+> worker CORS only allows shopandson.com origins; UX states verify locally, submit verifies live
+> post-merge. (2) build-machine 429s: the build's products.json snapshot feed is per-IP throttled;
+> 5 rapid builds tripped a long throttle window (GraphQL unaffected). Wait it out; CI unaffected.
+> Config log 2026-07-12: PUBLIC_NOW_PLAYING_URL added to gitignored homepage/.env; KV
+> subscribe-rate key for the build machine IP deleted (--remote) to un-throttle live verify. Test
+> customer +am2verify@gmail.com created (delete list in the handoff doc).
 > Log: 2026-07-12 — AM1d fix newsletter Admin API query — 08e5d90 — dry-run:green — DEPLOYED
 > (version 8debc6f5). Worker verified live: 3 sequential creates ok, rapid double-submit both ok
 > (AM1c race retry), CORS/405/400/429/now-playing/no-leak all pass. NOTE: concurrent bursts can
@@ -263,6 +277,53 @@ below so Codex has ONE target; everything else in this file is context.
 > now shows a preview still). Landing unchanged (1.87MB; these are on-demand).
 > Awaiting operator go to ship to main. NOTE: preorders piece.mp4 (43M) still
 > uncompressed (separate page, ships as-is per AGENTS).**
+
+---
+
+## PHASE AM2 — subscribe box posts to the worker, not Shopify (operator-approved, 2026-07-12)
+
+WHY: the hero subscribe box POSTs a Storefront `customerCreate` mutation straight to Shopify with
+the public token, which is why that token still carries a write scope (AM3 removes it). The worker
+`POST /subscribe` (same worker as now-playing, already deployed and live-verified) now does the
+subscription server-side: it upserts the customer's email marketing consent and returns a generic
+`{ok:true}` on success. Repoint the site at it. Site-only, ONE commit `AM2:`. Do NOT touch
+`worker/` or `public/preorders/`. Keep the on-page UX byte-identical (idle -> typing placeholder ->
+valid arrow -> neon check on success; failure = shake). No visual surface changes.
+
+1. `src/components/blocks/HeroVideo.astro` frontmatter: build the endpoint env-driven, never
+   hardcoded. `nowPlayingUrl` already exists (line 22). Add:
+   `const subscribeUrlOverride = import.meta.env.PUBLIC_SUBSCRIBE_URL?.trim() ?? "";` then derive
+   `let subscribeUrl = subscribeUrlOverride;` and, if that is empty and `nowPlayingUrl` is set,
+   `subscribeUrl = new URL(nowPlayingUrl).origin + "/subscribe"` inside a try/catch that falls
+   back to `""`. (The worker serves both features from one origin, so production needs NO new
+   repo variable; `PUBLIC_SUBSCRIBE_URL` exists only as an override if the endpoint ever moves.)
+2. Same file, the subscribe `<form>` (~line 267): replace the three attributes
+   `data-shop-domain` / `data-sf-token` / `data-sf-version` with ONE attribute
+   `data-subscribe-url={subscribeUrl}`. Then delete the now-unused frontmatter consts
+   `shopifyStoreDomain`, `shopifyStorefrontToken`, `shopifyStorefrontVersion` (lines 25-27).
+   Grep first to confirm the form was their only consumer in this file; the catalog layer reads
+   the env vars itself (`src/lib/storefront-client.ts`, `src/lib/shopify.ts`) and must be
+   untouched.
+3. `public/scripts/base.js`: replace the body of `submitSubscriber` with a worker POST and delete
+   the two helpers only it used, `getShopifyEndpoint` and `createThrowawayPassword`:
+   `const endpoint = subForm.dataset.subscribeUrl?.trim(); if (!endpoint) return false;`
+   then `fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" },
+   body: JSON.stringify({ email }) })`; `if (!response.ok) return false;` then
+   `const payload = await response.json().catch(() => null); return payload?.ok === true;`.
+   Touch NOTHING else in base.js: every state handler (activate, placeholder typing, success,
+   failure/shake, 20s success reset, submit listener) stays exactly as it is. The existing
+   try/catch in the submit listener already turns a thrown fetch (network/CORS) into the shake.
+4. CSP: NO change expected, verify only. `src/layouts/Base.astro` already derives a
+   `connect-src` entry from `PUBLIC_NOW_PLAYING_URL`'s origin, which IS the worker origin.
+   Do not edit Base.astro.
+
+Done when: from `homepage/`, `npm run build` AND `npx astro check` are BOTH green (`.env` already
+provides `PUBLIC_NOW_PLAYING_URL` plus the Shopify vars); built `dist/index.html` contains
+`data-subscribe-url="https://shop-and-son-now-playing.shop-and-son.workers.dev/subscribe"` and its
+CSP `connect-src` contains `https://shop-and-son-now-playing.shop-and-son.workers.dev`; grep of
+`dist/` finds ZERO `customerCreate` anywhere and ZERO `Storefront-Access-Token` in
+`dist/scripts/base.js` (the catalog bundles still legitimately contain the token header, leave
+them alone).
 
 ---
 
