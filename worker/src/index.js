@@ -192,7 +192,7 @@ async function createSubscribedCustomer(email, env) {
   const data = await shopifyAdminGraphql(env, `
     mutation CreateSubscribedCustomer($input: CustomerInput!) {
       customerCreate(input: $input) {
-        userErrors { code field message }
+        userErrors { field message }
       }
     }
   `, {
@@ -207,7 +207,7 @@ async function createSubscribedCustomer(email, env) {
 
   const userErrors = data.customerCreate?.userErrors;
   const taken = Array.isArray(userErrors) && userErrors.some(
-    (error) => error?.code === 'TAKEN' || /taken/i.test(error?.message || ''),
+    (error) => /taken/i.test(error?.message || ''),
   );
 
   if (taken) {
@@ -234,6 +234,7 @@ async function shopifyAdminGraphql(env, query, variables) {
 
   const result = await response.json();
   if (result.errors?.length || !result.data) {
+    console.error('Shopify Admin GraphQL errors', JSON.stringify(result.errors || []));
     throw new Error('Shopify Admin GraphQL request failed');
   }
 
