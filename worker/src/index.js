@@ -1,5 +1,6 @@
 const SPOTIFY_PLAYER_URL = 'https://api.spotify.com/v1/me/player';
 const SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token';
+const SHOPIFY_ADMIN_OAUTH_URL = 'https://shop-and-son.myshopify.com/admin/oauth/access_token';
 const SHOPIFY_ADMIN_GRAPHQL_URL = 'https://shop-and-son.myshopify.com/admin/api/2025-01/graphql.json';
 const NOW_CACHE_MS = 8000;
 const TOKEN_EXPIRY_SKEW_MS = 60000;
@@ -20,6 +21,11 @@ const KV_KEYS = {
 };
 
 let accessTokenCache = {
+  token: '',
+  expiresAt: 0,
+};
+
+let shopifyTokenCache = {
   token: '',
   expiresAt: 0,
 };
@@ -73,7 +79,7 @@ async function handleSubscribe(request, env) {
     return json({ error: 'request_failed' }, 405, headers);
   }
 
-  if (!env.SHOPIFY_ADMIN_TOKEN) {
+  if (!env.SHOPIFY_CLIENT_ID || !env.SHOPIFY_CLIENT_SECRET) {
     return json({ error: 'service_unavailable' }, 503, headers);
   }
 
@@ -180,14 +186,14 @@ async function createSubscribedCustomer(email, env) {
 }
 
 async function shopifyAdminGraphql(env, query, variables) {
-  const response = await fetch(SHOPIFY_ADMIN_GRAPHQL_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Shopify-Access-Token': env.SHOPIFY_ADMIN_TOKEN,
-    },
-    body: JSON.stringify({ query, variables }),
-  });
+  const body = JSON.stringify({ query, variables });
+  let token = await getShopifyAdminToken(env);
+  let response = await fetchShopifyAdminGraphql(token, body);
+
+  if (response.status === 401) {
+    token = await getShopifyAdminToken(env, true);
+    response = await fetchShopifyAdminGraphql(token, body);
+  }
 
   if (!response.ok) {
     throw new Error(`Shopify Admin API returned ${response.status}`);
@@ -199,6 +205,62 @@ async function shopifyAdminGraphql(env, query, variables) {
   }
 
   return result.data;
+}
+
+function fetchShopifyAdminGraphql(token, body) {
+  return fetch(SHOPIFY_ADMIN_GRAPHQL_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Shopify-Access-Token': token,
+    },
+    body,
+  });
+}
+
+async function getShopifyAdminToken(env, forceRefresh = false) {
+  const now = Date.now();
+
+  if (!forceRefresh && shopifyTokenCache.token && shopifyTokenCache.expiresAt > now + TOKEN_EXPIRY_SKEW_MS) {
+    return shopifyTokenCache.token;
+  }
+
+  const clientId = env.SHOPIFY_CLIENT_ID;
+  const clientSecret = env.SHOPIFY_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new AuthError('missing_shopify_credentials');
+  }
+
+  const body = new URLSearchParams({
+    grant_type: 'client_credentials',
+    client_id: clientId,
+    client_secret: clientSecret,
+  });
+
+  const response = await fetch(SHOPIFY_ADMIN_OAUTH_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body,
+  });
+
+  if (!response.ok) {
+    throw new AuthError('shopify_token_refresh_failed');
+  }
+
+  const data = await response.json();
+  if (!data.access_token) {
+    throw new AuthError('missing_shopify_access_token');
+  }
+
+  shopifyTokenCache = {
+    token: data.access_token,
+    expiresAt: now + Math.max(0, Number(data.expires_in || 0) * 1000),
+  };
+
+  return shopifyTokenCache.token;
 }
 
 function throwForUserErrors(userErrors) {
