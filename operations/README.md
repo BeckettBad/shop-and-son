@@ -108,17 +108,17 @@ Worker secrets or secret-valued bindings:
 
 ## Production rollout
 
-Beckett authorized routine, reversible production completion on 2026-07-16. Secret entry, Shopify permission, Access identity, iMessage recipient/testing, storefront publication, push/merge, and unexpected destructive or permission-expanding changes remain manual gates.
+Beckett authorized routine, reversible production completion on 2026-07-16. The remaining manual gates are the new Cloudflare Analytics token entry, disposition of stale notifications, LaunchAgent installation, the real incident/recovery drill, storefront privacy behavior, collection enablement, storefront publication, push/merge, and unexpected destructive or permission-expanding changes.
 
 ### Current production baseline
 
 - D1 `shop-and-son-operations` exists under binding `DB`; migrations `0001`–`0003` are applied.
-- Secret-bearing version `ab382b32-e588-43d0-9d24-839a5cf380a6` is deployed at 100% with collection disabled. The next deployment must come from the reviewed local `dev` commit and retain the same eight secret-valued bindings.
+- Version `3b2f9e22-3037-40b6-907f-a2573bd7087a`, mapped to local commit `f8d5cb1`, is deployed at 100% with all eight secret bindings and collection disabled.
 - `operations.shopandson.com` is the only Worker target. Standard and preview `workers.dev` URLs are disabled.
 - `/health` returns the versioned service contract; Access redirects `/dashboard` to the approved identity login; `/v1/events` returns `503 collection_disabled`; notification APIs return 401.
 - The collector edge rule allows 20 `POST /v1/events` requests per 10 seconds per IP and blocks for 10 seconds. It was verified with 429 responses and post-block recovery. The Free plan supplies one rule, so the dashboard relies on Access plus application Basic auth rather than a second WAF rule.
-- The five-minute Cron is active and all four health targets are healthy. Shopify authentication and `read_reports` pass, but the deployed query uses obsolete `units_sold`; the reviewed local candidate uses `net_items_sold`. Cloudflare Analytics rejects the configured runtime token with `Authentication failed`; replace that value privately before integration sign-off.
-- The approved Shortcut and Keychain token are configured, the harmless iMessage test arrived, and authenticated notification polling succeeds. The LaunchAgent and real incident drill remain gated.
+- The five-minute Cron is active and all four health targets are healthy. Shopify production aggregation is successful with 90 daily rows. Cloudflare Analytics has zero rows because the deployed token lacks `Account Analytics: Read` for the zone.
+- The approved Shortcut and Keychain token are configured, the harmless iMessage test arrived, and the relay's exact client identity polls successfully. Six rollout-generated notifications remain pending; the LaunchAgent is not installed and the real incident drill remains gated.
 
 ### Remaining ordered rollout
 
@@ -143,20 +143,13 @@ Beckett authorized routine, reversible production completion on 2026-07-16. Secr
 
 4. **Completed:** Access protects `operations.shopandson.com/dashboard*` for Beckett's confirmed identity. The Free plan's single available WAF rule protects `POST /v1/events` at 20 requests per 10 seconds per IP with a 10-second block. Access plus Basic auth protect the dashboard; enabling a second WAF rule would require a separately approved paid-plan change.
 
-5. Add each runtime secret interactively to an undeployed version. Use `versions secret put`, not `secret put`: plain `wrangler secret put` deploys immediately. Wrangler reads each value from its prompt; do not append values to commands:
+5. Replace only the Cloudflare Analytics runtime token interactively in an undeployed version. Use `versions secret put`, not `secret put`: plain `wrangler secret put` deploys immediately. Wrangler reads the value from its hidden prompt; do not append it to the command:
 
    ```sh
    npx wrangler versions secret put CLOUDFLARE_ANALYTICS_TOKEN
-   npx wrangler versions secret put CLOUDFLARE_ZONE_ID
-   npx wrangler versions secret put DASHBOARD_USERNAME
-   npx wrangler versions secret put DASHBOARD_PASSWORD
-   npx wrangler versions secret put NOTIFICATION_API_TOKEN
-   npx wrangler versions secret put SHOPIFY_CLIENT_ID
-   npx wrangler versions secret put SHOPIFY_CLIENT_SECRET
-   npx wrangler versions secret put SHOPIFY_SHOP_DOMAIN
    ```
 
-6. List versions, record the final version ID produced after the last secret, and inspect it. Record binding names, never secret values:
+6. List versions, record the newly produced version ID, and inspect it. It must be newer than `3b2f9e22-3037-40b6-907f-a2573bd7087a`; record binding names, never secret values:
 
    ```sh
    npx wrangler versions list
@@ -171,7 +164,7 @@ Beckett authorized routine, reversible production completion on 2026-07-16. Secr
 
 8. Verify `/health`; verify `/dashboard` is intercepted by Access before application Basic auth; verify `/v1/events` returns `503 collection_disabled`; verify the notification API rejects missing/wrong tokens. Do not enter credentials on any non-HTTPS origin.
 
-9. Deploy only a committed, reviewed candidate with collection still disabled. Verify Shopify daily aggregates from the current `net_items_sold` query. Privately replace the rejected Cloudflare Analytics token through `versions secret put`, then verify Cloudflare daily aggregates. The `*/5 * * * *` Cron is already active; do not recreate it.
+9. Create a genuinely new token with `Account → Account Analytics → Read`, restricted to the intended account and `shopandson.com` zone. Run `wrangler versions secret put CLOUDFLARE_ANALYTICS_TOKEN` against the current active code, inspect the newly created version, and deploy it with collection disabled. Stop unless the next Cron clears `cloudflare_analytics.last_error` and writes `daily_cloudflare_metrics`. The Cron is already active; do not recreate it.
 
 10. Enable collection only after Access, the collector edge rule, integrations, Cron, and notification protection succeed. This creates a new Worker version and deployment:
 

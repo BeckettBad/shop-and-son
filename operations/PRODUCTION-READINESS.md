@@ -2,7 +2,7 @@
 
 **Assessment date:** 2026-07-16
 **Branch:** `dev`
-**Disposition:** Contained production integration is active. D1, the secret-bearing Worker, `operations.shopandson.com`, dashboard Access, the Free-plan collector rate limit, and the five-minute Cron exist with collection disabled. Health is healthy; Shopify authentication is valid but awaits deployment of the current metric correction, and Cloudflare Analytics is blocked by an invalid runtime token. LaunchAgent delivery, collection enablement, and storefront publication remain gated.
+**Disposition:** Contained production integration is active but is not approved for collection or storefront publication. Committed Worker version `3b2f9e22-3037-40b6-907f-a2573bd7087a` maps to `f8d5cb1` and runs at `operations.shopandson.com` with D1, Access, the Free-plan collector rate limit, five-minute Cron, and collection disabled. Health and Shopify aggregation are verified. Cloudflare Analytics still lacks its read permission; six stale rollout notifications must be dispositioned before relay installation; the incident drill, collector, and storefront remain gated.
 
 ## 1. Completed functionality
 
@@ -102,21 +102,21 @@ All checks below were executed without production credentials or resources.
 
 | Check | Result |
 |---|---|
-| Operations Vitest suite | 55/55 passed across 15 files |
+| Operations Vitest suite | 56/56 passed across 15 files |
 | Operations production TypeScript | Passed |
 | Operations test TypeScript | Passed |
 | Wrangler generated-type consistency | Passed with `--include-env false --check`; handwritten `Env` owns dynamic bindings |
-| Wrangler deployment dry run | Passed; 55.38 KiB upload, 13.94 KiB gzip; collector binding defaults to `false` |
+| Wrangler deployment dry run | Passed; 55.64 KiB upload, 13.96 KiB gzip; collector binding defaults to `false` |
 | D1 migrations against local database | `0001`, `0002`, and `0003` applied successfully |
 | Storefront analytics tests | 4/4 passed |
 | Astro check | 0 errors, 0 warnings, 1 existing inline external-script hint |
-| Astro static production build | Passed; 3 pages including sitemap |
+| Astro static production build | Current run blocked twice by upstream Shopify `429` for `clothing-1` after all built-in retries during sitemap generation; source compilation completed before the rejection |
 | Configured collector build assertion | Passed; exact HTTPS `/v1/events` URL embedded in generated analytics bundle |
 | Notification relay tests | 4/4 passed |
 | Python bytecode compilation | Passed |
 | LaunchAgent plist validation | Passed |
 | `git diff --check` | Passed |
-| Independent production/security review | Duplicate-Cron health accounting and reproducibility blockers found; duplicate-tick execution is fixed with lease idempotency and bounded retention, while this scoped commit resolves source reproducibility |
+| Independent production/security review | Duplicate-Cron health accounting and reproducibility blockers found and resolved in committed/deployed Operations source; storefront host pinning and storage-denied behavior remain pre-publication findings |
 | Secret-pattern scan | No credential-like values found in new source/configuration |
 | Dynamic SQL/eval/unsafe-HTML scan | No findings in Operations source |
 | Operations `npm audit` | 0 advisories |
@@ -151,19 +151,18 @@ A safe Astro 6 lockfile update removed all four moderate YAML/language-server ad
 
 ## 4. Not yet verified
 
-These require real external values or explicit production changes:
+These require a corrected external value, explicit production changes, or a successful upstream build window:
 
-- Authenticated Cloudflare Analytics query after private replacement of the rejected runtime token
-- Production zone availability of every requested `httpRequests1dGroups` field
-- Successful ShopifyQL scheduled run using current `net_items_sold`; client-credentials exchange and `read_reports` are verified
-- Deployment of the exact reviewed/committed corrective Worker candidate
-- Duplicate-delivery behavior of the active Cron after deployment of tick idempotency
+- Authenticated Cloudflare Analytics query after private replacement with a genuinely new token that includes `Account Analytics: Read`; the currently deployed actor still lacks that permission
+- Production zone availability of every requested `httpRequests1dGroups` field and a nonzero `daily_cloudflare_metrics` result
+- Controlled duplicate-delivery exercise of the active Cron; code-level same-timestamp idempotency is covered and deployed
 - Authenticated dashboard use after the verified Access redirect
 - Collector edge rate limit is verified; the unavailable second dashboard rule is a documented Free-plan limitation
-- LaunchAgent polling and real incident/recovery delivery; authenticated polling and one harmless iMessage test are verified
+- Safe disposition of six rollout-generated pending notifications, LaunchAgent polling, and real incident/recovery delivery; the exact relay client receives 200 and one harmless iMessage test is verified
 - Live storefront event receipt
 - Production storefront publish and regression check
-- Production logs, freshness, and alert drill
+- Production Cloudflare freshness, notification acknowledgement, and alert drill
+- A green storefront static build after Shopify's current catalog `429` window clears
 
 ## 5. One minimum credential and permission checklist
 
@@ -206,27 +205,24 @@ Do **not** paste credential values into chat, documentation, commits, screenshot
 
 ## 6. Approved-order deployment procedure
 
-Routine reversible production work was authorized on 2026-07-16. The remaining manual gates are secret entry, Shopify permission, Access identity, iMessage recipient/testing, storefront publication, push/merge, and unexpected destructive or materially permission-expanding changes.
+Routine reversible production work was authorized on 2026-07-16. The remaining manual gates are the new Cloudflare Analytics token entry, disposition of stale notifications, LaunchAgent installation, the real incident/recovery drill, the storefront privacy decision, collection enablement, storefront publication, push/merge, and unexpected destructive or materially permission-expanding changes.
 
-1. Keep collection disabled and confirm the existing D1/bootstrap/custom-domain baseline.
+1. **Completed:** keep collection disabled; confirm D1, custom domain, migrations, eight secret bindings, disabled developer URLs, and committed version provenance.
 2. **Completed:** configure Access for `/dashboard*` and apply the Free plan's one available rule to `POST /v1/events`; retain application Basic auth because a second dashboard WAF rule is unavailable.
-3. Configure all eight values interactively with `wrangler versions secret put`; never use plain `wrangler secret put`, which deploys immediately.
-4. Inspect and activate the exact final secret-bearing version at 100%.
-5. Verify public health, Access interception before Basic auth, collector `503 collection_disabled`, and notification API denial.
-6. Run authenticated Cloudflare and Shopify integration checks.
-7. Add and apply the five-minute Cron separately through `wrangler triggers deploy`; verify scheduled D1 state.
-8. Configure and manually test the Shortcut relay with a harmless approved recipient/message.
-9. Run a controlled incident opening/recovery drill without taking a real service offline.
-10. Enable collection in a new version only after all protections pass; verify preflight and edge limiting.
-11. Set the storefront collector URL, rebuild, preview, and inspect the diff.
-12. Publish storefront instrumentation only under separate explicit approval.
-13. Verify safe event receipt, aggregate freshness, dashboard values, logs, and no duplicate alerts.
+3. **Completed:** verify the public boundary, five-minute Cron, four healthy targets, Shopify authentication/aggregation, Shortcut recipient test, Keychain item, and authenticated notification polling.
+4. **Next manual gate:** create a genuinely new Cloudflare token with `Account Analytics: Read`, enter it through `wrangler versions secret put`, inspect and deploy only the newly created version with collection disabled, and require a successful scheduled aggregate write.
+5. Explicitly disposition the six stale rollout notifications without delivering false alarms. Install the LaunchAgent and verify polling/acknowledgement only after the queue is safe.
+6. Obtain approval and run a controlled incident opening/recovery drill without taking a real service offline.
+7. Pin the storefront collector to `operations.shopandson.com`, decide the storage-denied privacy contract, and obtain a green static build and final review.
+8. Enable collection in a new version only after all protections pass; verify preflight and edge limiting.
+9. Set the storefront collector variable, rebuild, preview, and inspect the exact artifact.
+10. Publish storefront instrumentation only under separate explicit approval, then verify safe event receipt, aggregate freshness, dashboard values, logs, and no duplicate alerts.
 
 Exact commands and stop/report-back points are in `operations/README.md`.
 
 ## 7. Rollback
 
-- **Worker:** roll back to the last known-good Cloudflare deployment/version; preserve D1 unless schema caused the incident.
+- **Worker:** before any next version activation, retain current contained version `3b2f9e22-3037-40b6-907f-a2573bd7087a` as the immediate rollback. Secret-free bootstrap `95f0abfe-37a3-48ec-b60c-64dcee166b67` remains the deeper collection-disabled fallback. Preserve D1 unless schema caused the incident.
 - **Cron:** disable the Operations Worker's Cron trigger if scheduled execution is harmful.
 - **Storefront:** unset `PUBLIC_OPERATIONS_EVENTS_URL` and rebuild; the analytics adapter becomes a no-op without changing commerce.
 - **Notifications:** unload the LaunchAgent; queued alerts remain in D1.
@@ -234,8 +230,8 @@ Exact commands and stop/report-back points are in `operations/README.md`.
 
 ## 8. Known limitations
 
-- No production integration has been authenticated yet; the reachable Worker remains collection-disabled and fail-closed for private routes.
-- Cloudflare analytics fields are plan/schema dependent; production settings must be checked.
+- Shopify production integration is authenticated and writing aggregates; Cloudflare Analytics is not authorized and has written no rows. The Worker remains collection-disabled and fail-closed for private routes.
+- Cloudflare analytics fields are plan/schema dependent and remain unverified until the read permission succeeds.
 - Cloudflare unique values are unique IP estimates, not people. The dashboard labels the sum as a daily unique-IP total; it is not a distinct-period visitor count.
 - Funnel dates use UTC event dates; Shopify reporting is explicitly `America/New_York`. Cross-source daily boundaries are therefore not identical.
 - Browser Origin/CORS does not stop non-browser abuse; the edge collector rate limit is a production prerequisite.
@@ -245,8 +241,8 @@ Exact commands and stop/report-back points are in `operations/README.md`.
 - Customer Events/Web Pixels would be required for hosted-checkout step telemetry and are not part of this implementation.
 - Raw probes and funnel events retain 90 days; daily aggregates remain until a later reviewed aggregate-retention policy is introduced.
 - A breaking Astro 7 migration remains the only available fix for the low Windows development-server advisory.
-- Storefront catalog/sitemap builds depend on Shopify availability and can still encounter upstream `429` responses, although the latest verified builds succeeded.
+- Storefront catalog/sitemap builds depend on Shopify availability. The current final-check attempts were blocked by repeated upstream `429` responses while generating the sitemap.
 
 ## 9. Final gate
 
-The next necessary phase is the remaining manual gate: create the read-only Cloudflare Analytics token and least-privilege Shopify reporting app, enter all eight Worker values privately, and confirm the intended iMessage recipient. Access and the plan-available collector rule are verified. Collection, Cron, notification delivery, and storefront publication stay disabled until their remaining prerequisites are verified.
+The next necessary phase is one narrow manual correction: create a genuinely new read-only Cloudflare token with `Account → Account Analytics → Read`, scoped only to the intended account and `shopandson.com` zone, and enter it through `wrangler versions secret put CLOUDFLARE_ANALYTICS_TOKEN`. Do not paste it into chat or a command argument. Stop unless Wrangler produces a version newer than `3b2f9e22-3037-40b6-907f-a2573bd7087a`; inspect that version, keep collection disabled, and require the next Cron to clear `last_error` and populate `daily_cloudflare_metrics`. Shopify, Access, the collector edge rule, Cron, Shortcut, Keychain, and authenticated relay polling are already verified and should not be reconfigured. Notification delivery, collection, push/merge, and storefront publication remain gated.
