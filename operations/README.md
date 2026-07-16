@@ -164,7 +164,7 @@ Beckett authorized routine, reversible production completion on 2026-07-16. The 
 
 8. Verify `/health`; verify `/dashboard` is intercepted by Access before application Basic auth; verify `/v1/events` returns `503 collection_disabled`; verify the notification API rejects missing/wrong tokens. Do not enter credentials on any non-HTTPS origin.
 
-9. Create a genuinely new token with `Account → Account Analytics → Read`, restricted to the intended account and `shopandson.com` zone. Run `wrangler versions secret put CLOUDFLARE_ANALYTICS_TOKEN` against the current active code, inspect the newly created version, and deploy it with collection disabled. Stop unless the next Cron clears `cloudflare_analytics.last_error` and writes `daily_cloudflare_metrics`. The Cron is already active; do not recreate it.
+9. After activating the inspected token version, stop unless the next Cron clears `cloudflare_analytics.last_error` and writes `daily_cloudflare_metrics`. The Cron is already active; do not recreate it.
 
 10. Enable collection only after Access, the collector edge rule, integrations, Cron, and notification protection succeed. This creates a new Worker version and deployment:
 
