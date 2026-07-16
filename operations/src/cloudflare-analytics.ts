@@ -30,7 +30,12 @@ function count(value: unknown): number {
 export function normalizeCloudflareResponse(value: unknown): DailyCloudflareMetric[] {
   const root = record(value);
   if (Array.isArray(root.errors) && root.errors.length > 0) {
-    throw new Error("Cloudflare Analytics returned GraphQL errors");
+    const first = root.errors[0];
+    const message = first && typeof first === "object" && !Array.isArray(first)
+      ? (first as Record<string, unknown>).message
+      : "";
+    const detail = typeof message === "string" ? message.replace(/\s+/g, " ").trim().slice(0, 300) : "";
+    throw new Error(`Cloudflare Analytics returned GraphQL errors${detail ? `: ${detail}` : ""}`);
   }
   const data = record(root.data);
   const viewer = record(data.viewer);

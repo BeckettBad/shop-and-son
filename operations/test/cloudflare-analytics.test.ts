@@ -2,8 +2,16 @@ import { env } from "cloudflare:workers";
 import { describe, expect, it, vi } from "vitest";
 import { normalizeCloudflareResponse, syncCloudflareAnalytics } from "../src/cloudflare-analytics";
 
-describe("Cloudflare daily analytics", () => {
-  it("normalizes daily traffic and groups edge status codes", () => {
+describe("Cloudflare aggregate analytics", () => {
+  it("reports a bounded GraphQL error detail", () => {
+    expect(() => normalizeCloudflareResponse({
+      errors: [{ message: "Zone access denied   for this field" }],
+    })).toThrow(
+      "Cloudflare Analytics returned GraphQL errors: Zone access denied for this field",
+    );
+  });
+
+  it("normalizes complete daily groups and zero-fills missing dates", () => {
     const fixture = {
       data: {
         viewer: {
