@@ -23,7 +23,7 @@ set -uo pipefail
 export PATH="/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
 WORKER_URL="${WORKER_URL:-https://shop-and-son-now-playing.shop-and-son.workers.dev}"
-SITE_URL="${SITE_URL:-https://beckettbad.github.io/shop-and-son/}"
+SITE_URL="${SITE_URL:-https://shopandson.com/}"
 ALERT_SHORTCUT="${ALERT_SHORTCUT:-SS Alert}"
 REMIND_EVERY_SECS="${REMIND_EVERY_SECS:-86400}"   # re-nag once/day while broken
 

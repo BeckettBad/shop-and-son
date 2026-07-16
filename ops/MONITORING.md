@@ -27,18 +27,18 @@ on, which in practice is daily.
    - Name it exactly **`SS Alert`** (or change `ALERT_SHORTCUT` in the script).
 2. **Make the script executable** (once):
    ```sh
-   chmod +x "/Users/robo/Desktop/Shop & Sons/ops/now-playing-healthcheck.sh"
+   chmod +x "/Users/robo/Desktop/BaderBureau/Shop & Sons/ops/now-playing-healthcheck.sh"
    ```
 3. **Send yourself a test text** to prove the alert path works and to trigger any
    macOS permission prompt (approve it):
    ```sh
-   "/Users/robo/Desktop/Shop & Sons/ops/now-playing-healthcheck.sh" --test
+   "/Users/robo/Desktop/BaderBureau/Shop & Sons/ops/now-playing-healthcheck.sh" --test
    ```
    You should get a text within a few seconds. If not, check
    `ops/.state/monitor.log`.
 4. **Install the schedule** (launchd):
    ```sh
-   cp "/Users/robo/Desktop/Shop & Sons/ops/launchagent/com.shopandson.nowplaying-monitor.plist" ~/Library/LaunchAgents/
+   cp "/Users/robo/Desktop/BaderBureau/Shop & Sons/ops/launchagent/com.shopandson.nowplaying-monitor.plist" ~/Library/LaunchAgents/
    launchctl load ~/Library/LaunchAgents/com.shopandson.nowplaying-monitor.plist
    ```
 

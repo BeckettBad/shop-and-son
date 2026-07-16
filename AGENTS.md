@@ -1,18 +1,16 @@
 # &son — agent / AI context
 
-> **The studio layer:** this repo is the flagship build inside a larger business —
-> the retail consultancy Beckett is building with Ben (the owner of this shop).
-> The business layer lives at `~/Desktop/BADERSITE/` (STATE.md = live business
-> ledger, AGENTS.md = the canonical file map for the whole machine). Read it when
-> a task concerns the business rather than this site.
+> **The studio layer:** this repo is the flagship build inside the larger BaderBureau business.
+> The overall business model lives in `../README.md`, and the current business ledger lives in
+> `../BUSINESS-STATE.md`. Read them when a task concerns the business rather than this site.
 
 High-end, curated clothing store. The web presence is an **analog, editorial,
 brutalist** custom front-end for the live Shopify store at **shopandson.com**.
 Custom-coded front-end + Shopify checkout (every "buy" goes out to Shopify).
 
 ## ⭐ The project: `homepage/`
-**`homepage/` is THE homepage — the live site**, served at
-`beckettbad.github.io/shop-and-son/`. All active work happens here. The operator
+**`homepage/` is THE homepage and live site**, served at
+`shopandson.com`. The GitHub Pages URL remains a deployment origin and preview. All active work happens here. The operator
 (Beckett) refers to it simply as **"the homepage."**
 
 > **Edits to `homepage/` go LIVE.** On push to `main`, the GitHub Pages workflow

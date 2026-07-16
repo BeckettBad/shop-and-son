@@ -14,7 +14,7 @@
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string>/Users/robo/Desktop/Shop &amp; Sons/ops/now-playing-healthcheck.sh</string>
+    <string>/Users/robo/Desktop/BaderBureau/Shop &amp; Sons/ops/now-playing-healthcheck.sh</string>
   </array>
 
   <key>StartInterval</key>
@@ -24,8 +24,8 @@
   <true/>
 
   <key>StandardOutPath</key>
-  <string>/Users/robo/Desktop/Shop &amp; Sons/ops/.state/launchd.out.log</string>
+  <string>/Users/robo/Desktop/BaderBureau/Shop &amp; Sons/ops/.state/launchd.out.log</string>
   <key>StandardErrorPath</key>
-  <string>/Users/robo/Desktop/Shop &amp; Sons/ops/.state/launchd.err.log</string>
+  <string>/Users/robo/Desktop/BaderBureau/Shop &amp; Sons/ops/.state/launchd.err.log</string>
 </dict>
 </plist>

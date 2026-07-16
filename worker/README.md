@@ -1,8 +1,8 @@
 # &son Now Playing Worker
 
-Cloudflare Worker messenger for the MUSIC stage. It reads the store Spotify
-account through Spotify's refresh-token flow, exposes only the current allowed
-in-store track, and never controls playback.
+Cloudflare Worker for the MUSIC stage and newsletter signup. It reads the store Spotify account
+through Spotify's refresh-token flow, exposes only the current allowed in-store track, never controls
+playback, and subscribes customers through the Shopify Admin API without exposing Admin credentials.
 
 ## Endpoints
 
@@ -22,7 +22,12 @@ in-store track, and never controls playback.
   - Omit `state` to read the current toggle value.
 - `GET /status`
   - Public, CORS `*`, no secrets.
-  - Returns `{"auth":"ok"|"error","toggle":"on"|"off","allowedDevices":["Benjamin's iPad"],"lastSpotifyOkAt":null|"ISO date","lastShowAt":null|"ISO date"}`.
+  - Returns `{"auth":"ok"|"error","toggle":"on"|"off","allowedDevices":["iPad"],"lastSpotifyOkAt":null|"ISO date","lastShowAt":null|"ISO date"}`.
+- `OPTIONS|POST /subscribe`
+  - Accepts JSON containing one `email` value.
+  - Creates a subscribed Shopify customer or updates an existing customer's email-marketing consent.
+  - Uses KV-backed per-IP rate limiting and never reveals whether the customer already existed.
+  - Allows the production apex and configured preview origin through CORS.
 
 The toggle fails closed. A fresh KV namespace starts as `off`; turn it on only
 after the worker is deployed, authorized, and tested.
@@ -52,6 +57,8 @@ Run these commands from this `worker/` directory.
    npx wrangler secret put SPOTIFY_CLIENT_SECRET
    npx wrangler secret put SPOTIFY_REFRESH_TOKEN
    npx wrangler secret put TOGGLE_SECRET
+   npx wrangler secret put SHOPIFY_CLIENT_ID
+   npx wrangler secret put SHOPIFY_CLIENT_SECRET
    ```
 
 5. Deploy:
@@ -86,7 +93,7 @@ Required Spotify scope: `user-read-playback-state`.
 
 ## Toggle shortcut
 
-Create an iOS Shortcut on Benjamin's iPad, and optionally on a phone used by the
+Create an iOS Shortcut on the shop iPad, and optionally on a phone used by the
 operator:
 
 - Turn on: `GET https://<worker-origin>/toggle?state=on&secret=<TOGGLE_SECRET>`
@@ -105,7 +112,7 @@ Authorization: Bearer <TOGGLE_SECRET>
 initial value is:
 
 ```toml
-ALLOWED_DEVICES = "Benjamin's iPad"
+ALLOWED_DEVICES = "iPad"
 ```
 
 Matching is trimmed and case-insensitive. If the iPad is renamed or replaced,

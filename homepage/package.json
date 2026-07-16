@@ -2,7 +2,7 @@
   "name": "shop-and-son-homepage",
   "type": "module",
   "version": "0.0.1",
-  "description": "&son homepage — the live site served at beckettbad.github.io/shop-and-son/.",
+  "description": "The custom Astro storefront served at shopandson.com.",
   "engines": {
     "node": ">=22.12.0"
   },

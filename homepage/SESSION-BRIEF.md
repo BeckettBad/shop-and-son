@@ -5,8 +5,8 @@ session so both agents share the same picture. Full standing rules live in
 `CLAUDE.md` / `AGENTS.md`; this is the "what we're doing right now."
 
 ## Where we're building
-`homepage/` — **THE homepage, the live site** at
-`beckettbad.github.io/shop-and-son/`. Work only inside `homepage/`. Build on
+`homepage/` is the live site at `shopandson.com`. The GitHub Pages URL is the deployment origin and
+preview. Work only inside `homepage/`. Build on
 `dev`; `git push origin dev` does not deploy. **Merging `dev` → `main` deploys
 live** — only after the operator verifies and approves.
 
