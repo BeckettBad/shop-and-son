@@ -128,8 +128,8 @@ The complete Operations verification was rerun after resolving the collector acc
 
 ### Passed controls
 
-- No real token, password, database ID, account ID, or private key is committed
-- Placeholder D1 ID only
+- No real token, password, account credential, or private key is committed
+- The production D1 UUID is committed as a non-secret resource identifier; possession of it alone grants no access
 - Constant-time bearer and Basic credential comparisons
 - Parameterized D1 statements
 - Exact collector origins and narrow CORS response; collection is disabled by default until edge protection is verified
@@ -210,7 +210,7 @@ Routine reversible production work was authorized on 2026-07-16. The remaining m
 1. **Completed:** keep collection disabled; confirm D1, custom domain, migrations, eight secret bindings, disabled developer URLs, and committed version provenance.
 2. **Completed:** configure Access for `/dashboard*` and apply the Free plan's one available rule to `POST /v1/events`; retain application Basic auth because a second dashboard WAF rule is unavailable.
 3. **Completed:** verify the public boundary, five-minute Cron, four healthy targets, Shopify authentication/aggregation, Shortcut recipient test, Keychain item, and authenticated notification polling.
-4. **Next manual gate:** create a genuinely new Cloudflare token with `Account Analytics: Read`, enter it through `wrangler versions secret put`, inspect and deploy only the newly created version with collection disabled, and require a successful scheduled aggregate write.
+4. **Next manual gate:** create a genuinely new Cloudflare token with `Account Analytics: Read` and enter it through `wrangler versions secret put`. Stop before activation unless the newer version retains source `f8d5cb1`, all eight secret binding names, D1 binding `DB`, the intended custom route, and `EVENT_COLLECTION_ENABLED="false"`. Deploy only that inspected version and require a successful scheduled aggregate write.
 5. Explicitly disposition the six stale rollout notifications without delivering false alarms. Install the LaunchAgent and verify polling/acknowledgement only after the queue is safe.
 6. Obtain approval and run a controlled incident opening/recovery drill without taking a real service offline.
 7. Pin the storefront collector to `operations.shopandson.com`, decide the storage-denied privacy contract, and obtain a green static build and final review.
@@ -245,4 +245,4 @@ Exact commands and stop/report-back points are in `operations/README.md`.
 
 ## 9. Final gate
 
-The next necessary phase is one narrow manual correction: create a genuinely new read-only Cloudflare token with `Account → Account Analytics → Read`, scoped only to the intended account and `shopandson.com` zone, and enter it through `wrangler versions secret put CLOUDFLARE_ANALYTICS_TOKEN`. Do not paste it into chat or a command argument. Stop unless Wrangler produces a version newer than `3b2f9e22-3037-40b6-907f-a2573bd7087a`; inspect that version, keep collection disabled, and require the next Cron to clear `last_error` and populate `daily_cloudflare_metrics`. Shopify, Access, the collector edge rule, Cron, Shortcut, Keychain, and authenticated relay polling are already verified and should not be reconfigured. Notification delivery, collection, push/merge, and storefront publication remain gated.
+The next necessary phase is one narrow manual correction: create a genuinely new read-only Cloudflare token with `Account → Account Analytics → Read`, scoped only to the intended account and `shopandson.com` zone, and enter it through `wrangler versions secret put CLOUDFLARE_ANALYTICS_TOKEN`. Do not paste it into chat or a command argument. Stop unless Wrangler produces a version newer than `3b2f9e22-3037-40b6-907f-a2573bd7087a` and inspection proves that it retains source `f8d5cb1`, all eight secret binding names, D1 binding `DB`, the `operations.shopandson.com` route, and `EVENT_COLLECTION_ENABLED="false"`. Deploy only that inspected version, then require the next Cron to clear `last_error` and populate `daily_cloudflare_metrics`. Shopify, Access, the collector edge rule, Cron, Shortcut, Keychain, and authenticated relay polling are already verified and should not be reconfigured. Notification delivery, collection, push/merge, and storefront publication remain gated.

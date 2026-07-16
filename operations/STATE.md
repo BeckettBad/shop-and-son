@@ -44,7 +44,7 @@ Operations source is committed locally at `3829ceb` plus diagnostic fix `f8d5cb1
 
 ## Next steps
 
-1. Create a genuinely new least-privilege Cloudflare Analytics token, apply it to the current code with `wrangler versions secret put`, inspect the resulting newer version, deploy it with collection still disabled, and require a successful Cron row write before proceeding.
+1. Create a genuinely new least-privilege Cloudflare Analytics token and apply it with `wrangler versions secret put`. Stop unless the newer version retains source `f8d5cb1`, all eight binding names, D1 binding `DB`, the intended custom route, and `EVENT_COLLECTION_ENABLED="false"`; deploy only that inspected version and require a successful Cron row write.
 2. Explicitly disposition the six rollout-generated pending notifications without sending stale false alarms; preserve incident history. Then install the LaunchAgent, verify empty polling/ack behavior, and obtain explicit approval before a controlled incident/recovery drill.
 3. Resolve the storefront host-pinning finding and decide whether storage-denied browsers should fail closed or use the current in-memory UUID. Rerun the static build after Shopify's current `429` window clears.
 4. Re-review the frozen storefront candidate. Only then enable and verify edge-protected collection; live storefront publication remains a separate approval.

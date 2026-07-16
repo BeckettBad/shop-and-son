@@ -5,7 +5,7 @@ Local-first Cloudflare Worker for Shop & Sons uptime, privacy-minimized storefro
 | Field | Value |
 |---|---|
 | Type | Durable operational system inside the existing repository |
-| Status | Active production integration; custom domain live with collection, Cron, and secrets disabled |
+| Status | Contained production integration; custom domain, eight secret bindings, and five-minute Cron live with collection disabled |
 | Owner | Beckett Badertscher |
 | Repository | Containing `Shop & Sons` repository; active branch `dev` |
 
@@ -21,7 +21,7 @@ Local-first Cloudflare Worker for Shop & Sons uptime, privacy-minimized storefro
 
 Completion of the local phase requires all documented local checks to pass, independent review to have no blocking security or logic finding, and `STATE.md` to record the result. Production completion additionally requires Beckett-approved deployment, authenticated integration checks, alert drill, rollback verification, and storefront publication validation.
 
-> **Production safety:** The D1 database, bootstrap Worker, `operations.shopandson.com`, dashboard Access policy, and collector edge rate limit now exist. Collection, Cron, and secrets remain disabled or absent until the ordered gates below pass. `wrangler deploy --dry-run` is safe and does not deploy.
+> **Production safety:** D1, the committed secret-bearing Worker, `operations.shopandson.com`, dashboard Access policy, collector edge rate limit, and five-minute Cron are live. Collection remains disabled until the ordered gates below pass; the LaunchAgent and storefront telemetry are not active. `wrangler deploy --dry-run` is safe and does not deploy.
 
 ## Architecture
 
@@ -149,7 +149,7 @@ Beckett authorized routine, reversible production completion on 2026-07-16. The 
    npx wrangler versions secret put CLOUDFLARE_ANALYTICS_TOKEN
    ```
 
-6. List versions, record the newly produced version ID, and inspect it. It must be newer than `3b2f9e22-3037-40b6-907f-a2573bd7087a`; record binding names, never secret values:
+6. List versions, record the newly produced version ID, and inspect it. It must be newer than `3b2f9e22-3037-40b6-907f-a2573bd7087a`. Before activation, stop unless inspection proves it retains source revision `f8d5cb1`, all eight secret binding names, D1 binding `DB`, the `operations.shopandson.com` route, and `EVENT_COLLECTION_ENABLED="false"`. Record names and identifiers, never secret values:
 
    ```sh
    npx wrangler versions list
