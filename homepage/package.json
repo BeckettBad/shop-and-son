@@ -7,6 +7,8 @@
     "node": ">=22.12.0"
   },
   "scripts": {
+    "test": "node --experimental-strip-types --test test/*.test.mjs",
+    "verify:analytics-build": "node scripts/verify-analytics-build.mjs dist",
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",

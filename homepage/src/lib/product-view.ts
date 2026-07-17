@@ -6,6 +6,7 @@ import {
   type ProductOption,
   type ProductVariant,
 } from "./storefront-client";
+import { trackEvent } from "./analytics";
 
 declare global {
   interface Window {
@@ -768,6 +769,7 @@ export function mountProductView(container: HTMLElement, handle: string, options
     }
 
     renderProduct(container, product, options);
+    trackEvent({ eventType: "product_view", productHandle: handle });
   };
 
   void init();

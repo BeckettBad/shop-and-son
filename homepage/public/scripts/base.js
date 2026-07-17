@@ -235,6 +235,7 @@ document.querySelectorAll("[data-hero-subscribe-form]").forEach((subForm) => {
       const subscribed = await submitSubscriber(subscribeEmail.value.trim());
       if (subscribed) {
         setSubscribeSuccess();
+        document.dispatchEvent(new CustomEvent("analytics:newsletter-signup"));
         return;
       }
     } catch (_) {
