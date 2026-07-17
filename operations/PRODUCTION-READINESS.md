@@ -103,16 +103,17 @@ All checks below were executed without production credentials or resources.
 
 | Check | Result |
 |---|---|
-| Operations Vitest suite | 56/56 passed across 15 files |
+| Operations Vitest suite | 82/82 passed across 15 files |
 | Operations production TypeScript | Passed |
 | Operations test TypeScript | Passed |
 | Wrangler generated-type consistency | Passed with `--include-env false --check`; handwritten `Env` owns dynamic bindings |
-| Wrangler deployment dry run | Passed; 55.64 KiB upload, 13.96 KiB gzip; collector binding defaults to `false` |
+| Wrangler deployment dry run | Passed; 101.23 KiB upload, 25.04 KiB gzip; collector binding defaults to `false` |
 | D1 migrations against local database | `0001`, `0002`, and `0003` applied successfully |
 | Storefront analytics and emitted-artifact verification tests | 8/8 passed |
 | Astro check | 0 errors, 0 warnings, 1 existing inline external-script hint |
-| Astro static production build | Blocked across five production attempts, including three against the final source, by upstream Shopify `429` for `clothing-1`; each build exhausted the existing three bounded fetch attempts during sitemap generation after source compilation passed |
-| Configured collector source/runtime/CI gate | Passed focused tests and source review; only `https://operations.shopandson.com/v1/events` is accepted. Final artifact assertion remains blocked on the red production build |
+| Astro static production build | Passed after five earlier bounded Shopify-throttled failures; 3 pages and `/sitemap.xml` completed with 467 sitemap URLs |
+| Configured collector source/runtime/CI gate | Passed source tests and complete emitted-artifact verification; only `https://operations.shopandson.com/v1/events` is active, with exact CSP origin, omitted credentials, and suppressed referrers |
+| Complete storefront artifact | 4/4 required outputs, 17/17 public files, 41 total files, no forbidden analytics identifiers; SHA-256 `0845980d02996a583589873167ae65a71135fa2f63f7c5a8f8eb10f7d8996673` |
 | Notification relay tests | 4/4 passed |
 | Python bytecode compilation | Passed |
 | LaunchAgent plist validation | Passed |
@@ -123,7 +124,7 @@ All checks below were executed without production credentials or resources.
 | Operations `npm audit` | 0 advisories |
 | Storefront `npm audit` | 0 critical, 0 high, 0 moderate; 2 linked low entries |
 
-The complete Operations verification was rerun after resolving the collector accounting/body-limit, probe-contract, relay-journal, ordered-cohort, analytics-query, and duplicate-Cron findings. The storefront privacy contract and production-host pinning findings are resolved in source, tests, and independent review; final candidate approval remains blocked on a green live-data build and complete artifact inspection.
+The complete Operations verification was rerun after integrating the dashboard and correcting aggregate complete-day boundaries. The storefront privacy contract, production-host pinning, complete production build, and emitted-artifact inspection are green. Collection activation and storefront publication remain separate explicit approval gates.
 
 ## 3. Security assessment
 
@@ -159,7 +160,6 @@ These require a corrected external value, explicit production changes, or a succ
 - Live storefront event receipt
 - Production storefront publish and regression check
 - Continued production Cloudflare freshness
-- A green storefront static build after Shopify's current catalog `429` window clears
 
 ## 5. One minimum credential and permission checklist
 
@@ -238,8 +238,8 @@ Exact commands and stop/report-back points are in `operations/README.md`.
 - Customer Events/Web Pixels would be required for hosted-checkout step telemetry and are not part of this implementation.
 - Raw probes and funnel events retain 90 days; daily aggregates remain until a later reviewed aggregate-retention policy is introduced.
 - A breaking Astro 7 migration remains the only available fix for the low Windows development-server advisory.
-- Storefront catalog/sitemap builds depend on Shopify availability. Five production attempts—including three against the final source—each exhausted the unchanged three-attempt Shopify retry policy with `429` while generating the sitemap; the build remains red.
+- Storefront catalog/sitemap builds depend on Shopify availability. Five production attempts exhausted the unchanged three-attempt retry policy with `429`; the next unchanged attempt completed successfully and the artifact was fully inspected.
 
 ## 9. Final gate
 
-The frozen-source independent review is complete with no blocker. The next necessary gate is a green production build after Shopify's `429` window clears, followed by complete artifact inspection. Only then may the separately inspected collection-enabled Worker version be considered. Push/merge and storefront publication remain separate gates.
+Independent source review, the production build, and complete artifact inspection are green. The next necessary gate is a separately inspected collection-enabled Worker version and explicit activation approval. Push/merge and storefront publication remain separate gates.

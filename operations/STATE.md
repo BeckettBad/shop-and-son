@@ -10,11 +10,11 @@ Last updated: 2026-07-16
 - Repository: `/Users/robo/Desktop/BaderBureau/Shop & Sons`
 - Branch: `dev` tracking `origin/dev`
 - Worktree: primary checkout
-- Current session owner: this Hermes session; no other session may edit this checkout concurrently
+- Current session owner: none after this handoff; the primary checkout is clean and protected
 
 ## Current state
 
-Operations source is committed locally at `3829ceb` plus diagnostic fix `f8d5cb1`; `dev` is five commits ahead of `origin/dev`. Worker version `5b415f2a-5f4b-4603-a7fa-fb8a490c4304` is deployed at 100%. Its immutable script ETag matches the prior version mapped to `f8d5cb1`; it retains all eight secret bindings, `EVENT_COLLECTION_ENABLED=false`, `workers_dev=false`, preview URLs disabled, the intended D1 binding, the sole `operations.shopandson.com` custom domain, and the sole five-minute Cron. Remote migrations `0001`–`0003` are current. `/health` returns 200, Access redirects `/dashboard`, `POST /v1/events` returns `503 collection_disabled`, and unauthenticated notifications return 401. All four health targets are healthy with zero consecutive failures and no open incidents. Shopify has 90 aggregate rows covering 2026-04-17 through 2026-07-15. The corrected `Zone → Analytics → Read` token succeeded at 22:00 UTC: `last_error` is null, `last_success_at` is `2026-07-16T22:00:54.000Z`, and six Cloudflare rows cover 2026-07-10 through 2026-07-15. Collection has written zero funnel events. Notification IDs 1–6 were acknowledged without invoking the Shortcut; all six records and incident history remain. The LaunchAgent is installed and loaded from a mode-700 relay copy under `~/Library/Application Support/ShopAndSonOperations/`; 15 observed runs end with exit 0 and clean logs. The approved delivery drill created retained incident 4 and notifications 7–8; Beckett confirmed exactly one opening and one recovery iMessage, both rows are acknowledged, synthetic probe/state rows were removed, the pending queue is empty, and no incident is open. Storefront telemetry changes remain dirty and unpublished.
+`dev` contains the reviewed storefront telemetry and dashboard integration and, with this handoff commit, is eleven local commits ahead of `origin/dev`; none of those commits has been pushed or deployed. Worker version `5b415f2a-5f4b-4603-a7fa-fb8a490c4304` remains deployed at 100% with all eight secret bindings, `EVENT_COLLECTION_ENABLED=false`, `workers_dev=false`, preview URLs disabled, the intended D1 binding, the sole `operations.shopandson.com` custom domain, and the sole five-minute Cron. Remote migrations `0001`–`0003` are current. `/health` returns 200, Access redirects `/dashboard`, `POST /v1/events` returns `503 collection_disabled`, and unauthenticated notifications return 401. All four health targets are healthy with zero consecutive failures and no open incidents. Shopify has 90 aggregate rows covering 2026-04-17 through 2026-07-15. The corrected `Zone → Analytics → Read` token last verified six Cloudflare rows covering 2026-07-10 through 2026-07-15. Collection has written zero funnel events. Notification IDs 1–8 and incident history remain as audit evidence; Beckett confirmed exactly one opening and one recovery iMessage during the approved drill, the pending queue is empty, and no incident is open. The LaunchAgent remains installed from a mode-700 relay copy under `~/Library/Application Support/ShopAndSonOperations/`. Storefront telemetry and dashboard changes are committed locally and unpublished.
 
 ## Completed work
 
@@ -31,7 +31,7 @@ Operations source is committed locally at `3829ceb` plus diagnostic fix `f8d5cb1
 ## Active work
 
 - Beckett authorized this session to complete routine, reversible production setup end to end, including Worker versions, D1, the documented custom hostname, Cron, Access, rate limits, integration verification, collection enablement, documentation, and a local commit on `dev`.
-- This session owns `operations/`, the related homepage telemetry paths, `.github/workflows/deploy.yml`, `.gitignore`, and `homepage/.env.example` until handoff. No other session may edit this checkout concurrently.
+- No active path claim remains after this handoff. A future session must reread this file and claim the primary checkout before editing.
 - Remaining manual gates are collection enablement, live storefront publication, push/merge, and unexpected destructive or materially permission-expanding work.
 
 ## Blockers and decisions needed
@@ -40,14 +40,15 @@ Operations source is committed locally at `3829ceb` plus diagnostic fix `f8d5cb1
 - Storefront publication, push/merge, and any unexpected destructive, irreversible, materially permission-expanding, or live-storefront-interrupting action remain separate Beckett gates. A local scoped commit on `dev` is authorized after verification.
 - Shopify and Cloudflare production aggregation, repeated LaunchAgent polling, and real opening/recovery iMessage delivery are verified. Collector enablement and storefront publication are not.
 - The storefront source now pins `https://operations.shopandson.com/v1/events` at runtime, CSP generation, CI, and example configuration. Denied/unavailable session storage uses only a page-lifetime anonymous in-memory UUID; no fingerprint or alternate persistence is added, and reloads may count separately.
-- Collector enablement remains blocked on a green live-data production build and complete artifact inspection. The final independent frozen-source review found no privacy, security, or production-correctness blocker. Five production attempts—including three against the final source—each exhausted the unchanged three-attempt Shopify retry policy with `429` during sitemap generation. Access, integrations, notification protection, and the plan-available collector edge rule are verified.
+- The storefront build and artifact gate is green. After five bounded Shopify-throttled failures, the next unchanged build completed all routes and 467 sitemap URLs. The 41-file artifact passed collector, CSP, privacy-transport, and 17/17 public-file parity checks with SHA-256 `0845980d02996a583589873167ae65a71135fa2f63f7c5a8f8eb10f7d8996673`. Collection remains disabled pending its separate inspected-version approval; publication remains a distinct push/merge approval.
+- The redesigned private dashboard is integrated locally. Its Cloudflare and Shopify 7/30/90-day windows end on the latest complete reporting date and retain exactly the requested number of days; probe history preserves its existing start-of-cutoff-UTC-day boundary.
 - Storefront dependencies retain two linked low-severity transitive esbuild findings; remediation requires a separately tested breaking Astro 7 migration.
 
 ## Next steps
 
-1. Rerun the unchanged production build after Shopify's current `429` window clears; require a complete artifact and exact pinned-endpoint assertion.
-2. Inspect the complete artifact against the independently approved frozen source. Only then enable and verify edge-protected collection; live storefront publication remains a separate approval.
-3. Commit documentation/storefront work locally, update the root coordination summary, and stop before push/merge or publication.
+1. Inspect any proposed collection-enabled Worker version without activating it, then obtain separate explicit approval before changing live traffic.
+2. Obtain separate immutable storefront artifact/source approval before any push, merge, or publication.
+3. Keep collection disabled and stop before every production, push, merge, or publication boundary until those approvals are explicit.
 
 ## Immediate post-rollout follow-up — do not start during this rollout
 
@@ -73,17 +74,18 @@ The shared newsletter/now-playing Worker’s code, bindings, routes, secrets, an
 
 Executed locally on 2026-07-16 without production credentials or network-side changes:
 
-- `npm test` in `operations`: 56/56 tests passed across 15 files.
+- `npm test` in `operations`: 82/82 tests passed across 15 files.
 - `npm run typecheck` in `operations`: production and test TypeScript passed.
 - `npm run cf-typegen -- --check`: generated runtime declarations are current; handwritten `Env` owns dynamic bindings.
-- `npm run deploy:dry`: passed; 55.64 KiB upload, 13.96 KiB gzip, DB binding present, collector binding `false`.
+- `npm run deploy:dry`: passed; 101.23 KiB upload, 25.04 KiB gzip, DB binding present, collector binding `false`.
 - Clean temporary local D1: migrations `0001`, `0002`, and `0003` applied successfully.
 - Python relay: 4/4 tests passed; `compileall` passed.
 - LaunchAgent template: `plutil -lint` passed.
 - Operations `npm audit --audit-level=low`: 0 vulnerabilities.
 - Storefront analytics and emitted-artifact verification: 8/8 tests passed.
 - Astro check: 0 errors, 0 warnings, 1 existing inline external-script hint.
-- Current static storefront build: blocked across five production attempts, including three against the final source, by Shopify `429` responses for collection `clothing-1`; each attempt exhausted the existing three bounded retries while rendering the sitemap, and no source/build error preceded the upstream rejection.
+- Static storefront production build: passed after five earlier bounded Shopify-throttled failures; 3 pages, `/sitemap.xml`, and 467 sitemap URLs completed.
+- Complete artifact inspection: 4/4 required outputs, 17/17 public files, 41 total files, exact collector/CSP/privacy controls, no forbidden analytics identifiers, SHA-256 `0845980d02996a583589873167ae65a71135fa2f63f7c5a8f8eb10f7d8996673`.
 - Pinned collector tests: exact production endpoint accepted; arbitrary HTTPS host and malformed alternatives are no-ops. Denied storage reuses one in-memory UUID within a page instance and creates a distinct UUID after reload/new instance without extra identifiers. Requests explicitly omit credentials and suppress referrers; malformed stored session identifiers are replaced with anonymous UUIDs.
 - Storefront dependency audit: 0 critical/high/moderate; 2 linked low transitive esbuild findings with no non-breaking fix in the current Astro line.
 - `git diff --check`: passed.
@@ -93,6 +95,6 @@ Executed locally on 2026-07-16 without production credentials or network-side ch
 ## Handoff
 
 - Start by reading: `../../README.md`, `../../BUSINESS-STATE.md`, `../../WORKSTREAM-STANDARD.md`, `../AGENTS.md`, this workstream’s `README.md`, `AGENTS.md`, `STATE.md`, and `PRODUCTION-READINESS.md`.
-- Repository state: `dev` is five local commits ahead of `origin/dev`; Operations production-state documentation and storefront telemetry/workflow paths are dirty. Do not push, merge, publish, or let another session edit this checkout without Beckett's approval and ownership transfer.
-- Last handoff summary: Worker `5b415f2a-5f4b-4603-a7fa-fb8a490c4304` is live with collection disabled; health, integrations, notifications, pinned storefront destination, and the accepted page-lifetime privacy fallback are green. The full storefront build is red only because Shopify returned `429` through five bounded production attempts; collection and publication remain gated.
-- Resume point: perform only step 1 above after the upstream throttle window clears. Do not weaken retries, enable collection, or publish the storefront without the remaining evidence and approvals.
+- Repository state: `dev` is eleven local commits ahead of `origin/dev` and clean after this handoff commit. Do not push, merge, publish, or edit this checkout without Beckett's approval and a fresh ownership claim.
+- Last handoff summary: Worker `5b415f2a-5f4b-4603-a7fa-fb8a490c4304` is live with collection disabled; health, integrations, notifications, dashboard integration, pinned storefront destination, accepted page-lifetime privacy fallback, complete storefront build, and artifact inspection are green. Collection and publication remain separately gated.
+- Resume point: only prepare the next separately reviewed version/approval evidence. Do not enable collection or publish the storefront without the remaining explicit approvals.
