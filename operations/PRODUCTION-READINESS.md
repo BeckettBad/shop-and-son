@@ -103,11 +103,11 @@ All checks below were executed without production credentials or resources.
 
 | Check | Result |
 |---|---|
-| Operations Vitest suite | 82/82 passed across 15 files |
+| Operations Vitest suite | 83/83 passed across 15 files |
 | Operations production TypeScript | Passed |
 | Operations test TypeScript | Passed |
 | Wrangler generated-type consistency | Passed with `--include-env false --check`; handwritten `Env` owns dynamic bindings |
-| Wrangler deployment dry run | Passed; 101.23 KiB upload, 25.04 KiB gzip; collector binding defaults to `false` |
+| Wrangler deployment dry run | Passed; 104.94 KiB upload, 25.81 KiB gzip; collector binding defaults to `false` |
 | D1 migrations against local database | `0001`, `0002`, and `0003` applied successfully |
 | Storefront analytics and emitted-artifact verification tests | 8/8 passed |
 | Astro check | 0 errors, 0 warnings, 1 existing inline external-script hint |
@@ -118,7 +118,7 @@ All checks below were executed without production credentials or resources.
 | Python bytecode compilation | Passed |
 | LaunchAgent plist validation | Passed |
 | `git diff --check` | Passed |
-| Independent production/security review | Final frozen storefront source review found no privacy, security, or production-correctness blocker; artifact/build approval remains blocked on Shopify `429` |
+| Independent production/security review | Final storefront source and artifact reviews found no privacy, security, accessibility, or production-correctness blocker; reviewer-requested dashboard accuracy corrections were applied and verified locally |
 | Secret-pattern scan | No credential-like values found in new source/configuration |
 | Dynamic SQL/eval/unsafe-HTML scan | No findings in Operations source |
 | Operations `npm audit` | 0 advisories |
@@ -153,7 +153,7 @@ A safe Astro 6 lockfile update removed all four moderate YAML/language-server ad
 
 ## 4. Not yet verified
 
-These require a corrected external value, explicit production changes, or a successful upstream build window. The collector edge rate limit is verified; the unavailable second dashboard rule remains a documented Free-plan limitation.
+These require explicit production changes or continued live verification. The collector edge rate limit is verified; the unavailable second dashboard rule remains a documented Free-plan limitation.
 
 - Controlled duplicate-delivery exercise of the active Cron; code-level same-timestamp idempotency is covered and deployed
 - Authenticated dashboard use after the verified Access redirect
@@ -210,7 +210,7 @@ Routine reversible production work was authorized on 2026-07-16. The remaining m
 4. **Completed:** activate the inspected `Zone → Analytics → Read` version and verify the 22:00 UTC scheduled aggregate write clears `last_error`, populates `last_success_at`, and writes six Cloudflare rows.
 5. **Completed:** acknowledge six stale rollout notifications without delivering false alarms, preserve all rows, install the LaunchAgent from an Application Support relay copy, and verify two clean empty-queue runs.
 6. **Completed:** run the approved synthetic delivery drill without taking a real service offline. Beckett confirmed exactly one opening and one recovery iMessage; retain incident 4 and notifications 7–8, remove only generated synthetic probe/state rows, and verify zero pending notifications/open incidents.
-7. **Source complete:** pin the storefront collector to `operations.shopandson.com` and use a page-lifetime anonymous in-memory UUID when session storage is denied, documenting reload overcounting. A green static build and final review remain required.
+7. **Completed locally:** pin the storefront collector to `operations.shopandson.com`, use a page-lifetime anonymous in-memory UUID when session storage is denied, document reload overcounting, and verify the complete static artifact. Publication remains separately gated.
 8. Enable collection in a new version only after all protections pass; verify preflight and edge limiting.
 9. Set the storefront collector variable, rebuild, preview, and inspect the exact artifact.
 10. Publish storefront instrumentation only under separate explicit approval, then verify safe event receipt, aggregate freshness, dashboard values, logs, and no duplicate alerts.

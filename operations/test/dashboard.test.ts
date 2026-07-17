@@ -96,7 +96,7 @@ describe("private dashboard", () => {
     }
   });
 
-  it("renders the executive summary and honest matched prior-period comparisons", async () => {
+  it("renders key store numbers and honest matched-date comparisons", async () => {
     for (let day = 2; day <= 15; day += 1) {
       const date = `2026-07-${String(day).padStart(2, "0")}`;
       const current = day >= 9;
@@ -106,17 +106,47 @@ describe("private dashboard", () => {
     const { html, response } = await render(7);
 
     expect(response.status).toBe(200);
-    expect(html).toContain("Executive summary");
-    expect(html).toContain("Requests");
-    expect(html).toContain("Estimated unique IPs");
+    expect(html).toContain("Key store numbers");
+    expect(html).toContain("Website requests");
+    expect(html).toContain("Estimated visitors");
     expect(html).toContain("Orders");
-    expect(html).toContain("Net sales");
-    expect(html).toContain("Average order value");
+    expect(html).toContain("Sales after discounts and refunds");
+    expect(html).toContain("Average spent per order");
     expect(html).toContain('data-metric="requests" data-current="700" data-previous="350"');
     expect(html).toContain("+100.0%");
-    expect(html).toContain("Matched 7-day comparison");
+    expect(html).toContain("Compared with the same 7 available dates in the previous period");
     expect(html).toContain("$700.00");
     expect(html).toContain("$50.00");
+  });
+
+  it("uses plain store-owner language without overstating estimates", async () => {
+    const { html } = await render(7);
+
+    expect(html).toContain("Store overview · Last 7 days");
+    expect(html).toContain("Key store numbers");
+    expect(html).toContain("Website requests");
+    expect(html).toContain("Estimated visitors");
+    expect(html).toContain("Sales after discounts and refunds");
+    expect(html).toContain("Average spent per order");
+    expect(html).toContain("Net items sold");
+    expect(html).toContain("Returned items reduce this number");
+    expect(html).toContain("4xx responses");
+    expect(html).toContain("5xx responses");
+    expect(html).toContain(">Threats<");
+    expect(html).toContain("Cloudflare traffic data has not been synced for this period");
+    expect(html).toContain("It will appear after the next successful daily Cloudflare update");
+    expect(html).toContain("Shopify sales data has not been synced for this period");
+    expect(html).toContain("It will appear after the next successful daily Shopify update");
+    expect(html).toContain("No Shopify sales data has been recorded. It will appear after the next successful daily Shopify update.");
+    expect(html).toContain("No Cloudflare traffic data has been recorded. It will appear after the next successful daily Cloudflare update.");
+    expect(html).toContain("No health checks have run. These records will appear after the five-minute scheduled check runs.");
+    expect(html).toContain("No shopper journey data has been recorded. It will appear after collection is approved and enabled and the updated storefront is published.");
+    expect(html).toContain("The same visitor can be counted again on another day");
+    expect(html).toContain("Shopify is the sales record");
+    expect(html).not.toContain("Executive operating view");
+    expect(html).not.toContain("Estimated unique IPs");
+    expect(html).not.toContain("No stored aggregate data for this period");
+    expect(html).not.toContain("exact stored values");
   });
 
   it("does not compare mismatched calendar coverage", async () => {
@@ -127,7 +157,7 @@ describe("private dashboard", () => {
 
     expect(html).toContain('data-metric="requests" data-current="100"');
     expect(html).not.toContain('data-metric="requests" data-current="100" data-previous=');
-    expect(html).toContain("No matched prior-period data");
+    expect(html).toContain("No comparison yet because the previous period is missing one or more matching days.");
   });
 
   it("does not compare AOV when either matched period has no orders", async () => {
@@ -142,7 +172,7 @@ describe("private dashboard", () => {
     expect(aovCard).toBeDefined();
     expect(aovCard).toContain('<div class="metric-value">—</div>');
     expect(aovCard).not.toContain("data-previous");
-    expect(aovCard).toContain("AOV comparison unavailable without orders");
+    expect(aovCard).toContain("No comparison yet because this period has no orders.");
   });
 
   it("renders healthy, degraded, unhealthy, stale, and overall health states", async () => {
@@ -158,15 +188,19 @@ describe("private dashboard", () => {
 
     const { html } = await render();
 
-    expect(html).toContain("System attention required");
+    expect(html).toContain("A store service needs attention");
     expect(html).toContain("Storefront");
-    expect(html).toContain("Shared Worker");
-    expect(html).toContain("Spotify authorization");
-    expect(html).toContain("Now-playing feature");
+    expect(html).toContain("Now-playing service");
+    expect(html).toContain("Spotify connection");
+    expect(html).toContain("Homepage now-playing feature");
     expect(html).toContain('data-state="healthy"');
     expect(html).toContain('data-state="degraded"');
     expect(html).toContain('data-state="unhealthy"');
     expect(html).toContain('data-state="stale"');
+    expect(html).toContain("Working");
+    expect(html).toContain("Possible issue");
+    expect(html).toContain("Needs attention");
+    expect(html).toContain("Update delayed");
     expect(html).toContain("First failed check");
     expect(html).toContain("Authorization failed");
   });
@@ -181,9 +215,9 @@ describe("private dashboard", () => {
 
     const { html } = await render();
 
-    expect(html).toContain("Incident timeline");
-    expect(html).toContain("Active incident");
-    expect(html).toContain("Recovered");
+    expect(html).toContain("Recent service issues");
+    expect(html).toContain("Active issue");
+    expect(html).toContain("Back to normal");
     expect(html).toContain("2h 0m active");
     expect(html).toContain("1h 30m");
     expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
@@ -197,14 +231,19 @@ describe("private dashboard", () => {
     expect(html).toContain('data-metric="orders" data-availability="unavailable"');
     expect(html).toContain('data-metric="net-sales" data-availability="unavailable"');
     expect(html).toContain('data-metric="aov" data-availability="unavailable"');
-    expect(html).toContain("No stored aggregate data for this period");
+    expect(html).toContain("Cloudflare traffic data has not been synced for this period");
+    expect(html).toContain("Shopify sales data has not been synced for this period");
     expect(html).not.toContain('data-metric="requests" data-current="0"');
     expect(html).not.toContain('data-metric="net-sales" data-current="0"');
-    expect(html).toContain("No stored data for this view");
-    expect(html).toContain("Storefront funnel");
-    expect(html).toContain("Storefront telemetry is unavailable");
-    expect(html).toContain("No storefront events have been recorded");
-    expect(html).toContain("Product views, cart additions, checkout starts, newsletter responses, and conversion trends will appear here");
+    expect(html).toContain("No Shopify sales data has been recorded. It will appear after the next successful daily Shopify update.");
+    expect(html).toContain("No Cloudflare traffic data has been recorded. It will appear after the next successful daily Cloudflare update.");
+    expect(html).toContain("Shopper journey");
+    expect(html).toContain("Shopper journey data is not available yet");
+    expect(html).toContain("No anonymous storefront events have been collected");
+    expect(html).toContain("Product views, cart additions, checkout starts, newsletter signups, and journey percentages will appear only after collection is approved and enabled");
+    expect(html).toContain("Checked Not yet");
+    expect(html).toContain("Last successful update</dt><dd>Not yet");
+    expect(html).not.toContain(">Never<");
     expect(html).toContain('class="empty-state"');
   });
 
@@ -230,15 +269,15 @@ describe("private dashboard", () => {
     const { html } = await render();
 
     expect(html).toContain("Product views");
-    expect(html).toContain("Cart additions");
-    expect(html).toContain("Checkout starts");
-    expect(html).toContain("Newsletter responses");
-    expect(html).toContain("Cart session conversion");
-    expect(html).toContain("Checkout session conversion");
+    expect(html).toContain("Added to cart");
+    expect(html).toContain("Started checkout");
+    expect(html).toContain("Newsletter signups");
+    expect(html).toContain("Product view to cart");
+    expect(html).toContain("Cart to checkout");
     expect(html).toContain("50.0%");
     expect(html).toContain("100.0%");
     expect(html).not.toContain("150.0%");
-    expect(html).toContain("ordered anonymous session cohorts");
+    expect(html).toContain("anonymous browser sessions that completed each step in order");
   });
 
   it("aligns funnel counts and cohorts to the latest complete UTC day", async () => {
@@ -259,9 +298,9 @@ describe("private dashboard", () => {
 
     const { html } = await render(7);
 
-    expect(html).toContain("1 of 1 product-view sessions");
-    expect(html).toContain("Funnel data through Jul 15, 2026");
-    expect(html).toContain("Ordered cart and checkout session conversion percentages by product-view cohort day: exact stored values");
+    expect(html).toContain("1 of 1 anonymous product-view sessions continued to cart");
+    expect(html).toContain("Data through Jul 15, 2026");
+    expect(html).toContain("Anonymous sessions that moved from product view to cart and from cart to checkout, grouped by first product-view day: stored daily values");
     expect(html).toContain("<td>2026-07-15</td><td>100</td><td>0</td>");
     expect(html).not.toContain("private-session-complete-day");
     expect(html).not.toContain("private-session-current-day");
@@ -279,10 +318,10 @@ describe("private dashboard", () => {
 
     const { html } = await render();
 
-    expect(html).toContain("Integration freshness");
-    expect(html).toContain("Cloudflare Analytics");
-    expect(html).toContain("Shopify Analytics");
-    expect(html).toContain("Latest error");
+    expect(html).toContain("When store data last updated");
+    expect(html).toContain("Cloudflare traffic");
+    expect(html).toContain("Shopify sales");
+    expect(html).toContain("Most recent problem");
     expect(html).toContain("permission &lt;denied&gt;");
     expect(html).not.toContain("permission <denied>");
   });
@@ -376,7 +415,7 @@ describe("private dashboard", () => {
     const funnel = html.match(/<section class="section" aria-labelledby="funnel-title"[\s\S]*?<\/section>/)?.[0];
 
     expect(funnel).toContain("<strong>30</strong>");
-    expect(funnel).toContain("2 of 2 product-view sessions");
+    expect(funnel).toContain("2 of 2 anonymous product-view sessions continued to cart");
     expect(funnel).not.toContain("900");
     expect(funnel).not.toContain("800");
   });
@@ -391,15 +430,15 @@ describe("private dashboard", () => {
     await insertDailyMetrics("2026-07-15", 100, 2, 10_000);
     const { html, response } = await render();
 
-    expect(html).toContain("Growth and trends");
+    expect(html).toContain("Daily store trends");
     expect(html).toContain('aria-labelledby="traffic-chart-title traffic-chart-caption"');
-    expect(html).toContain('role="img" aria-label="Requests, HTML page views, and estimated unique IPs by stored day"');
+    expect(html).toContain('role="img" aria-label="Website requests, page views, and estimated visitors by day"');
     expect(html).toContain('aria-labelledby="sales-chart-title sales-chart-caption"');
-    expect(html).toContain("Charts use stored daily aggregates only");
-    expect(html).toContain("Cloudflare traffic details");
-    expect(html).toContain("Shopify sales details");
-    expect(html).toContain("Health details");
-    expect(html).toContain("Probe history");
+    expect(html).toContain("Each chart uses completed days already saved");
+    expect(html).toContain("Website traffic by day");
+    expect(html).toContain("Shopify sales by day");
+    expect(html).toContain("Current service checks");
+    expect(html).toContain("Health check history");
     expect(html).not.toContain("<script");
     expect(html).not.toContain("<link");
     expect(html).not.toMatch(/src=["']https?:/);
@@ -417,10 +456,10 @@ describe("private dashboard", () => {
     const { html } = await render(7);
 
     expect(html).toContain('class="sparkline" viewBox="0 0 160 42" aria-hidden="true"');
-    expect(html).toContain('class="chart-scroll" tabindex="0" role="region" aria-label="Scrollable chart: Requests, HTML page views, and estimated unique IPs by stored day"');
-    expect(html).toContain('<table class="chart-data"><caption>Requests, HTML page views, and estimated unique IPs by stored day: exact stored values</caption>');
+    expect(html).toContain('class="chart-scroll" tabindex="0" role="region" aria-label="Scrollable chart: Website requests, page views, and estimated visitors by day"');
+    expect(html).toContain('<table class="chart-data"><caption>Website requests, page views, and estimated visitors by day: stored daily values</caption>');
     expect(html).toContain('stroke-dasharray="8 5"');
-    expect(html).toContain('class="table-wrap" tabindex="0" role="region" aria-label="Daily Cloudflare aggregate traffic; scroll horizontally when needed"');
+    expect(html).toContain('class="table-wrap" tabindex="0" role="region" aria-label="Daily Cloudflare website traffic; scroll horizontally when needed"');
     expect(html).toContain("--muted:#56615b");
     expect(html).toContain("--gold:#765817");
     expect(html).toContain(".period-nav a:focus-visible{outline:3px solid #1f5a43");
@@ -452,6 +491,6 @@ describe("private dashboard", () => {
 
     expect(html).toContain('data-scale-min="-50" data-scale-max="115"');
     expect(html).toContain("-$50.00");
-    expect(html).toContain("zero baseline");
+    expect(html).toContain("The chart includes zero");
   });
 });

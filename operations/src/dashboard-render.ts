@@ -94,14 +94,14 @@ type DatedRow = { date: string };
 
 const DAY_MS = 86_400_000;
 const TARGETS = [
-  { key: "site", label: "Storefront", description: "Public shopandson.com experience" },
-  { key: "worker", label: "Shared Worker", description: "Now-playing service contract" },
-  { key: "spotify_auth", label: "Spotify authorization", description: "Spotify credential status" },
-  { key: "feature_toggle", label: "Now-playing feature", description: "Production feature toggle" },
+  { key: "site", label: "Storefront", description: "The public shopandson.com store" },
+  { key: "worker", label: "Now-playing service", description: "The service that supplies the homepage now-playing feature" },
+  { key: "spotify_auth", label: "Spotify connection", description: "Whether the now-playing service can connect to Spotify" },
+  { key: "feature_toggle", label: "Homepage now-playing feature", description: "Whether the feature is turned on in production" },
 ] as const;
 const INTEGRATIONS = [
-  { key: "cloudflare_analytics", label: "Cloudflare Analytics", description: "Traffic and edge request aggregates" },
-  { key: "shopify_analytics", label: "Shopify Analytics", description: "Authoritative aggregate commerce reporting" },
+  { key: "cloudflare_analytics", label: "Cloudflare traffic", description: "Daily website traffic and estimated visitor totals" },
+  { key: "shopify_analytics", label: "Shopify sales", description: "Daily order and sales totals from Shopify" },
 ] as const;
 
 function escapeHtml(value: unknown): string {
@@ -136,7 +136,7 @@ function shiftDate(date: string, days: number): string {
 }
 
 function formatTimestamp(value: string | null): string {
-  if (!value) return "Never";
+  if (!value) return "Not yet";
   const parsed = new Date(value);
   if (!Number.isFinite(parsed.getTime())) return value;
   return new Intl.DateTimeFormat("en-US", {
@@ -170,16 +170,26 @@ function formatDuration(start: string, end: string): string {
   return `${remainder}m`;
 }
 
-function table(caption: string, headers: string[], rows: unknown[][]): string {
+function table(
+  caption: string,
+  headers: string[],
+  rows: unknown[][],
+  emptyText = "No data has been recorded for this table yet.",
+): string {
   const head = headers.map((header) => `<th scope="col">${escapeHtml(header)}</th>`).join("");
   const body = rows.length > 0
     ? rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")
-    : `<tr><td class="empty-cell" colspan="${headers.length}">No stored data for this view</td></tr>`;
+    : `<tr><td class="empty-cell" colspan="${headers.length}">${escapeHtml(emptyText)}</td></tr>`;
   return `<div class="table-wrap" tabindex="0" role="region" aria-label="${escapeHtml(caption)}; scroll horizontally when needed"><table><caption>${escapeHtml(caption)}</caption><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
 function stateLabel(state: VisualState): string {
-  return state[0].toUpperCase() + state.slice(1);
+  return {
+    degraded: "Possible issue",
+    healthy: "Working",
+    stale: "Update delayed",
+    unhealthy: "Needs attention",
+  }[state];
 }
 
 function healthState(row: StateRow | undefined, now: Date): VisualState {
@@ -204,8 +214,8 @@ function latestProbe(probes: ProbeRow[], target: string): ProbeRow | undefined {
 
 function probeDots(probes: ProbeRow[], target: string): string {
   const targetProbes = probes.filter((probe) => probe.target === target).slice(0, 12).reverse();
-  if (targetProbes.length === 0) return `<span class="probe-empty">No recent probe history</span>`;
-  return `<span class="probe-dots" role="img" aria-label="Recent checks: ${targetProbes.map((probe) => probe.healthy === 1 ? "healthy" : "unhealthy").join(", ")}">${targetProbes.map((probe) => `<span class="probe-dot ${probe.healthy === 1 ? "dot-good" : "dot-bad"}" aria-hidden="true"></span>`).join("")}</span>`;
+  if (targetProbes.length === 0) return `<span class="probe-empty">No checks have run yet</span>`;
+  return `<span class="probe-dots" role="img" aria-label="Recent health checks: ${targetProbes.map((probe) => probe.healthy === 1 ? "working" : "problem").join(", ")}">${targetProbes.map((probe) => `<span class="probe-dot ${probe.healthy === 1 ? "dot-good" : "dot-bad"}" aria-hidden="true"></span>`).join("")}</span>`;
 }
 
 function matchedRows<T extends { date: string }>(rows: T[], periodStart: string, days: number): { current: T[]; previous: T[] } | null {
@@ -219,18 +229,18 @@ function matchedRows<T extends { date: string }>(rows: T[], periodStart: string,
 function comparison(current: number, previous: number, matchedDays: number): string {
   if (previous === 0) {
     return current === 0
-      ? `<span class="comparison neutral">No change · Matched ${matchedDays}-day comparison</span>`
-      : `<span class="comparison positive">New activity · Matched ${matchedDays}-day comparison</span>`;
+      ? `<span class="comparison neutral">No change · Compared with the same ${matchedDays} available dates in the previous period</span>`
+      : `<span class="comparison positive">First activity · Compared with the same ${matchedDays} available dates in the previous period</span>`;
   }
   const change = ((current - previous) / Math.abs(previous)) * 100;
   const direction = change > 0 ? "positive" : change < 0 ? "negative" : "neutral";
   const arrow = change > 0 ? "↑" : change < 0 ? "↓" : "→";
   const sign = change > 0 ? "+" : "";
-  return `<span class="comparison ${direction}">${arrow} ${sign}${change.toFixed(1)}% · Matched ${matchedDays}-day comparison</span>`;
+  return `<span class="comparison ${direction}">${arrow} ${sign}${change.toFixed(1)}% · Compared with the same ${matchedDays} available dates in the previous period</span>`;
 }
 
 function sparkline(values: number[]): string {
-  if (values.length === 0) return `<div class="spark-empty">No daily data</div>`;
+  if (values.length === 0) return `<div class="spark-empty">No daily totals yet</div>`;
   const width = 160;
   const height = 42;
   const minimum = Math.min(0, ...values);
@@ -254,14 +264,15 @@ interface MetricCardOptions {
   note: string;
   previous?: number;
   sparkValues: number[];
+  unavailableText?: string;
 }
 
 function metricCard(options: MetricCardOptions): string {
   if (options.available === false) {
     return `<article class="metric-card" data-metric="${escapeHtml(options.key)}" data-availability="unavailable">
     <div class="metric-label">${escapeHtml(options.label)}</div>
-    <div class="metric-value unavailable-value">Unavailable</div>
-    <span class="comparison unavailable">No stored aggregate data for this period</span>
+    <div class="metric-value unavailable-value">Not available yet</div>
+    <span class="comparison unavailable">${escapeHtml(options.unavailableText ?? "No daily totals have been recorded for this period yet.")}</span>
     ${sparkline([])}
     <p>${escapeHtml(options.note)}</p>
   </article>`;
@@ -269,7 +280,7 @@ function metricCard(options: MetricCardOptions): string {
   const currentAttribute = options.current === undefined ? "" : ` data-current="${options.current}"`;
   const previousAttribute = options.previous === undefined ? "" : ` data-previous="${options.previous}"`;
   const comparisonMarkup = options.current === undefined || options.previous === undefined
-    ? `<span class="comparison unavailable">${escapeHtml(options.comparisonUnavailableText ?? "No matched prior-period data")}</span>`
+    ? `<span class="comparison unavailable">${escapeHtml(options.comparisonUnavailableText ?? "No comparison yet because the previous period is missing one or more matching days.")}</span>`
     : comparison(options.current, options.previous, options.sparkValues.length);
   return `<article class="metric-card" data-metric="${escapeHtml(options.key)}"${currentAttribute}${previousAttribute}>
     <div class="metric-label">${escapeHtml(options.label)}</div>
@@ -289,7 +300,7 @@ interface ChartSeries {
 function chartDataTable<T extends DatedRow>(rows: T[], series: ChartSeries[], caption: string): string {
   const head = ["Date", ...series.map((item) => item.label)].map((label) => `<th scope="col">${escapeHtml(label)}</th>`).join("");
   const body = rows.map((row) => `<tr><td>${escapeHtml(row.date)}</td>${series.map((item) => `<td>${escapeHtml(numericField(row, item.field))}</td>`).join("")}</tr>`).join("");
-  return `<table class="chart-data"><caption>${escapeHtml(caption)}: exact stored values</caption><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+  return `<table class="chart-data"><caption>${escapeHtml(caption)}: stored daily values</caption><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
 }
 
 function numericField(row: object, field: string): number {
@@ -308,7 +319,7 @@ function contiguousSegments<T extends DatedRow>(rows: T[]): T[][] {
 }
 
 function lineChart<T extends DatedRow>(rows: T[], series: ChartSeries[], ariaLabel: string): string {
-  if (rows.length === 0) return `<div class="chart-empty">No stored daily data for this chart.</div>`;
+  if (rows.length === 0) return `<div class="chart-empty">No daily totals are available yet. This chart will appear after its next successful data update.</div>`;
   const ordered = [...rows].sort((a, b) => a.date.localeCompare(b.date));
   const width = 720;
   const height = 250;
@@ -348,7 +359,7 @@ function lineChart<T extends DatedRow>(rows: T[], series: ChartSeries[], ariaLab
 }
 
 function barChart<T extends DatedRow>(rows: T[], field: string, ariaLabel: string, color: string): string {
-  if (rows.length === 0) return `<div class="chart-empty">No stored daily data for this chart.</div>`;
+  if (rows.length === 0) return `<div class="chart-empty">No daily totals are available yet. This chart will appear after its next successful data update.</div>`;
   const ordered = [...rows].sort((a, b) => a.date.localeCompare(b.date));
   const width = 720;
   const height = 190;
@@ -382,25 +393,25 @@ function healthOverview(states: StateRow[], probes: ProbeRow[], now: Date): { ma
         ? "stale"
         : "healthy";
   const headline = overall === "healthy"
-    ? "All monitored systems healthy"
+    ? "All store services are working"
     : overall === "unhealthy"
-      ? "System attention required"
+      ? "A store service needs attention"
       : overall === "degraded"
-        ? "A system is degraded"
-        : "Monitoring data needs a fresh check";
+        ? "A store service may need attention"
+        : "Health check data is delayed";
   const cards = resolved.map((target) => {
     const probe = latestProbe(probes, target.key);
-    const detail = target.row?.latest_detail || "Awaiting first health check";
+    const detail = target.row?.latest_detail || "Waiting for the first check. This will update after the five-minute scheduled check runs.";
     return `<article class="health-card" data-state="${target.state}">
-      <div class="card-top"><span class="status-chip ${target.state}"><i></i>${stateLabel(target.state)}</span><span class="latency">${probe ? `${number(probe.latency_ms)} ms` : "Latency —"}</span></div>
+      <div class="card-top"><span class="status-chip ${target.state}"><i></i>${stateLabel(target.state)}</span><span class="latency">${probe ? `${number(probe.latency_ms)} ms` : "Response time —"}</span></div>
       <h3>${escapeHtml(target.label)}</h3><p class="card-description">${escapeHtml(target.description)}</p>
       <p class="detail">${escapeHtml(detail)}</p>
-      <div class="health-meta"><span>Last checked ${escapeHtml(formatTimestamp(target.row?.updated_at ?? null))}</span>${probeDots(probes, target.key)}</div>
+      <div class="health-meta"><span>Checked ${escapeHtml(formatTimestamp(target.row?.updated_at ?? null))}</span>${probeDots(probes, target.key)}</div>
     </article>`;
   }).join("");
   return {
     overall,
-    markup: `<section class="section" aria-labelledby="health-title"><div class="section-heading"><div><span class="eyebrow">Live operations</span><h2 id="health-title">Health overview</h2><p>Four independent checks distinguish a healthy storefront from shared-service, authorization, and feature-toggle issues.</p></div><span class="status-chip ${overall}"><i></i>${escapeHtml(headline)}</span></div><div class="health-grid">${cards}</div></section>`,
+    markup: `<section class="section" aria-labelledby="health-title"><div class="section-heading"><div><span class="eyebrow">Service checks</span><h2 id="health-title">Store health</h2><p>Four separate checks show whether the storefront, now-playing service, Spotify connection, and homepage feature are working.</p></div><span class="status-chip ${overall}"><i></i>${escapeHtml(headline)}</span></div><div class="health-grid">${cards}</div></section>`,
   };
 }
 
@@ -411,13 +422,13 @@ function incidentTimeline(incidents: IncidentRow[], now: Date): string {
     const duration = formatDuration(incident.opened_at, end);
     return `<article class="timeline-item ${active ? "active" : "recovered"}">
       <div class="timeline-marker" aria-hidden="true"></div><div class="timeline-content">
-        <div class="timeline-head"><div><span class="status-chip ${active ? "unhealthy" : "healthy"}"><i></i>${active ? "Active incident" : "Recovered"}</span><h3>${escapeHtml(TARGETS.find((target) => target.key === incident.target)?.label ?? incident.target)}</h3></div><strong>${escapeHtml(active ? `${duration} active` : duration)}</strong></div>
-        <dl><div><dt>Opened</dt><dd>${escapeHtml(formatTimestamp(incident.opened_at))}</dd></div><div><dt>Recovery</dt><dd>${escapeHtml(formatTimestamp(incident.recovered_at))}</dd></div></dl>
+        <div class="timeline-head"><div><span class="status-chip ${active ? "unhealthy" : "healthy"}"><i></i>${active ? "Active issue" : "Back to normal"}</span><h3>${escapeHtml(TARGETS.find((target) => target.key === incident.target)?.label ?? incident.target)}</h3></div><strong>${escapeHtml(active ? `${duration} active` : duration)}</strong></div>
+        <dl><div><dt>Started</dt><dd>${escapeHtml(formatTimestamp(incident.opened_at))}</dd></div><div><dt>Resolved</dt><dd>${escapeHtml(formatTimestamp(incident.recovered_at))}</dd></div></dl>
         <p>${escapeHtml(incident.latest_detail)}</p>
       </div>
     </article>`;
-  }).join("") : `<div class="quiet-empty"><span class="status-chip healthy"><i></i>Quiet</span><h3>No recent incidents</h3><p>Nothing has crossed the incident threshold in stored history.</p></div>`;
-  return `<section class="section" aria-labelledby="incidents-title"><div class="section-heading"><div><span class="eyebrow">Operational history</span><h2 id="incidents-title">Incident timeline</h2><p>Active failures stay visually distinct from recovered events, with exact opening, recovery, and duration context.</p></div></div><div class="timeline">${items}</div></section>`;
+  }).join("") : `<div class="quiet-empty"><span class="status-chip healthy"><i></i>All clear</span><h3>No recent service issues</h3><p>No health check has opened a service issue during the saved history.</p></div>`;
+  return `<section class="section" aria-labelledby="incidents-title"><div class="section-heading"><div><span class="eyebrow">Service history</span><h2 id="incidents-title">Recent service issues</h2><p>Open issues and resolved issues show when a problem started, when it ended, and how long it lasted.</p></div></div><div class="timeline">${items}</div></section>`;
 }
 
 function integrationFreshness(integrations: IntegrationRow[], now: Date): string {
@@ -425,17 +436,20 @@ function integrationFreshness(integrations: IntegrationRow[], now: Date): string
   const cards = INTEGRATIONS.map((integration) => {
     const row = byName.get(integration.key);
     const state = integrationState(row, now);
-    return `<article class="integration-card" data-state="${state}"><div class="card-top"><span class="status-chip ${state}"><i></i>${stateLabel(state)}</span><span class="source-mark">${integration.key === "cloudflare_analytics" ? "CF" : "S"}</span></div><h3>${escapeHtml(integration.label)}</h3><p>${escapeHtml(integration.description)}</p><dl><div><dt>Last successful sync</dt><dd>${escapeHtml(formatTimestamp(row?.last_success_at ?? null))}</dd></div><div><dt>Latest error</dt><dd class="error-detail">${escapeHtml(row?.last_error ?? "None")}</dd></div></dl></article>`;
+    const waiting = row?.last_success_at
+      ? ""
+      : `<p>No successful update has finished yet. These totals will appear after the next scheduled update succeeds.</p>`;
+    return `<article class="integration-card" data-state="${state}"><div class="card-top"><span class="status-chip ${state}"><i></i>${stateLabel(state)}</span><span class="source-mark">${integration.key === "cloudflare_analytics" ? "CF" : "S"}</span></div><h3>${escapeHtml(integration.label)}</h3><p>${escapeHtml(integration.description)}</p>${waiting}<dl><div><dt>Last successful update</dt><dd>${escapeHtml(formatTimestamp(row?.last_success_at ?? null))}</dd></div><div><dt>Most recent problem</dt><dd class="error-detail">${escapeHtml(row?.last_error ?? "No current error")}</dd></div></dl></article>`;
   }).join("");
-  return `<section class="section" aria-labelledby="integrations-title"><div class="section-heading"><div><span class="eyebrow">Data confidence</span><h2 id="integrations-title">Integration freshness</h2><p>Daily aggregate sources are useful only when their last successful sync is current and errors are visible.</p></div></div><div class="integration-grid">${cards}</div></section>`;
+  return `<section class="section" aria-labelledby="integrations-title"><div class="section-heading"><div><span class="eyebrow">Data updates</span><h2 id="integrations-title">When store data last updated</h2><p>Cloudflare and Shopify totals update on a schedule. Check the last successful update and any current problem before relying on the numbers.</p></div></div><div class="integration-grid">${cards}</div></section>`;
 }
 
 function emptyFunnel(): string {
-  return `<div class="empty-state"><svg viewBox="0 0 180 120" aria-hidden="true"><path d="M24 22h132l-45 44v28l-42 13V66z"/><circle cx="46" cy="42" r="5"/><circle cx="68" cy="42" r="5"/><circle cx="90" cy="42" r="5"/></svg><div><span class="status-chip stale"><i></i>Unavailable</span><h3>Storefront telemetry is unavailable</h3><p>No storefront events have been recorded. Collection remains intentionally unpublished, so Product views, cart additions, checkout starts, newsletter responses, and conversion trends will appear here only after the approved storefront telemetry launch.</p></div></div>`;
+  return `<div class="empty-state"><svg viewBox="0 0 180 120" aria-hidden="true"><path d="M24 22h132l-45 44v28l-42 13V66z"/><circle cx="46" cy="42" r="5"/><circle cx="68" cy="42" r="5"/><circle cx="90" cy="42" r="5"/></svg><div><span class="status-chip stale"><i></i>Not collecting yet</span><h3>Shopper journey data is not available yet</h3><p>No anonymous storefront events have been collected. Product views, cart additions, checkout starts, newsletter signups, and journey percentages will appear only after collection is approved and enabled and the updated storefront is published. Shopify remains the source for confirmed orders and sales.</p></div></div>`;
 }
 
 function funnelSection(rows: FunnelRow[], sessions: FunnelSessions | null, trends: FunnelTrendRow[], throughDate: string): string {
-  if (rows.length === 0) return `<section class="section" aria-labelledby="funnel-title"><div class="section-heading"><div><span class="eyebrow">Customer journey</span><h2 id="funnel-title">Storefront funnel</h2><p>Directional pre-checkout behavior, separate from authoritative Shopify order totals.</p></div></div>${emptyFunnel()}</section>`;
+  if (rows.length === 0) return `<section class="section" aria-labelledby="funnel-title"><div class="section-heading"><div><span class="eyebrow">Shopping activity</span><h2 id="funnel-title">Shopper journey</h2><p>Anonymous browsing activity before checkout. These estimates are separate from confirmed Shopify orders.</p></div></div>${emptyFunnel()}</section>`;
   const productSessions = sessions?.product_sessions ?? 0;
   const cartSessions = sessions?.cart_sessions ?? 0;
   const checkoutSessions = sessions?.checkout_sessions ?? 0;
@@ -446,16 +460,16 @@ function funnelSection(rows: FunnelRow[], sessions: FunnelSessions | null, trend
   const maximum = Math.max(1, productViews, cartAdds, checkoutBegins, newsletter);
   const stages = [
     ["Product views", productViews],
-    ["Cart additions", cartAdds],
-    ["Checkout starts", checkoutBegins],
-    ["Newsletter responses", newsletter],
+    ["Added to cart", cartAdds],
+    ["Started checkout", checkoutBegins],
+    ["Newsletter signups", newsletter],
   ] as const;
   const trendRows = trends.map((row) => ({
     ...row,
     cart_conversion: row.product_sessions > 0 ? Math.min(100, row.cart_sessions / row.product_sessions * 100) : 0,
     checkout_conversion: row.cart_sessions > 0 ? Math.min(100, row.checkout_sessions / row.cart_sessions * 100) : 0,
   }));
-  return `<section class="section" aria-labelledby="funnel-title"><div class="section-heading"><div><span class="eyebrow">Customer journey</span><h2 id="funnel-title">Storefront funnel</h2><p>Event counts are directional. Conversion uses ordered anonymous session cohorts and cannot exceed 100%. Funnel data through ${escapeHtml(formatDate(throughDate))} uses complete UTC days.</p></div></div><div class="funnel-layout"><div class="funnel-bars">${stages.map(([label, value]) => `<div class="funnel-row"><div><span>${label}</span><strong>${number(value)}</strong></div><span class="funnel-track"><i style="width:${(value / maximum * 100).toFixed(1)}%"></i></span></div>`).join("")}</div><div class="conversion-cards"><article><span>Cart session conversion</span><strong>${percent(cartSessions, productSessions)}</strong><p>${number(cartSessions)} of ${number(productSessions)} product-view sessions</p></article><article><span>Checkout session conversion</span><strong>${percent(checkoutSessions, cartSessions)}</strong><p>${number(checkoutSessions)} of ${number(cartSessions)} ordered cart sessions</p></article></div></div><figure class="chart-card compact" aria-labelledby="conversion-chart-title conversion-chart-caption"><div class="chart-heading"><div><h3 id="conversion-chart-title">Conversion trend</h3><p>Daily cohorts grouped by first product view</p></div></div>${lineChart(trendRows, [{ field: "cart_conversion", label: "Product → cart", color: "#26634a" }, { field: "checkout_conversion", label: "Cart → checkout", color: "#c66a3d" }], "Ordered cart and checkout session conversion percentages by product-view cohort day")}<figcaption id="conversion-chart-caption">Percent scale starts at zero; cohort stages must occur in order inside the selected reporting window.</figcaption></figure></section>`;
+  return `<section class="section" aria-labelledby="funnel-title"><div class="section-heading"><div><span class="eyebrow">Shopping activity</span><h2 id="funnel-title">Shopper journey</h2><p>These event counts are estimates of browsing activity, not confirmed purchases. Percentages count anonymous browser sessions that completed each step in order and cannot exceed 100%. Data through ${escapeHtml(formatDate(throughDate))} uses complete UTC days.</p></div></div><div class="funnel-layout"><div class="funnel-bars">${stages.map(([label, value]) => `<div class="funnel-row"><div><span>${label}</span><strong>${number(value)}</strong></div><span class="funnel-track"><i style="width:${(value / maximum * 100).toFixed(1)}%"></i></span></div>`).join("")}</div><div class="conversion-cards"><article><span>Product view to cart</span><strong>${percent(cartSessions, productSessions)}</strong><p>${number(cartSessions)} of ${number(productSessions)} anonymous product-view sessions continued to cart</p></article><article><span>Cart to checkout</span><strong>${percent(checkoutSessions, cartSessions)}</strong><p>${number(checkoutSessions)} of ${number(cartSessions)} anonymous cart sessions continued to checkout in order</p></article></div></div><figure class="chart-card compact" aria-labelledby="conversion-chart-title conversion-chart-caption"><div class="chart-heading"><div><h3 id="conversion-chart-title">Shopping step trend</h3><p>Daily groups based on each session's first product view</p></div></div>${lineChart(trendRows, [{ field: "cart_conversion", label: "Product view to cart", color: "#26634a" }, { field: "checkout_conversion", label: "Cart to checkout", color: "#c66a3d" }], "Anonymous sessions that moved from product view to cart and from cart to checkout, grouped by first product-view day")}<figcaption id="conversion-chart-caption">The percentage scale starts at zero. A session counts only when its steps happened in order during the selected period.</figcaption></figure></section>`;
 }
 
 const CSS = `
@@ -498,40 +512,40 @@ export function renderDashboard(data: DashboardData): string {
     : undefined;
   const health = healthOverview(data.states, data.probes, data.now);
   const overallText = health.overall === "healthy"
-    ? "All monitored systems are reporting normally."
+    ? "Store services are reporting normally."
     : health.overall === "unhealthy"
-      ? "One or more monitored systems require attention."
-      : "At least one monitored system is degraded or stale.";
+      ? "A store service needs attention."
+      : "Some store data is delayed or a service may need attention.";
   const metricCards = [
-    metricCard({ available: hasCloudflareData, key: "requests", label: "Requests", current: requests, previous: previousRequests, display: number(requests), sparkValues: currentCloudflare.map((row) => row.requests), note: "Cloudflare edge requests" }),
-    metricCard({ available: hasCloudflareData, key: "unique-ips", label: "Estimated unique IPs", current: uniqueIps, previous: previousUniqueIps, display: number(uniqueIps), sparkValues: currentCloudflare.map((row) => row.unique_ips), note: "Sum of daily estimates, not people" }),
-    metricCard({ available: hasShopifyData, key: "orders", label: "Orders", current: orders, previous: previousOrders, display: number(orders), sparkValues: currentShopify.map((row) => row.orders), note: "Authoritative Shopify aggregate" }),
-    metricCard({ available: hasShopifyData, key: "net-sales", label: "Net sales", current: netSales, previous: previousNet, display: money(netSales, currency), sparkValues: currentShopify.map((row) => row.net_sales_minor), note: "After discounts and reversals" }),
-    metricCard({ available: hasShopifyData, key: "aov", label: "Average order value", current: averageOrderValue ?? undefined, previous: previousAov, comparisonUnavailableText: averageOrderValue === null ? "AOV comparison unavailable without orders" : undefined, display: averageOrderValue === null ? "—" : money(averageOrderValue, currency), sparkValues: currentShopify.map((row) => row.orders > 0 ? Math.round(row.net_sales_minor / row.orders) : 0), note: "Net sales divided by orders" }),
+    metricCard({ available: hasCloudflareData, key: "requests", label: "Website requests", current: requests, previous: previousRequests, display: number(requests), sparkValues: currentCloudflare.map((row) => row.requests), note: "Every page, image, and file request handled by Cloudflare; not the same as visits", unavailableText: "Cloudflare traffic data has not been synced for this period. It will appear after the next successful daily Cloudflare update." }),
+    metricCard({ available: hasCloudflareData, key: "unique-ips", label: "Estimated visitors", current: uniqueIps, previous: previousUniqueIps, display: number(uniqueIps), sparkValues: currentCloudflare.map((row) => row.unique_ips), note: "Daily Cloudflare estimates, not exact people. The same visitor can be counted again on another day", unavailableText: "Cloudflare traffic data has not been synced for this period. It will appear after the next successful daily Cloudflare update." }),
+    metricCard({ available: hasShopifyData, key: "orders", label: "Orders", current: orders, previous: previousOrders, display: number(orders), sparkValues: currentShopify.map((row) => row.orders), note: "Completed orders reported by Shopify", unavailableText: "Shopify sales data has not been synced for this period. It will appear after the next successful daily Shopify update." }),
+    metricCard({ available: hasShopifyData, key: "net-sales", label: "Sales after discounts and refunds", current: netSales, previous: previousNet, display: money(netSales, currency), sparkValues: currentShopify.map((row) => row.net_sales_minor), note: "Shopify sales after discounts and recorded refunds or other sales reversals", unavailableText: "Shopify sales data has not been synced for this period. It will appear after the next successful daily Shopify update." }),
+    metricCard({ available: hasShopifyData, key: "aov", label: "Average spent per order", current: averageOrderValue ?? undefined, previous: previousAov, comparisonUnavailableText: averageOrderValue === null ? "No comparison yet because this period has no orders." : undefined, display: averageOrderValue === null ? "—" : money(averageOrderValue, currency), sparkValues: currentShopify.map((row) => row.orders > 0 ? Math.round(row.net_sales_minor / row.orders) : 0), note: "Sales after discounts and refunds divided by the number of orders", unavailableText: "Shopify sales data has not been synced for this period. It will appear after the next successful daily Shopify update." }),
   ].join("");
   const salesChartRows = currentShopify.map((row) => ({ ...row, gross_sales: row.gross_sales_minor / 100, net_sales: row.net_sales_minor / 100, aov: row.orders > 0 ? row.net_sales_minor / row.orders / 100 : 0 }));
   const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Shop &amp; Sons Operations</title><style>${CSS}</style></head><body><main>
 <header class="masthead"><div class="brand"><span class="monogram" aria-hidden="true">&amp;S</span><div class="brand-copy"><span>Private dashboard</span><strong>Shop &amp; Sons Operations</strong></div></div><div class="report-meta"><strong>Last ${data.days} days</strong><span>Generated ${escapeHtml(formatTimestamp(data.now.toISOString()))}</span></div></header>
 <nav class="period-nav" aria-label="Reporting period">${[7, 30, 90].map((period) => `<a href="/dashboard?days=${period}"${period === data.days ? ' aria-current="page"' : ""}>${period} days</a>`).join("")}</nav>
-<section class="hero" aria-labelledby="dashboard-title"><div class="hero-copy"><span class="eyebrow">Executive operating view · Last ${data.days} days</span><h1 id="dashboard-title">A clear view of the shop, from storefront health to daily sales.</h1><p>Real stored operational and aggregate business data, presented without customer records or third-party dashboard assets.</p></div><div class="hero-status"><span class="status-orb ${health.overall}" aria-hidden="true"></span><strong>${escapeHtml(overallText)}</strong><span>Health freshness threshold: 15 minutes</span></div></section>
-<section class="section" aria-labelledby="summary-title"><div class="section-heading"><div><span class="eyebrow">At a glance</span><h2 id="summary-title">Executive summary</h2><p>Current selected-period totals with comparisons only where every displayed day has a real matching day in the prior period.</p></div></div><div class="metrics-grid">${metricCards}</div></section>
-<section class="section" aria-labelledby="growth-title"><div class="section-heading"><div><span class="eyebrow">Daily movement</span><h2 id="growth-title">Growth and trends</h2><p>Charts use stored daily aggregates only. Missing dates remain gaps; every quantitative chart keeps a visible zero baseline.</p></div></div><div class="chart-grid"><figure class="chart-card" aria-labelledby="traffic-chart-title traffic-chart-caption"><div class="chart-heading"><div><h3 id="traffic-chart-title">Traffic</h3><p>Requests, HTML page views, and daily unique-IP estimates</p></div></div>${lineChart(currentCloudflare, [{ field: "requests", label: "Requests", color: "#1f5a43" }, { field: "page_views", label: "HTML page views", color: "#bd6339" }, { field: "unique_ips", label: "Estimated unique IPs", color: "#7a6b9b" }], "Requests, HTML page views, and estimated unique IPs by stored day")}<figcaption id="traffic-chart-caption">Daily unique IPs are Cloudflare estimates, not verified people or distinct-period visitors.</figcaption></figure><div class="chart-stack"><figure class="chart-card" aria-labelledby="orders-chart-title orders-chart-caption"><div class="chart-heading"><div><h3 id="orders-chart-title">Orders</h3><p>Daily Shopify order count</p></div></div>${barChart(currentShopify, "orders", "Shopify orders by stored day", "#1f5a43")}<figcaption id="orders-chart-caption">Authoritative aggregate order counts from Shopify reporting.</figcaption></figure><figure class="chart-card" aria-labelledby="aov-chart-title aov-chart-caption"><div class="chart-heading"><div><h3 id="aov-chart-title">Average order value</h3><p>Daily net sales per order</p></div></div>${lineChart(salesChartRows, [{ field: "aov", label: "AOV", color: "#7a6b9b" }], "Average order value by stored day")}<figcaption id="aov-chart-caption">Days with no orders render at zero and do not produce a period AOV.</figcaption></figure></div></div><figure class="chart-card compact" aria-labelledby="sales-chart-title sales-chart-caption"><div class="chart-heading"><div><h3 id="sales-chart-title">Gross and net sales</h3><p>Daily reported sales in ${escapeHtml(currency)}</p></div></div>${lineChart(salesChartRows, [{ field: "gross_sales", label: "Gross sales", color: "#bd6339" }, { field: "net_sales", label: "Net sales", color: "#1f5a43" }], "Gross and net sales by stored day")}<figcaption id="sales-chart-caption">Values are plotted from exact minor-unit aggregates with a zero baseline; negative reversal days remain visible below zero.</figcaption></figure></section>
+<section class="hero" aria-labelledby="dashboard-title"><div class="hero-copy"><span class="eyebrow">Store overview · Last ${data.days} days</span><h1 id="dashboard-title">See how the store is selling, how shoppers move toward checkout, and whether key services are working.</h1><p>Uses stored daily totals and anonymous storefront events. No customer profiles or third-party dashboard tools.</p></div><div class="hero-status"><span class="status-orb ${health.overall}" aria-hidden="true"></span><strong>${escapeHtml(overallText)}</strong><span>Health checks are considered current for 15 minutes</span></div></section>
+<section class="section" aria-labelledby="summary-title"><div class="section-heading"><div><span class="eyebrow">Store totals</span><h2 id="summary-title">Key store numbers</h2><p>Totals for the selected period. A comparison appears only when each available day has a matching date in the previous period.</p></div></div><div class="metrics-grid">${metricCards}</div></section>
+<section class="section" aria-labelledby="growth-title"><div class="section-heading"><div><span class="eyebrow">Daily store totals</span><h2 id="growth-title">Daily store trends</h2><p>Each chart uses completed days already saved. Missing dates stay blank, and charts show zero so rises and drops are not visually exaggerated.</p></div></div><div class="chart-grid"><figure class="chart-card" aria-labelledby="traffic-chart-title traffic-chart-caption"><div class="chart-heading"><div><h3 id="traffic-chart-title">Website traffic</h3><p>Website requests, page views, and estimated visitors by day</p></div></div>${lineChart(currentCloudflare, [{ field: "requests", label: "Website requests", color: "#1f5a43" }, { field: "page_views", label: "Page views", color: "#bd6339" }, { field: "unique_ips", label: "Estimated visitors", color: "#7a6b9b" }], "Website requests, page views, and estimated visitors by day")}<figcaption id="traffic-chart-caption">Estimated visitors are daily Cloudflare estimates, not exact people or a count of distinct visitors across the full period. The same visitor can be counted again on another day.</figcaption></figure><div class="chart-stack"><figure class="chart-card" aria-labelledby="orders-chart-title orders-chart-caption"><div class="chart-heading"><div><h3 id="orders-chart-title">Orders</h3><p>Completed Shopify orders by day</p></div></div>${barChart(currentShopify, "orders", "Completed Shopify orders by day", "#1f5a43")}<figcaption id="orders-chart-caption">Shopify is the sales record for confirmed order counts.</figcaption></figure><figure class="chart-card" aria-labelledby="aov-chart-title aov-chart-caption"><div class="chart-heading"><div><h3 id="aov-chart-title">Average spent per order</h3><p>Sales after discounts and refunds divided by orders each day</p></div></div>${lineChart(salesChartRows, [{ field: "aov", label: "Average spent per order", color: "#7a6b9b" }], "Average spent per order by day")}<figcaption id="aov-chart-caption">A day with no orders is shown at zero. The selected period has no average until at least one order is recorded.</figcaption></figure></div></div><figure class="chart-card compact" aria-labelledby="sales-chart-title sales-chart-caption"><div class="chart-heading"><div><h3 id="sales-chart-title">Sales before and after adjustments</h3><p>Daily Shopify sales in ${escapeHtml(currency)}</p></div></div>${lineChart(salesChartRows, [{ field: "gross_sales", label: "Before discounts and refunds", color: "#bd6339" }, { field: "net_sales", label: "After discounts and refunds", color: "#1f5a43" }], "Sales before and after discounts, refunds, and other recorded reversals by day")}<figcaption id="sales-chart-caption">Amounts come from Shopify's stored daily totals. The chart includes zero and shows negative days below zero when refunds or other reversals exceed sales.</figcaption></figure></section>
 ${health.markup}
 ${incidentTimeline(data.incidents, data.now)}
 ${integrationFreshness(data.integrations, data.now)}
 ${funnelSection(currentFunnel, data.funnelSessions, data.funnelTrendRows, data.funnelEndDate)}
-<section class="details-section" aria-labelledby="details-title"><div class="section-heading"><div><span class="eyebrow">Source records</span><h2 id="details-title">Detailed operational data</h2><p>Original bounded Cloudflare, Shopify, incident, probe, funnel, and health details remain available below the summaries.</p></div></div>
-<div class="detail-group"><h3>Commerce totals</h3>${table("Selected-period commerce totals", ["Orders", "Units sold", "Gross sales", "Discounts", "Sales reversals", "Net sales", "AOV"], hasShopifyData ? [[orders, units, money(grossSales, currency), money(discounts, currency), money(reversals, currency), money(netSales, currency), averageOrderValue === null ? "—" : money(averageOrderValue, currency)]] : [])}</div>
-<div class="detail-group"><h3>Health details</h3>${table("Current health target state", ["Target", "State", "Failures", "Latest detail", "Updated"], data.states.map((row) => [TARGETS.find((target) => target.key === row.target)?.label ?? row.target, stateLabel(healthState(row, data.now)), row.consecutive_failures, row.latest_detail, row.updated_at]))}</div>
-<div class="detail-group"><h3>Incident details</h3>${table("Recent incidents", ["Target", "State", "Opened", "Recovered", "Duration", "Latest detail"], data.incidents.map((row) => [TARGETS.find((target) => target.key === row.target)?.label ?? row.target, row.recovered_at ? "Recovered" : "Active", row.opened_at, row.recovered_at ?? "—", formatDuration(row.opened_at, row.recovered_at ?? data.now.toISOString()), row.latest_detail]))}</div>
-<div class="detail-group"><h3>Probe history</h3>${table("Recent bounded health probe history", ["Target", "Checked", "Healthy", "HTTP", "Latency ms", "Detail"], data.probes.map((row) => [TARGETS.find((target) => target.key === row.target)?.label ?? row.target, row.checked_at, row.healthy === 1 ? "Yes" : "No", row.status_code ?? "—", row.latency_ms, row.detail]))}</div>
-<div class="detail-group"><h3>Funnel details</h3>${table("Daily storefront funnel aggregates", ["Date", "Sessions", "Page views", "Product views", "Cart additions", "Checkout starts", "Newsletter responses"], currentFunnel.slice().reverse().map((row) => [row.date, row.distinct_sessions, row.page_views, row.product_views, row.cart_adds, row.checkout_begins, row.newsletter_signups]))}</div>
-<div class="detail-group"><h3>Cloudflare traffic details</h3>${table("Daily Cloudflare aggregate traffic", ["Date", "Requests", "HTML page views", "Estimated unique IPs", "4xx", "5xx", "Threats"], currentCloudflare.slice().reverse().map((row) => [row.date, row.requests, row.page_views, row.unique_ips, row.status_4xx, row.status_5xx, row.threats]))}</div>
-<div class="detail-group"><h3>Shopify sales details</h3>${table("Daily Shopify aggregate sales", ["Date", "Orders", "Units sold", "Gross sales", "Discounts", "Sales reversals", "Net sales", "AOV"], currentShopify.slice().reverse().map((row) => [row.date, row.orders, row.units_sold, money(row.gross_sales_minor, row.currency), money(row.discounts_minor, row.currency), money(row.sales_reversals_minor, row.currency), money(row.net_sales_minor, row.currency), row.orders > 0 ? money(Math.round(row.net_sales_minor / row.orders), row.currency) : "—"]))}</div>
-<div class="detail-group"><h3>Integration details</h3>${table("Aggregate integration freshness", ["Integration", "State", "Last successful sync", "Latest error"], INTEGRATIONS.map((integration) => { const row = data.integrations.find((item) => item.integration === integration.key); return [integration.label, stateLabel(integrationState(row, data.now)), row?.last_success_at ?? "Never", row?.last_error ?? "—"]; }))}</div></section>
-<section class="methodology" aria-label="Metric notes"><article><strong>Estimated, not identified</strong><p>Unique IP values are daily Cloudflare estimates. They are not exact people and are not additive into a distinct-period visitor count.</p></article><article><strong>Two reporting clocks</strong><p>Cloudflare and funnel dates use UTC. Shopify reports in America/New_York, so daily source boundaries are not identical.</p></article><article><strong>Orders are the purchase truth</strong><p>Shopify aggregates are authoritative for orders and sales. Storefront funnel events remain directional and pre-checkout.</p></article></section>
-<footer><span>Private · server rendered · no third-party assets</span><span>Generated ${escapeHtml(data.now.toISOString())}</span></footer>
+<section class="details-section" aria-labelledby="details-title"><div class="section-heading"><div><span class="eyebrow">Daily records</span><h2 id="details-title">Daily store totals</h2><p>The saved Cloudflare, Shopify, service-check, shopper-journey, and data-update records behind the summaries are listed below.</p></div></div>
+<div class="detail-group"><h3>Sales totals</h3>${table("Sales totals for the selected period", ["Orders", "Net items sold", "Sales before discounts and refunds", "Discounts", "Refunds and other reversals", "Sales after discounts and refunds", "Average spent per order"], hasShopifyData ? [[orders, units, money(grossSales, currency), money(discounts, currency), money(reversals, currency), money(netSales, currency), averageOrderValue === null ? "—" : money(averageOrderValue, currency)]] : [], "No Shopify sales data has been recorded. It will appear after the next successful daily Shopify update.")}</div>
+<div class="detail-group"><h3>Current service checks</h3>${table("Current store service checks", ["Service", "Status", "Failed checks", "Latest message", "Last updated"], data.states.map((row) => [TARGETS.find((target) => target.key === row.target)?.label ?? row.target, stateLabel(healthState(row, data.now)), row.consecutive_failures, row.latest_detail, row.updated_at]), "No health checks have run. These records will appear after the five-minute scheduled check runs.")}</div>
+<div class="detail-group"><h3>Service issue history</h3>${table("Recent store service issues", ["Service", "Status", "Started", "Resolved", "Duration", "Latest message"], data.incidents.map((row) => [TARGETS.find((target) => target.key === row.target)?.label ?? row.target, row.recovered_at ? "Back to normal" : "Active issue", row.opened_at, row.recovered_at ?? "—", formatDuration(row.opened_at, row.recovered_at ?? data.now.toISOString()), row.latest_detail]), "No service issues have been recorded. A row appears after two consecutive failed checks open a service issue.")}</div>
+<div class="detail-group"><h3>Health check history</h3>${table("Recent health check results", ["Service", "Checked", "Working", "Web status code", "Response time (ms)", "Message"], data.probes.map((row) => [TARGETS.find((target) => target.key === row.target)?.label ?? row.target, row.checked_at, row.healthy === 1 ? "Yes" : "No", row.status_code ?? "—", row.latency_ms, row.detail]), "No health checks have run. These records will appear after the five-minute scheduled check runs.")}</div>
+<div class="detail-group"><h3>Shopper journey by day</h3>${table("Anonymous shopping activity by day", ["Date", "Anonymous sessions", "Page views", "Product views", "Added to cart", "Started checkout", "Newsletter signups"], currentFunnel.slice().reverse().map((row) => [row.date, row.distinct_sessions, row.page_views, row.product_views, row.cart_adds, row.checkout_begins, row.newsletter_signups]), "No shopper journey data has been recorded. It will appear after collection is approved and enabled and the updated storefront is published.")}</div>
+<div class="detail-group"><h3>Website traffic by day</h3>${table("Daily Cloudflare website traffic", ["Date", "Website requests", "Page views", "Estimated visitors", "4xx responses", "5xx responses", "Threats"], currentCloudflare.slice().reverse().map((row) => [row.date, row.requests, row.page_views, row.unique_ips, row.status_4xx, row.status_5xx, row.threats]), "No Cloudflare traffic data has been recorded. It will appear after the next successful daily Cloudflare update.")}</div>
+<div class="detail-group"><h3>Shopify sales by day</h3>${table("Daily Shopify sales totals", ["Date", "Orders", "Net items sold", "Sales before discounts and refunds", "Discounts", "Refunds and other reversals", "Sales after discounts and refunds", "Average spent per order"], currentShopify.slice().reverse().map((row) => [row.date, row.orders, row.units_sold, money(row.gross_sales_minor, row.currency), money(row.discounts_minor, row.currency), money(row.sales_reversals_minor, row.currency), money(row.net_sales_minor, row.currency), row.orders > 0 ? money(Math.round(row.net_sales_minor / row.orders), row.currency) : "—"]), "No Shopify sales data has been recorded. It will appear after the next successful daily Shopify update.")}</div>
+<div class="detail-group"><h3>Data update history</h3>${table("Cloudflare and Shopify data updates", ["Data source", "Status", "Last successful update", "Most recent problem"], INTEGRATIONS.map((integration) => { const row = data.integrations.find((item) => item.integration === integration.key); return [integration.label, stateLabel(integrationState(row, data.now)), row?.last_success_at ?? "Not yet", row?.last_error ?? "—"]; }))}</div></section>
+<section class="methodology" aria-label="How these numbers work"><article><strong>Visitor numbers are estimates</strong><p>Cloudflare estimates visitors from daily unique IP addresses. This is not an exact count of people, and the same visitor can be counted again on another day.</p></article><article><strong>Daily cutoffs differ</strong><p>Cloudflare and shopper-journey days end at midnight UTC. Shopify days end at midnight in New York, so daily totals may not line up exactly.</p></article><article><strong>Shopify is the sales record</strong><p>Use Shopify totals for confirmed orders and sales. Net items sold subtracts returned items. Returned items reduce this number. Anonymous storefront events show browsing steps before checkout and are estimates, not confirmed purchases.</p></article></section>
+<footer><span>Private · built on the server · no third-party dashboard tools</span><span>Generated ${escapeHtml(data.now.toISOString())}</span></footer>
 </main></body></html>`;
   return html;
 }

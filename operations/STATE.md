@@ -10,11 +10,11 @@ Last updated: 2026-07-16
 - Repository: `/Users/robo/Desktop/BaderBureau/Shop & Sons`
 - Branch: `dev` tracking `origin/dev`
 - Worktree: primary checkout
-- Current session owner: none after this handoff; the primary checkout is clean and protected
+- Current session owner: none after this handoff; the primary checkout contains the reviewed local dashboard wording changes
 
 ## Current state
 
-`dev` contains the reviewed storefront telemetry and dashboard integration and, with this handoff commit, is eleven local commits ahead of `origin/dev`; none of those commits has been pushed or deployed. Worker version `5b415f2a-5f4b-4603-a7fa-fb8a490c4304` remains deployed at 100% with all eight secret bindings, `EVENT_COLLECTION_ENABLED=false`, `workers_dev=false`, preview URLs disabled, the intended D1 binding, the sole `operations.shopandson.com` custom domain, and the sole five-minute Cron. Remote migrations `0001`–`0003` are current. `/health` returns 200, Access redirects `/dashboard`, `POST /v1/events` returns `503 collection_disabled`, and unauthenticated notifications return 401. All four health targets are healthy with zero consecutive failures and no open incidents. Shopify has 90 aggregate rows covering 2026-04-17 through 2026-07-15. The corrected `Zone → Analytics → Read` token last verified six Cloudflare rows covering 2026-07-10 through 2026-07-15. Collection has written zero funnel events. Notification IDs 1–8 and incident history remain as audit evidence; Beckett confirmed exactly one opening and one recovery iMessage during the approved drill, the pending queue is empty, and no incident is open. The LaunchAgent remains installed from a mode-700 relay copy under `~/Library/Application Support/ShopAndSonOperations/`. Storefront telemetry and dashboard changes are committed locally and unpublished.
+`dev` matches `origin/dev` at `c676486`; the reviewed storefront telemetry and dashboard integration were pushed, and an external Cloudflare Pages GitHub App created a non-production `dev` branch preview. The plain-language dashboard rewrite is verified locally and remains uncommitted. No merge, Worker deployment, remote migration, collection enablement, secret change, or production storefront publication occurred in this session. Worker version `5b415f2a-5f4b-4603-a7fa-fb8a490c4304` remains deployed at 100% with all eight secret bindings, `EVENT_COLLECTION_ENABLED=false`, `workers_dev=false`, preview URLs disabled, the intended D1 binding, the sole `operations.shopandson.com` custom domain, and the sole five-minute Cron. Remote migrations `0001`–`0003` are current. `/health` returns 200, Access redirects `/dashboard`, `POST /v1/events` returns `503 collection_disabled`, and unauthenticated notifications return 401. All four health targets are healthy with zero consecutive failures and no open incidents. Shopify has 90 aggregate rows covering 2026-04-17 through 2026-07-15. The corrected `Zone → Analytics → Read` token last verified six Cloudflare rows covering 2026-07-10 through 2026-07-15. Collection has written zero funnel events. Notification IDs 1–8 and incident history remain as audit evidence; Beckett confirmed exactly one opening and one recovery iMessage during the approved drill, the pending queue is empty, and no incident is open. The LaunchAgent remains installed from a mode-700 relay copy under `~/Library/Application Support/ShopAndSonOperations/`.
 
 ## Completed work
 
@@ -27,11 +27,11 @@ Last updated: 2026-07-16
 - Implemented a Keychain/Shortcut relay with a local pending-ack journal and a secret-free LaunchAgent template.
 - Added deployment, credential, backup/recovery, rollback, and production-readiness documentation.
 - Added the required workstream `README.md`, `AGENTS.md`, and `STATE.md` contract.
+- Rewrote dashboard headings, labels, descriptions, warnings, metric explanations, comparison states, and empty states in plain store-owner language while retaining estimate, date-boundary, and sales-source caveats.
 
 ## Active work
 
-- Beckett authorized this session to complete routine, reversible production setup end to end, including Worker versions, D1, the documented custom hostname, Cron, Access, rate limits, integration verification, collection enablement, documentation, and a local commit on `dev`.
-- No active path claim remains after this handoff. A future session must reread this file and claim the primary checkout before editing.
+- No active file owner after this handoff. Local changes are limited to the plain-language dashboard renderer, its tests, and this state record.
 - Remaining manual gates are collection enablement, live storefront publication, push/merge, and unexpected destructive or materially permission-expanding work.
 
 ## Blockers and decisions needed
@@ -74,10 +74,13 @@ The shared newsletter/now-playing Worker’s code, bindings, routes, secrets, an
 
 Executed locally on 2026-07-16 without production credentials or network-side changes:
 
-- `npm test` in `operations`: 82/82 tests passed across 15 files.
+- `npm test` in `operations`: 83/83 tests passed across 15 files, including the new plain-language and source-specific unavailable-state assertions.
 - `npm run typecheck` in `operations`: production and test TypeScript passed.
 - `npm run cf-typegen -- --check`: generated runtime declarations are current; handwritten `Env` owns dynamic bindings.
-- `npm run deploy:dry`: passed; 101.23 KiB upload, 25.04 KiB gzip, DB binding present, collector binding `false`.
+- `npm run deploy:dry`: passed after the wording rewrite and independent review corrections; 104.94 KiB upload, 25.81 KiB gzip, DB binding present, collector binding `false`.
+- Independent read-only review found no accessibility or security regression. Its four dashboard accuracy findings were corrected: estimated/derived chart values are no longer called exact, comparison copy describes matched available dates, Shopify units are labeled net items sold, and Cloudflare 4xx/5xx/threat labels no longer overinterpret source fields.
+- Live loopback runtime: authenticated dashboard returned 200 with `Cache-Control: no-store`, the plain-language and source-specific unavailable states rendered, no external scripts were present, and `POST /v1/events` remained `503 collection_disabled`.
+- Browser review: no visible clipping or overflow at desktop width, no console errors, one H1, no duplicate IDs, all figures named, and all eight scrollable table regions retained captions, labels, and keyboard focus.
 - Clean temporary local D1: migrations `0001`, `0002`, and `0003` applied successfully.
 - Python relay: 4/4 tests passed; `compileall` passed.
 - LaunchAgent template: `plutil -lint` passed.
@@ -95,6 +98,6 @@ Executed locally on 2026-07-16 without production credentials or network-side ch
 ## Handoff
 
 - Start by reading: `../../README.md`, `../../BUSINESS-STATE.md`, `../../WORKSTREAM-STANDARD.md`, `../AGENTS.md`, this workstream’s `README.md`, `AGENTS.md`, `STATE.md`, and `PRODUCTION-READINESS.md`.
-- Repository state: `dev` is eleven local commits ahead of `origin/dev` and clean after this handoff commit. Do not push, merge, publish, or edit this checkout without Beckett's approval and a fresh ownership claim.
-- Last handoff summary: Worker `5b415f2a-5f4b-4603-a7fa-fb8a490c4304` is live with collection disabled; health, integrations, notifications, dashboard integration, pinned storefront destination, accepted page-lifetime privacy fallback, complete storefront build, and artifact inspection are green. Collection and publication remain separately gated.
+- Repository state: `dev` matches `origin/dev` with uncommitted changes in `operations/src/dashboard-render.ts`, `operations/test/dashboard.test.ts`, and `operations/STATE.md`. Do not push, merge, publish, deploy, or edit this checkout without Beckett's approval and a fresh ownership claim.
+- Last handoff summary: Worker `5b415f2a-5f4b-4603-a7fa-fb8a490c4304` is unchanged and live with collection disabled; the plain-language dashboard is verified only on the local loopback runtime. Health, integrations, notifications, pinned storefront destination, accepted page-lifetime privacy fallback, complete storefront build, and artifact inspection remain green. Collection and publication remain separately gated.
 - Resume point: only prepare the next separately reviewed version/approval evidence. Do not enable collection or publish the storefront without the remaining explicit approvals.
