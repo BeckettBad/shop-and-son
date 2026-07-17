@@ -17,6 +17,16 @@ describe("daily maintenance", () => {
         ) VALUES (?, ?, ?, ?, 'page_view', 'landing')
       `).bind("event-old", "session-old", "2026-03-01T12:00:00.000Z", "2026-03-01T12:00:01.000Z"),
       env.DB.prepare(`
+        INSERT INTO funnel_events (
+          event_id, session_id, occurred_at, received_at, event_type, page_kind
+        ) VALUES (?, ?, ?, ?, 'page_view', 'landing')
+      `).bind("event-oldest-complete-day", "session-boundary", "2026-04-17T00:30:00.000Z", "2026-04-17T00:30:01.000Z"),
+      env.DB.prepare(`
+        INSERT INTO funnel_events (
+          event_id, session_id, occurred_at, received_at, event_type, page_kind
+        ) VALUES (?, ?, ?, ?, 'page_view', 'landing')
+      `).bind("event-before-complete-window", "session-before", "2026-04-16T23:59:59.999Z", "2026-04-17T00:00:00.000Z"),
+      env.DB.prepare(`
         INSERT INTO event_rate_limits (rate_key, window_start, event_count)
         VALUES ('global', '2026-07-01T00:00:00.000Z', 1)
       `),
@@ -47,6 +57,8 @@ describe("daily maintenance", () => {
     `).first<{ count: number }>();
     expect(reminders?.count).toBe(1);
     expect(await env.DB.prepare("SELECT 1 FROM funnel_events WHERE event_id = 'event-old'").first()).toBeNull();
+    expect(await env.DB.prepare("SELECT 1 FROM funnel_events WHERE event_id = 'event-oldest-complete-day'").first()).not.toBeNull();
+    expect(await env.DB.prepare("SELECT 1 FROM funnel_events WHERE event_id = 'event-before-complete-window'").first()).toBeNull();
     expect(await env.DB.prepare("SELECT 1 FROM event_rate_limits WHERE rate_key = 'global'").first()).toBeNull();
     expect(await env.DB.prepare("SELECT 1 FROM scheduled_job_runs WHERE claim_id = 'old-health'").first()).toBeNull();
     expect(await env.DB.prepare("SELECT 1 FROM scheduled_job_runs WHERE claim_id = 'recent-health'").first()).not.toBeNull();

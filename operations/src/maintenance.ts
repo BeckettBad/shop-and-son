@@ -9,6 +9,7 @@ export async function runDailyMaintenance(db: D1Database, now: Date): Promise<vo
   const rateLimitCutoff = new Date(now.getTime() - 2 * 86_400_000).toISOString();
   const startDate = isoDate(start);
   const endDate = isoDate(end);
+  const funnelCutoff = `${startDate}T00:00:00.000Z`;
   const runDate = isoDate(now);
   const updatedAt = now.toISOString();
 
@@ -49,7 +50,7 @@ export async function runDailyMaintenance(db: D1Database, now: Date): Promise<vo
       FROM incidents
       WHERE recovered_at IS NULL
     `).bind(updatedAt, runDate),
-    db.prepare("DELETE FROM funnel_events WHERE occurred_at < ?").bind(cutoff),
+    db.prepare("DELETE FROM funnel_events WHERE occurred_at < ?").bind(funnelCutoff),
     db.prepare("DELETE FROM event_rate_limits WHERE window_start < ?").bind(rateLimitCutoff),
     db.prepare("DELETE FROM scheduled_job_runs WHERE job_name = 'health' AND run_date < ?").bind(rateLimitCutoff),
     db.prepare("DELETE FROM health_probes WHERE checked_at < ?").bind(cutoff),
