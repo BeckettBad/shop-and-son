@@ -1,6 +1,7 @@
 ---
 import "../styles/global.css";
 import { site } from "../data/content.ts";
+import { PRODUCTION_COLLECTOR_ENDPOINT } from "../lib/analytics";
 import { withBase } from "../lib/url.ts";
 
 interface Props {
@@ -21,11 +22,16 @@ const siteUrl = Astro.site ?? new URL("https://beckettbad.github.io");
 const absolutePageUrl = new URL(Astro.url.pathname, siteUrl).toString();
 const absoluteOgImageUrl = new URL(withBase("/og-image.jpg"), siteUrl).toString();
 const nowPlayingUrl = import.meta.env.PUBLIC_NOW_PLAYING_URL?.trim() ?? "";
+const configuredOperationsEventsUrl = import.meta.env.PUBLIC_OPERATIONS_EVENTS_URL?.trim() ?? "";
+const operationsEventsUrl = configuredOperationsEventsUrl === PRODUCTION_COLLECTOR_ENDPOINT
+  ? PRODUCTION_COLLECTOR_ENDPOINT
+  : "";
 const shopifyDomain = (import.meta.env.PUBLIC_SHOPIFY_STORE_DOMAIN?.trim() || "shopandson.com")
   .replace(/^https?:\/\//, "")
   .replace(/\/+$/, "");
 const shopifyOrigin = `https://${shopifyDomain}`;
 let nowPlayingOrigin = "";
+let operationsOrigin = "";
 if (nowPlayingUrl) {
   try {
     nowPlayingOrigin = new URL(nowPlayingUrl).origin;
@@ -33,8 +39,15 @@ if (nowPlayingUrl) {
     nowPlayingOrigin = "";
   }
 }
+if (operationsEventsUrl) {
+  try {
+    operationsOrigin = new URL(operationsEventsUrl).origin;
+  } catch {
+    operationsOrigin = "";
+  }
+}
 // Cloudflare Web Analytics beacon (auto-injected by Pages).
-const connectSrc = ["'self'", shopifyOrigin, "https://shopandson.com", "https://cloudflareinsights.com", nowPlayingOrigin]
+const connectSrc = ["'self'", shopifyOrigin, "https://shopandson.com", "https://cloudflareinsights.com", nowPlayingOrigin, operationsOrigin]
   .filter(Boolean)
   .join(" ");
 const contentSecurityPolicy = [
@@ -98,6 +111,10 @@ const contentSecurityPolicy = [
   <body class:list={[{ landing }]} data-open-hour={site.hours.openHour} data-close-hour={site.hours.closeHour}>
     <slot />
 
+    <script>
+      import { initializeAnalytics } from "../lib/analytics";
+      initializeAnalytics();
+    </script>
     <script type="module" src={withBase("/scripts/base.js")}></script>
   </body>
 </html>

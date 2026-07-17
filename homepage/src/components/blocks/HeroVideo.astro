@@ -379,6 +379,7 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
 {nowPlayingUrl && <script is:inline type="module" src={withBase("/scripts/now-playing.js")}></script>}
 
 <script>
+  import { trackPageView } from "../../lib/analytics";
   import { getLiveHeroMenu, type LiveHeroMenuEntry } from "../../lib/menu";
   import { mountProductView, type ProductImageSeed } from "../../lib/product-view";
   import { getCollection, predictiveSearch, prefetchProduct, type CollectionDetail } from "../../lib/storefront-client";
@@ -1603,6 +1604,7 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
         hero.scrollTop = 0;
         if (nextStage === "preorder") resizePreorderFrame();
         activeStage = nextStage;
+        trackPageView(nextStage);
         if (nextStage === "music") {
           stageCleanup = window.setTimeout(() => {
             setMusicSettled(true);
@@ -1628,6 +1630,7 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
     hero.scrollTop = 0;
     if (nextStage === "preorder") resizePreorderFrame();
     activeStage = nextStage;
+    trackPageView(nextStage);
 
     if (previousPanelStage) {
       stageCleanup = window.setTimeout(() => {
@@ -2719,6 +2722,7 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
     activeProductHandle = null;
     savedStageReturn = null;
     activeStage = "landing";
+    trackPageView("landing");
   };
 
   const closeSearchStage = () => {
@@ -3060,4 +3064,5 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
   });
   void hydrateLiveMenu();
   syncStageFromUrl();
+  trackPageView(activeStage);
 </script>

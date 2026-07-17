@@ -20,6 +20,7 @@
 <script>
   import * as cart from "../lib/cart";
   import type { Cart, CartLine } from "../lib/cart";
+  import { trackEvent } from "../lib/analytics";
 
   const drawer = document.querySelector<HTMLElement>("[data-cart-drawer]");
   const backdrop = document.querySelector<HTMLElement>("[data-cart-backdrop]");
@@ -225,6 +226,11 @@
   backdrop?.addEventListener("click", closeCart);
   checkoutButton?.addEventListener("click", () => {
     if (!activeCart?.checkoutUrl) return;
+    trackEvent({
+      distinctLineCount: activeCart.lines.length,
+      eventType: "checkout_begin",
+      totalQuantity: activeCart.totalQuantity,
+    });
     window.location.href = activeCart.checkoutUrl;
   });
 
