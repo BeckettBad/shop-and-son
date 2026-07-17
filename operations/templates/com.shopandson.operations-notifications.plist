@@ -7,7 +7,7 @@
   <key>ProgramArguments</key>
   <array>
     <string>/usr/bin/python3</string>
-    <string>REPLACE_WITH_ABSOLUTE_REPO_PATH/operations/scripts/notification_relay.py</string>
+    <string>REPLACE_WITH_INSTALLED_RELAY_PATH</string>
     <string>--base-url</string>
     <string>https://REPLACE_WITH_OPERATIONS_WORKER_HOST</string>
     <string>--shortcut</string>

@@ -21,7 +21,7 @@ Local-first Cloudflare Worker for Shop & Sons uptime, privacy-minimized storefro
 
 Completion of the local phase requires all documented local checks to pass, independent review to have no blocking security or logic finding, and `STATE.md` to record the result. Production completion additionally requires Beckett-approved deployment, authenticated integration checks, alert drill, rollback verification, and storefront publication validation.
 
-> **Production safety:** D1, the committed secret-bearing Worker, `operations.shopandson.com`, dashboard Access policy, collector edge rate limit, and five-minute Cron are live. Collection remains disabled until the ordered gates below pass; the LaunchAgent and storefront telemetry are not active. `wrangler deploy --dry-run` is safe and does not deploy.
+> **Production safety:** D1, the committed secret-bearing Worker, `operations.shopandson.com`, dashboard Access policy, collector edge rate limit, five-minute Cron, and notification LaunchAgent are live. Collection and storefront telemetry remain disabled until the ordered gates below pass. `wrangler deploy --dry-run` is safe and does not deploy.
 
 ## Architecture
 
@@ -81,7 +81,7 @@ npm run astro check
 npm run build
 ```
 
-The storefront analytics adapter is a no-op unless `PUBLIC_OPERATIONS_EVENTS_URL` is a valid HTTPS `/v1/events` URL.
+The storefront analytics adapter is a no-op unless `PUBLIC_OPERATIONS_EVENTS_URL` equals `https://operations.shopandson.com/v1/events` exactly.
 
 ## Runtime bindings
 
@@ -108,17 +108,18 @@ Worker secrets or secret-valued bindings:
 
 ## Production rollout
 
-Beckett authorized routine, reversible production completion on 2026-07-16. The remaining manual gates are the new Cloudflare Analytics token entry, disposition of stale notifications, LaunchAgent installation, the real incident/recovery drill, storefront privacy behavior, collection enablement, storefront publication, push/merge, and unexpected destructive or permission-expanding changes.
+Beckett authorized routine, reversible production completion on 2026-07-16. The remaining manual gates are collection enablement, storefront publication, push/merge, and unexpected destructive or permission-expanding changes.
 
 ### Current production baseline
 
 - D1 `shop-and-son-operations` exists under binding `DB`; migrations `0001`–`0003` are applied.
-- Version `3b2f9e22-3037-40b6-907f-a2573bd7087a`, mapped to local commit `f8d5cb1`, is deployed at 100% with all eight secret bindings and collection disabled.
+- Version `5b415f2a-5f4b-4603-a7fa-fb8a490c4304` is deployed at 100% with all eight secret bindings and collection disabled. Its immutable script ETag matches the prior version mapped to local commit `f8d5cb1`.
 - `operations.shopandson.com` is the only Worker target. Standard and preview `workers.dev` URLs are disabled.
 - `/health` returns the versioned service contract; Access redirects `/dashboard` to the approved identity login; `/v1/events` returns `503 collection_disabled`; notification APIs return 401.
 - The collector edge rule allows 20 `POST /v1/events` requests per 10 seconds per IP and blocks for 10 seconds. It was verified with 429 responses and post-block recovery. The Free plan supplies one rule, so the dashboard relies on Access plus application Basic auth rather than a second WAF rule.
-- The five-minute Cron is active and all four health targets are healthy. Shopify production aggregation is successful with 90 daily rows. Cloudflare Analytics has zero rows because the deployed token lacks `Account Analytics: Read` for the zone.
-- The approved Shortcut and Keychain token are configured, the harmless iMessage test arrived, and the relay's exact client identity polls successfully. Six rollout-generated notifications remain pending; the LaunchAgent is not installed and the real incident drill remains gated.
+- The five-minute Cron is active and all four health targets are healthy. Shopify production aggregation has 90 daily rows. The corrected `Zone → Analytics → Read` token succeeded at 22:00 UTC: `last_error` is clear, `last_success_at` is populated, and Cloudflare has six rows covering 2026-07-10 through 2026-07-15.
+- The six recovered rollout notifications were acknowledged without sending and all rows were preserved. The approved Shortcut and Keychain token are configured. The LaunchAgent uses an installed mode-700 relay copy under `~/Library/Application Support/ShopAndSonOperations/`; repeated runs exit 0 with clean logs. The approved delivery drill produced exactly one confirmed opening and one confirmed recovery iMessage; incident 4 and notifications 7–8 are retained, synthetic probe/state rows were removed, and the queue is empty.
+- The frozen storefront source accepts only `https://operations.shopandson.com/v1/events`. If session storage is unavailable or denied, it uses one anonymous in-memory UUID for the current page instance only, with no fingerprint or alternate persistence; reloads can therefore be counted as separate sessions. Tests and Astro check pass, but the final production build remains blocked after five bounded attempts—including three against the final source—exhausted Shopify `429` responses during sitemap generation.
 
 ### Remaining ordered rollout
 
@@ -143,28 +144,28 @@ Beckett authorized routine, reversible production completion on 2026-07-16. The 
 
 4. **Completed:** Access protects `operations.shopandson.com/dashboard*` for Beckett's confirmed identity. The Free plan's single available WAF rule protects `POST /v1/events` at 20 requests per 10 seconds per IP with a 10-second block. Access plus Basic auth protect the dashboard; enabling a second WAF rule would require a separately approved paid-plan change.
 
-5. Replace only the Cloudflare Analytics runtime token interactively in an undeployed version. Use `versions secret put`, not `secret put`: plain `wrangler secret put` deploys immediately. Wrangler reads the value from its hidden prompt; do not append it to the command:
+5. **Completed:** create a token with only `Zone → Analytics → Read`, restricted to `shopandson.com`, then replace only the Cloudflare Analytics runtime token interactively in an undeployed version. Do not use `Account → Account Analytics → Read`; it does not grant the zone GraphQL permission `com.cloudflare.api.account.zone.analytics.read`. Use `versions secret put`, not `secret put`: plain `wrangler secret put` deploys immediately. Wrangler reads the value from its hidden prompt; do not append it to the command:
 
    ```sh
    npx wrangler versions secret put CLOUDFLARE_ANALYTICS_TOKEN
    ```
 
-6. List versions, record the newly produced version ID, and inspect it. It must be newer than `3b2f9e22-3037-40b6-907f-a2573bd7087a`. Before activation, stop unless inspection proves it retains source revision `f8d5cb1`, all eight secret binding names, D1 binding `DB`, the `operations.shopandson.com` route, and `EVENT_COLLECTION_ENABLED="false"`. Record names and identifiers, never secret values:
+6. **Completed:** list versions, record the newly produced version ID, and inspect it. Before activation, stop unless inspection proves its immutable script ETag matches the current version mapped to source revision `f8d5cb1`, and it retains all eight secret binding names, D1 binding `DB`, the sole `operations.shopandson.com` custom domain, the sole `*/5 * * * *` Cron, and `EVENT_COLLECTION_ENABLED="false"`. Record names and identifiers, never secret values:
 
    ```sh
    npx wrangler versions list
    npx wrangler versions view <FINAL_VERSION_ID>
    ```
 
-7. Activate that exact secret-bearing version at 100%. This does not create Cron; current Wrangler applies routes/domains and Cron separately:
+7. **Completed:** activate that exact secret-bearing version at 100%. This does not create Cron; current Wrangler applies routes/domains and Cron separately:
 
    ```sh
    npx wrangler versions deploy <FINAL_VERSION_ID>@100%
    ```
 
-8. Verify `/health`; verify `/dashboard` is intercepted by Access before application Basic auth; verify `/v1/events` returns `503 collection_disabled`; verify the notification API rejects missing/wrong tokens. Do not enter credentials on any non-HTTPS origin.
+8. **Completed:** verify `/health`; verify `/dashboard` is intercepted by Access before application Basic auth; verify `/v1/events` returns `503 collection_disabled`; verify the notification API rejects missing/wrong tokens. Do not enter credentials on any non-HTTPS origin.
 
-9. After activating the inspected token version, stop unless the next Cron clears `cloudflare_analytics.last_error` and writes `daily_cloudflare_metrics`. The Cron is already active; do not recreate it.
+9. **Completed:** after activating the inspected token version, stop unless the next Cron clears `cloudflare_analytics.last_error` and writes `daily_cloudflare_metrics`. The 22:00 UTC run succeeded and wrote six rows. The Cron is already active; do not recreate it.
 
 10. Enable collection only after Access, the collector edge rule, integrations, Cron, and notification protection succeed. This creates a new Worker version and deployment:
 
@@ -179,7 +180,7 @@ Beckett authorized routine, reversible production completion on 2026-07-16. The 
 11. Configure the storefront build variable:
 
     ```text
-    PUBLIC_OPERATIONS_EVENTS_URL=https://<operations-worker-host>/v1/events
+    PUBLIC_OPERATIONS_EVENTS_URL=https://operations.shopandson.com/v1/events
     ```
 
     Rebuild and preview the storefront before any production publish. Publishing the storefront remains a separate explicit approval.
@@ -221,20 +222,30 @@ Do this only after the Worker exists and the alert API has been verified.
      -w
    ```
 
-10. Copy `templates/com.shopandson.operations-notifications.plist` to a temporary path. Replace only the repository path and Worker host placeholders.
-11. Validate it:
+10. Install a private executable copy outside `~/Desktop`; macOS TCC can deny LaunchAgents access to Desktop-hosted scripts even when manual execution succeeds:
+
+    ```sh
+    install -d -m 700 "$HOME/Library/Application Support/ShopAndSonOperations"
+    install -m 700 scripts/notification_relay.py \
+      "$HOME/Library/Application Support/ShopAndSonOperations/notification_relay.py"
+    ```
+
+11. Copy `templates/com.shopandson.operations-notifications.plist` to a temporary path. Replace `REPLACE_WITH_INSTALLED_RELAY_PATH` with the absolute Application Support path above and replace only the Worker host placeholder.
+12. Validate it:
 
     ```sh
     plutil -lint /path/to/com.shopandson.operations-notifications.plist
     ```
 
-12. Test the relay once manually:
+13. Test the relay once manually:
 
     ```sh
-    python3 scripts/notification_relay.py --base-url https://<operations-worker-host>
+    /usr/bin/python3 \
+      "$HOME/Library/Application Support/ShopAndSonOperations/notification_relay.py" \
+      --base-url https://<operations-worker-host>
     ```
 
-13. Only after that succeeds, install and start the LaunchAgent:
+14. Only after that succeeds, install and start the LaunchAgent:
 
     ```sh
     cp /path/to/com.shopandson.operations-notifications.plist \
@@ -243,7 +254,7 @@ Do this only after the Worker exists and the alert API has been verified.
       ~/Library/LaunchAgents/com.shopandson.operations-notifications.plist
     ```
 
-14. Report back the manual relay exit status and whether exactly one message arrived. Do not proceed to a real failure drill if either differs.
+15. Report back the manual relay exit status and whether exactly one message arrived. Do not proceed to a real failure drill if either differs.
 
 To stop it:
 
@@ -264,6 +275,8 @@ A real drill can send iMessages and write production D1 records. Run it only aft
 6. Confirm exactly one recovery message.
 7. Confirm `/dashboard` shows no open test incident.
 8. Remove all temporary test configuration. Do not delete retained audit rows manually.
+
+Production drill completed 2026-07-16: approved synthetic incident 4 produced opening notification 7 and recovery notification 8. Beckett confirmed exactly one correct iMessage for each transition. Both notifications are acknowledged; the incident and notification rows remain as audit evidence; only generated synthetic probe/state rows were removed. Final state: zero pending notifications and zero open incidents.
 
 ## Backups and restore
 
