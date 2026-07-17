@@ -43,14 +43,15 @@ export async function handleDashboardRequest(
   const generatedAt = now();
   const requestedDays = Number(new URL(request.url).searchParams.get("days"));
   const days = requestedDays === 7 || requestedDays === 90 ? requestedDays : 30;
-  const periodStart = new Date(generatedAt.getTime() - (days - 1) * DAY_MS).toISOString().slice(0, 10);
-  const priorStart = new Date(generatedAt.getTime() - (days * 2 - 1) * DAY_MS).toISOString().slice(0, 10);
-  const endDate = generatedAt.toISOString().slice(0, 10);
-  const funnelEndDate = new Date(generatedAt.getTime() - DAY_MS).toISOString().slice(0, 10);
-  const funnelPeriodStart = new Date(generatedAt.getTime() - days * DAY_MS).toISOString().slice(0, 10);
+  const aggregateEnd = new Date(generatedAt.getTime() - DAY_MS);
+  const periodStart = new Date(aggregateEnd.getTime() - (days - 1) * DAY_MS).toISOString().slice(0, 10);
+  const priorStart = new Date(aggregateEnd.getTime() - (days * 2 - 1) * DAY_MS).toISOString().slice(0, 10);
+  const endDate = aggregateEnd.toISOString().slice(0, 10);
+  const funnelEndDate = endDate;
+  const funnelPeriodStart = periodStart;
   const funnelEndTimestamp = `${funnelEndDate}T23:59:59.999Z`;
   const funnelPeriodStartTimestamp = `${funnelPeriodStart}T00:00:00.000Z`;
-  const periodStartTimestamp = `${periodStart}T00:00:00.000Z`;
+  const probePeriodStartTimestamp = `${new Date(generatedAt.getTime() - (days - 1) * DAY_MS).toISOString().slice(0, 10)}T00:00:00.000Z`;
   const generatedTimestamp = generatedAt.toISOString();
 
   const [states, incidents, probes, funnel, funnelSessions, funnelTrend, cloudflare, shopify, integrations] = await Promise.all([
@@ -66,7 +67,7 @@ export async function handleDashboardRequest(
       SELECT target, checked_at, healthy, status_code, latency_ms, detail
       FROM health_probes WHERE checked_at >= ? AND checked_at <= ?
       ORDER BY checked_at DESC LIMIT 200
-    `).bind(periodStartTimestamp, generatedTimestamp).all<ProbeRow>(),
+    `).bind(probePeriodStartTimestamp, generatedTimestamp).all<ProbeRow>(),
     db.prepare(`
       SELECT date, page_views, product_views, cart_adds, checkout_begins,
              newsletter_signups, distinct_sessions

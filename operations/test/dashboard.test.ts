@@ -97,9 +97,9 @@ describe("private dashboard", () => {
   });
 
   it("renders the executive summary and honest matched prior-period comparisons", async () => {
-    for (let day = 3; day <= 16; day += 1) {
+    for (let day = 2; day <= 15; day += 1) {
       const date = `2026-07-${String(day).padStart(2, "0")}`;
-      const current = day >= 10;
+      const current = day >= 9;
       await insertDailyMetrics(date, current ? 100 : 50, current ? 2 : 1, current ? 10_000 : 5_000);
     }
 
@@ -120,8 +120,8 @@ describe("private dashboard", () => {
   });
 
   it("does not compare mismatched calendar coverage", async () => {
-    await insertDailyMetrics("2026-07-16", 100, 2, 10_000);
-    await insertDailyMetrics("2026-07-08", 50, 1, 5_000);
+    await insertDailyMetrics("2026-07-15", 100, 2, 10_000);
+    await insertDailyMetrics("2026-07-07", 50, 1, 5_000);
 
     const { html } = await render(7);
 
@@ -131,9 +131,9 @@ describe("private dashboard", () => {
   });
 
   it("does not compare AOV when either matched period has no orders", async () => {
-    for (let day = 3; day <= 16; day += 1) {
+    for (let day = 2; day <= 15; day += 1) {
       const date = `2026-07-${String(day).padStart(2, "0")}`;
-      await insertDailyMetrics(date, 100, day >= 10 ? 0 : 1, day >= 10 ? 0 : 5_000);
+      await insertDailyMetrics(date, 100, day >= 9 ? 0 : 1, day >= 9 ? 0 : 5_000);
     }
 
     const { html } = await render(7);
@@ -297,12 +297,14 @@ describe("private dashboard", () => {
   });
 
   it.each([7, 30, 90])("uses exact inclusive boundaries and excludes outside and future rows for %i days", async (days) => {
-    const start = new Date(NOW.getTime() - (days - 1) * 86_400_000).toISOString().slice(0, 10);
-    const before = new Date(NOW.getTime() - days * 86_400_000).toISOString().slice(0, 10);
+    const end = new Date(NOW.getTime() - 86_400_000);
+    const start = new Date(end.getTime() - (days - 1) * 86_400_000).toISOString().slice(0, 10);
+    const before = new Date(end.getTime() - days * 86_400_000).toISOString().slice(0, 10);
     const future = new Date(NOW.getTime() + 86_400_000).toISOString().slice(0, 10);
     await insertDailyMetrics(before, 900, 9, 90_000);
     await insertDailyMetrics(start, 10, 1, 1_000);
-    await insertDailyMetrics("2026-07-16", 20, 2, 2_000);
+    await insertDailyMetrics(end.toISOString().slice(0, 10), 20, 2, 2_000);
+    await insertDailyMetrics("2026-07-16", 700, 7, 70_000);
     await insertDailyMetrics(future, 800, 8, 80_000);
 
     const { html } = await render(days);
@@ -310,7 +312,28 @@ describe("private dashboard", () => {
     expect(html).toContain('data-metric="requests" data-current="30"');
     expect(html).toContain('data-metric="orders" data-current="3"');
     expect(html).not.toContain(">900<");
-    expect(html).not.toContain(">800<");
+    expect(html).not.toContain('data-current="700"');
+    expect(html).not.toContain('data-current="800"');
+  });
+
+  it.each([7, 30, 90])("retains probe history from the start of the cutoff UTC day for %i days", async (days) => {
+    const cutoff = new Date(NOW);
+    cutoff.setUTCDate(cutoff.getUTCDate() - (days - 1));
+    const cutoffDate = cutoff.toISOString().slice(0, 10);
+    const beforeCutoff = new Date(`${cutoffDate}T00:00:00.000Z`);
+    beforeCutoff.setUTCMilliseconds(-1);
+
+    await env.DB.prepare(`
+      INSERT INTO health_probes (target, checked_at, healthy, status_code, latency_ms, detail)
+      VALUES
+        ('site', ?, 1, 200, 10, 'before-cutoff-probe'),
+        ('site', ?, 1, 200, 10, 'cutoff-start-probe')
+    `).bind(beforeCutoff.toISOString(), `${cutoffDate}T00:00:00.000Z`).run();
+
+    const { html } = await render(days);
+
+    expect(html).toContain("cutoff-start-probe");
+    expect(html).not.toContain("before-cutoff-probe");
   });
 
   it.each([7, 30, 90])("uses exactly %i complete UTC days for funnel counts and cohorts", async (days) => {
@@ -365,7 +388,7 @@ describe("private dashboard", () => {
   });
 
   it("renders accessible real-data charts without external assets or scripts", async () => {
-    await insertDailyMetrics("2026-07-16", 100, 2, 10_000);
+    await insertDailyMetrics("2026-07-15", 100, 2, 10_000);
     const { html, response } = await render();
 
     expect(html).toContain("Growth and trends");
@@ -422,8 +445,8 @@ describe("private dashboard", () => {
   });
 
   it("keeps a visible zero baseline when a stored sales value is negative", async () => {
-    await insertDailyMetrics("2026-07-15", 100, 1, -5_000);
-    await insertDailyMetrics("2026-07-16", 100, 2, 10_000);
+    await insertDailyMetrics("2026-07-14", 100, 1, -5_000);
+    await insertDailyMetrics("2026-07-15", 100, 2, 10_000);
 
     const { html } = await render();
 
