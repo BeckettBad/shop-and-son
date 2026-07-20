@@ -1,6 +1,6 @@
 # Shop & Sons Operations State
 
-Last updated: 2026-07-16
+Last updated: 2026-07-20 (sync facts corrected by a root governance session; no operational change)
 
 ## Control
 
@@ -10,11 +10,11 @@ Last updated: 2026-07-16
 - Repository: `/Users/robo/Desktop/BaderBureau/Shop & Sons`
 - Branch: `dev` tracking `origin/dev`
 - Worktree: primary checkout
-- Current session owner: none after this handoff; the primary checkout contains the reviewed local dashboard wording changes
+- Current session owner: none after this handoff; the primary checkout is clean
 
 ## Current state
 
-`dev` matches `origin/dev` at `c676486`; the reviewed storefront telemetry and dashboard integration were pushed, and an external Cloudflare Pages GitHub App created a non-production `dev` branch preview. The plain-language dashboard rewrite is verified locally and remains uncommitted. No merge, Worker deployment, remote migration, collection enablement, secret change, or production storefront publication occurred in this session. Worker version `5b415f2a-5f4b-4603-a7fa-fb8a490c4304` remains deployed at 100% with all eight secret bindings, `EVENT_COLLECTION_ENABLED=false`, `workers_dev=false`, preview URLs disabled, the intended D1 binding, the sole `operations.shopandson.com` custom domain, and the sole five-minute Cron. Remote migrations `0001`–`0003` are current. `/health` returns 200, Access redirects `/dashboard`, `POST /v1/events` returns `503 collection_disabled`, and unauthenticated notifications return 401. All four health targets are healthy with zero consecutive failures and no open incidents. Shopify has 90 aggregate rows covering 2026-04-17 through 2026-07-15. The corrected `Zone → Analytics → Read` token last verified six Cloudflare rows covering 2026-07-10 through 2026-07-15. Collection has written zero funnel events. Notification IDs 1–8 and incident history remain as audit evidence; Beckett confirmed exactly one opening and one recovery iMessage during the approved drill, the pending queue is empty, and no incident is open. The LaunchAgent remains installed from a mode-700 relay copy under `~/Library/Application Support/ShopAndSonOperations/`.
+`dev` matches `origin/dev` at `4ae989e` (2026-07-17); the reviewed storefront telemetry and dashboard integration were pushed, and an external Cloudflare Pages GitHub App created a non-production `dev` branch preview. The plain-language dashboard rewrite was committed and pushed in `4ae989e`; the checkout is clean. No merge, Worker deployment, remote migration, collection enablement, secret change, or production storefront publication occurred in this session. Worker version `5b415f2a-5f4b-4603-a7fa-fb8a490c4304` remains deployed at 100% with all eight secret bindings, `EVENT_COLLECTION_ENABLED=false`, `workers_dev=false`, preview URLs disabled, the intended D1 binding, the sole `operations.shopandson.com` custom domain, and the sole five-minute Cron. Remote migrations `0001`–`0003` are current. `/health` returns 200, Access redirects `/dashboard`, `POST /v1/events` returns `503 collection_disabled`, and unauthenticated notifications return 401. All four health targets are healthy with zero consecutive failures and no open incidents. Shopify has 90 aggregate rows covering 2026-04-17 through 2026-07-15. The corrected `Zone → Analytics → Read` token last verified six Cloudflare rows covering 2026-07-10 through 2026-07-15. Collection has written zero funnel events. Notification IDs 1–8 and incident history remain as audit evidence; Beckett confirmed exactly one opening and one recovery iMessage during the approved drill, the pending queue is empty, and no incident is open. The LaunchAgent remains installed from a mode-700 relay copy under `~/Library/Application Support/ShopAndSonOperations/`.
 
 ## Completed work
 
