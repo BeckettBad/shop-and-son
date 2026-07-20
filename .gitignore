@@ -23,6 +23,7 @@ pnpm-debug.log*
 .env.production
 operations/.dev.vars
 operations/.dev.vars.*
+!operations/.dev.vars.example
 
 # local Operations Worker state and sensitive D1 exports
 operations/.wrangler/
