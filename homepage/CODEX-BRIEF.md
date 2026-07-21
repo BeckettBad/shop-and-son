@@ -95,16 +95,20 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 > **Phases G–J are SHIPPED** (merged `dev → main` @ `012f918`, live). Do not re-do
 > any of them; their brief text lives in this file's git history + the sections below.
 
-**Status:** implementing Phase BA1 directly per operator instruction. Everything below BA1 is
-history, not instruction.
+**Status:** Phase BA1 SHIPPED via PR #43 and production-verified. Everything below BA1 is history,
+not instruction.
 
 **DISPATCH PROTOCOL — one sub-task per `./dispatch-codex.sh` run, one commit
 each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: BA1 — set every homepage store-hours source/fallback to 11 AM–7 PM ET,
-> regression-test it, verify the production build, then publish through dev → main.**
+> **ACTIVE SUB-TASK: (none) — BA1 shipped @ main merge `9fa965d`.**
+> Log: 2026-07-21 — BA1 store hours 11 AM–7 PM — dev `5be6ef0`, PR #43, main `9fa965d`
+> — tests:green (9/9) check:green build/deploy:green — Cloudflare preview verified at 11:47 ET
+> with body hours 11/19 and live Spotify track; production verified at 11:49 ET with body hours
+> 11/19, `/now` requested, live track rendered, and zero console errors. PR was isolated from 17
+> unrelated commits parked on dev; main merged back into dev afterward.
 > Log: 2026-07-12 — AM2 route newsletter signup through worker — 2c4b2c0 — build:green check:green
 > — reviewed CLEAN. Endpoint env-driven: PUBLIC_SUBSCRIBE_URL override else derived from
 > PUBLIC_NOW_PLAYING_URL origin + /subscribe (prod needs NO new repo var; CSP connect-src already
