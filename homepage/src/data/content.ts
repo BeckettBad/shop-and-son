@@ -10,7 +10,7 @@ export const site = {
   brand: "&son",
   address: "138 Sullivan Street, New York, NY 10012",
   email: "info@shopandson.com",
-  hours: { openHour: 12, closeHour: 19 },
+  hours: { openHour: 11, closeHour: 19 },
 };
 
 /** Block 01 — hero landing overlay menu. */
