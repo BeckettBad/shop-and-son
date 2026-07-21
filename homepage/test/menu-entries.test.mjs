@@ -4,7 +4,7 @@ import test from "node:test";
 const moduleUrl = new URL("../src/lib/menu-entries.ts", import.meta.url);
 const { toCollectionMenuEntries, toDesignerMenuEntries } = await import(moduleUrl);
 
-test("designer placeholders are retained after collection-backed designers", () => {
+test("all designers are alphabetized together regardless of collection status", () => {
   assert.deepEqual(
     toDesignerMenuEntries([
       { label: " first preview ", href: "/search" },
@@ -20,13 +20,16 @@ test("designer placeholders are retained after collection-backed designers", () 
         collectionLabel: "ANCELLM",
       },
       {
+        kind: "placeholder",
+        label: "FIRST PREVIEW",
+      },
+      { kind: "placeholder", label: "SECOND PREVIEW" },
+      {
         kind: "collection",
         label: "YAHAE",
         collection: "yahae-1",
         collectionLabel: "YAHAE",
       },
-      { kind: "placeholder", label: "FIRST PREVIEW" },
-      { kind: "placeholder", label: "SECOND PREVIEW" },
     ],
   );
 });
