@@ -98,16 +98,24 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 > **Phases G–J are SHIPPED** (merged `dev → main` @ `012f918`, live). Do not re-do
 > any of them; their brief text lives in this file's git history + the sections below.
 
-**Status:** implementing Phase BC1 directly per operator instruction. Everything below BC1 is
-history, not instruction.
+**Status:** Phase BC1 SHIPPED via PR #46 and production-verified. Everything below BC1 is history,
+not instruction.
 
 **DISPATCH PROTOCOL — one sub-task per `./dispatch-codex.sh` run, one commit
 each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: BC1 — alphabetize all designer entries together regardless of collection
-> status, test, preview, and publish through an isolated PR.**
+> **ACTIVE SUB-TASK: (none) — BC1 shipped @ main merge `64b8049`.**
+> Log: 2026-07-21 — BC1 universal alphabetical designer order — dev `0a13a9e`, PR #46, main
+> `64b8049` — test-first regression:red→green; tests:green (11/11 dev; 3/3 isolated deployment
+> branch), check:green, independent review:pass, Cloudflare preview/build:green. Preview verified
+> desktop and 390×844 mobile. Real menu contained 40 designers and 6 inert placeholders; every
+> label sorted alphabetically regardless of kind, with WILLIAM FREDERICK → inert WRIGHT + DOYLE
+> (FW26) → Y. Placeholder click preserved the URL and normal collection buttons still opened the
+> catalogue. GitHub Pages build/deploy run `29860442489`:green. Production verified with the same
+> 40-entry alphabetical order, 6 inert placeholders, working collection catalogue, and zero console
+> errors. `DEPLOY-PLAN.md` now records the universal alphabetical behavior.
 > Log: 2026-07-21 — BB1 coming-soon designer placeholders — dev `2c91251`, PR #44, main
 > `48662f9` — tests:green (11/11 dev; 3/3 isolated deployment branch), check:green,
 > independent review:pass, Cloudflare preview/build:green. Preview verified desktop and 390×844
