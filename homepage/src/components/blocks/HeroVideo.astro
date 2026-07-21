@@ -1081,34 +1081,50 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
     return subgroup?.closest(".hero__menu-item--group")?.querySelector<HTMLUListElement>(".hero__menu-nested") ?? null;
   };
 
-  const getCollectionEntries = (items: Element[]): LiveHeroMenuEntry[] =>
-    items.flatMap((item) => {
+  const getRenderedMenuEntries = (items: Element[]): LiveHeroMenuEntry[] =>
+    items.flatMap<LiveHeroMenuEntry>((item) => {
       const button = item.querySelector<HTMLButtonElement>("[data-shop-all]");
       const collection = button?.dataset.collection;
-      if (!button || !collection) return [];
+      if (button && collection) {
+        const label = getMenuLabel(button.dataset.collectionLabel ?? button.textContent);
+        return [
+          {
+            kind: "collection" as const,
+            label: getMenuLabel(button.textContent),
+            collection,
+            collectionLabel: label,
+          },
+        ];
+      }
 
-      const label = getMenuLabel(button.dataset.collectionLabel ?? button.textContent);
-      return [
-        {
-          label,
-          collection,
-          collectionLabel: label,
-        },
-      ];
+      const placeholder = item.querySelector<HTMLElement>("[data-menu-placeholder]");
+      const label = getMenuLabel(placeholder?.textContent);
+      return placeholder && label ? [{ kind: "placeholder" as const, label }] : [];
     });
 
   const entriesMatch = (currentEntries: LiveHeroMenuEntry[], nextEntries: LiveHeroMenuEntry[]) =>
     currentEntries.length === nextEntries.length &&
-    currentEntries.every(
-      (entry, index) =>
-        entry.collection === nextEntries[index]?.collection &&
-        entry.collectionLabel === nextEntries[index]?.collectionLabel,
-    );
+    currentEntries.every((entry, index) => {
+      const nextEntry = nextEntries[index];
+      if (!nextEntry || entry.kind !== nextEntry.kind || entry.label !== nextEntry.label) return false;
+      if (entry.kind === "placeholder") return true;
+      if (nextEntry.kind !== "collection") return false;
+      return entry.collection === nextEntry.collection && entry.collectionLabel === nextEntry.collectionLabel;
+    });
 
-  const createCollectionMenuItem = (entry: LiveHeroMenuEntry, variant: "bullet" | "dash") => {
+  const createMenuItem = (entry: LiveHeroMenuEntry, variant: "bullet" | "dash") => {
     const item = document.createElement("li");
     if (variant === "dash") {
       item.className = "hero__menu-item";
+    }
+
+    if (entry.kind === "placeholder") {
+      const placeholder = document.createElement("span");
+      placeholder.className = `hero__menu-link hero__menu-link--${variant}`;
+      placeholder.dataset.menuPlaceholder = "";
+      placeholder.textContent = entry.label;
+      item.append(placeholder);
+      return item;
     }
 
     const button = document.createElement("button");
@@ -1127,10 +1143,10 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
   const reconcileNestedMenuList = (list: HTMLUListElement | null, nextEntries: LiveHeroMenuEntry[]) => {
     if (!list || nextEntries.length === 0) return;
 
-    const currentEntries = getCollectionEntries(Array.from(list.children));
+    const currentEntries = getRenderedMenuEntries(Array.from(list.children));
     if (entriesMatch(currentEntries, nextEntries)) return;
 
-    list.replaceChildren(...nextEntries.map((entry) => createCollectionMenuItem(entry, "bullet")));
+    list.replaceChildren(...nextEntries.map((entry) => createMenuItem(entry, "bullet")));
   };
 
   const reconcileObjectsMenuList = (section: HTMLElement | undefined, nextEntries: LiveHeroMenuEntry[]) => {
@@ -1144,11 +1160,11 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
     if (shopAllIndex === -1) return;
 
     const currentLeafItems = items.slice(shopAllIndex + 1);
-    const currentEntries = getCollectionEntries(currentLeafItems);
+    const currentEntries = getRenderedMenuEntries(currentLeafItems);
     if (entriesMatch(currentEntries, nextEntries)) return;
 
     currentLeafItems.forEach((item) => item.remove());
-    items[shopAllIndex]?.after(...nextEntries.map((entry) => createCollectionMenuItem(entry, "dash")));
+    items[shopAllIndex]?.after(...nextEntries.map((entry) => createMenuItem(entry, "dash")));
   };
 
   const hydrateLiveMenu = async () => {

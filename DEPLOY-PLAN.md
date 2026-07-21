@@ -106,10 +106,12 @@ Auto-live, NO rebuild, NO code edit, keeps working after cutover once B1 is done
 - Product images (imageless products are hidden by AI1 until photos are uploaded,
   then appear automatically).
 - Refund/privacy/terms policy edits (fetched live).
-- **New designer/collection: auto-appears IF Ben also adds the collection to
-  Shopify admin -> Online Store -> Navigation -> `main-menu` under the `designers`
-  item.** The site hydrates its menu from `main-menu` at runtime. This is THE one
-  workflow to teach Ben. A collection not added to `main-menu` gets no button.
+- **New designer: add the designer to Shopify admin -> Online Store -> Navigation ->
+  `main-menu` under the `designers` item.** The site hydrates this menu at runtime.
+  A Collection-linked designer is clickable and opens its catalogue. A designer
+  without a Collection remains visible as unclickable text at the bottom of the
+  list; when Ben later changes its link to the real Collection, it automatically
+  becomes clickable. A collection not added to `main-menu` gets no button.
 Refreshes within 24h via the nightly 4am ET rebuild (cron in deploy.yml):
 - Baked first-paint snapshot, scoped (within-collection) search handle set.
 Needs a code edit (us):
@@ -182,8 +184,9 @@ Trap for future editors: `content.ts` contains large DEAD sections (`site.nav`,
       sales channels -> Develop apps -> Create app ("son-ops") -> Configuration ->
       Admin API scopes: read_customers, write_customers -> Install -> copy the Admin
       API access token ONCE and paste it ONLY into the worker secret (never the repo).
-- [ ] Teach Ben the ONE nav rule: new collection -> add it to Navigation `main-menu`
-      (designers submenu) and it appears on the site by itself.
+- [ ] Teach Ben the ONE nav rule: add every designer to Navigation `main-menu`
+      (designers submenu). Collection links are clickable; entries without a
+      Collection display as inert bottom-of-list names until linked later.
 - [x] Product hygiene RESOLVED (Ben, 2026-07-10): the headless-only list is POS-only
       inventory. Never draft/delete (breaks POS). Phase AN filters the site to
       Online-Store-published products, so the list is excluded automatically.

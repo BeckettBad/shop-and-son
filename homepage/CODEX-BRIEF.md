@@ -55,14 +55,18 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## ACTIVE BRIEF
 
-> **CURRENT TASK (2026-07-21): Phase BA1 — permanently correct store hours to 11 AM–7 PM ET.
-> Root cause verified live: the worker and Spotify were healthy (`/now` returned `show:true` from
-> the allowed iPad), but the homepage still had the canonical opening hour set to 12, so both the
-> open/closed clock and Now Playing gate rejected valid playback from 11:00–11:59. Update the
-> single canonical `site.hours.openHour` to 11 and align both defensive public-script fallbacks to
-> 11 (keep close at 19). Add a regression test covering the canonical value and both consumers.
-> Scope: `homepage/` only; no worker, operations, archive, or preorders changes. Verify tests,
-> Astro check/build, built body data attributes, and live Now Playing before declaring shipped.**
+> **CURRENT TASK (2026-07-21): Phase BB1 — render Shopify designer placeholders without fake
+> catalogues. Live Storefront evidence: Ben already added `wright + doyle (FW26)` under
+> `main-menu → designers`, but it is a SEARCH item with no Collection resource. `menu.ts`
+> currently drops every child without a collection handle, so the site silently omits it. Preserve
+> non-collection items under DESIGNERS only as typed, inert placeholders; keep collection-backed
+> designers clickable. Partition placeholders after all collection designers while preserving
+> Shopify order within each group. Render placeholders with the exact existing bullet typography
+> and green pointer hover, but as non-focusable/non-clickable spans with no URL/stage action and no
+> “coming soon” copy. One shared DOM path must cover desktop and mobile. Categories/Objects remain
+> collection-only. Add regression tests and update the Ben upkeep documentation. Scope: homepage
+> code/tests/docs plus root `DEPLOY-PLAN.md` documentation only; no worker, operations, archive, or
+> preorders changes. Verify preview and production against the real WRIGHT + DOYLE menu item.**
 >
 > **PRIOR: AH1 @ ea6beba / AG1 @ 514cf81 — eager loading + onerror retry. Harmless hardening,
 > kept, but they did NOT fix the blanks (see AI diagnosis above).**
@@ -95,15 +99,16 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 > **Phases G–J are SHIPPED** (merged `dev → main` @ `012f918`, live). Do not re-do
 > any of them; their brief text lives in this file's git history + the sections below.
 
-**Status:** Phase BA1 SHIPPED via PR #43 and production-verified. Everything below BA1 is history,
-not instruction.
+**Status:** implementing Phase BB1 directly per operator instruction. Everything below BB1 is
+history, not instruction.
 
 **DISPATCH PROTOCOL — one sub-task per `./dispatch-codex.sh` run, one commit
 each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — BA1 shipped @ main merge `9fa965d`.**
+> **ACTIVE SUB-TASK: BB1 — retain non-collection Shopify designer entries as inert bottom-of-list
+> text, test, preview, and publish through an isolated PR.**
 > Log: 2026-07-21 — BA1 store hours 11 AM–7 PM — dev `5be6ef0`, PR #43, main `9fa965d`
 > — tests:green (9/9) check:green build/deploy:green — Cloudflare preview verified at 11:47 ET
 > with body hours 11/19 and live Spotify track; production verified at 11:49 ET with body hours
