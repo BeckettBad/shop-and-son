@@ -55,16 +55,14 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## ACTIVE BRIEF
 
-> **CURRENT TASK (2026-07-10): Phase AI (TOP PRIORITY) — blank catalogue tiles, TRUE ROOT CAUSE
-> FOUND. It was never a loading/rendering bug (AG1/AH1 chased the wrong layer). On 2026-07-09,
-> 121 old draft products (created 2024–2026, never published to the Online Store — they 404 on
-> shopandson.com) were bulk-published to the headless sales channel in Shopify admin. 95 of them
-> have ZERO images/media in Shopify. The Storefront API now returns them, the live reconcile
-> re-render replaces the (clean, baked) snapshot grid, and every imageless product renders as an
-> off-white blank canvas (the no-image placeholder branch). Verified live: clothing-1 snapshot=342
-> products (all with images), live API=463, 95 with featuredImage:null AND images:[] AND media:[],
-> all 95 publishedAt 2026-07-09. Fix = never render imageless products in grids. Spec under
-> "## PHASE AI". Dispatch now.**
+> **CURRENT TASK (2026-07-21): Phase BA1 — permanently correct store hours to 11 AM–7 PM ET.
+> Root cause verified live: the worker and Spotify were healthy (`/now` returned `show:true` from
+> the allowed iPad), but the homepage still had the canonical opening hour set to 12, so both the
+> open/closed clock and Now Playing gate rejected valid playback from 11:00–11:59. Update the
+> single canonical `site.hours.openHour` to 11 and align both defensive public-script fallbacks to
+> 11 (keep close at 19). Add a regression test covering the canonical value and both consumers.
+> Scope: `homepage/` only; no worker, operations, archive, or preorders changes. Verify tests,
+> Astro check/build, built body data attributes, and live Now Playing before declaring shipped.**
 >
 > **PRIOR: AH1 @ ea6beba / AG1 @ 514cf81 — eager loading + onerror retry. Harmless hardening,
 > kept, but they did NOT fix the blanks (see AI diagnosis above).**
@@ -97,19 +95,16 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 > **Phases G–J are SHIPPED** (merged `dev → main` @ `012f918`, live). Do not re-do
 > any of them; their brief text lives in this file's git history + the sections below.
 
-**Status:** ready for Codex — Phase T (operator edits 2026-07-08, "no text overlay
-anywhere, especially mobile" pass; 4 commits T1–T4). Phase S SHIPPED (PR #19).
-Everything below Phase T is history, not instruction.
+**Status:** implementing Phase BA1 directly per operator instruction. Everything below BA1 is
+history, not instruction.
 
 **DISPATCH PROTOCOL — one sub-task per `./dispatch-codex.sh` run, one commit
 each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — AM2 committed @ 2c4b2c0, reviewed CLEAN, fully verified. Status:
-> ready for operator verify on dev, then operator says "ship AM2" -> PR dev -> main -> merge
-> flips the LIVE signup path to the worker. After AM2 is live, AM3 = operator drops
-> unauthenticated_write_customers off the public Storefront token (ending 470c).**
+> **ACTIVE SUB-TASK: BA1 — set every homepage store-hours source/fallback to 11 AM–7 PM ET,
+> regression-test it, verify the production build, then publish through dev → main.**
 > Log: 2026-07-12 — AM2 route newsletter signup through worker — 2c4b2c0 — build:green check:green
 > — reviewed CLEAN. Endpoint env-driven: PUBLIC_SUBSCRIBE_URL override else derived from
 > PUBLIC_NOW_PLAYING_URL origin + /subscribe (prod needs NO new repo var; CSP connect-src already
