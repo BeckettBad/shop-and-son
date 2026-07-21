@@ -111,8 +111,8 @@ if (nowPlayingRoot) {
   };
 
   const isStoreOpen = () => {
-    const openHour = Number(document.body.dataset.openHour ?? "12");
-    const closeHour = Number(document.body.dataset.closeHour ?? "18");
+    const openHour = Number(document.body.dataset.openHour ?? "11");
+    const closeHour = Number(document.body.dataset.closeHour ?? "19");
     if (!Number.isFinite(openHour) || !Number.isFinite(closeHour)) return false;
 
     const hour = getEasternHour();

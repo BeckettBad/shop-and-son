@@ -1,5 +1,5 @@
-const OPEN_HOUR = Number(document.body.dataset.openHour ?? "12");
-const CLOSE_HOUR = Number(document.body.dataset.closeHour ?? "18");
+const OPEN_HOUR = Number(document.body.dataset.openHour ?? "11");
+const CLOSE_HOUR = Number(document.body.dataset.closeHour ?? "19");
 
 // clock + open/closed status, computed from store hours in America/New_York
 function tick() {
