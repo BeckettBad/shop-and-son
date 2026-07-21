@@ -99,16 +99,23 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 > **Phases G–J are SHIPPED** (merged `dev → main` @ `012f918`, live). Do not re-do
 > any of them; their brief text lives in this file's git history + the sections below.
 
-**Status:** implementing Phase BB1 directly per operator instruction. Everything below BB1 is
-history, not instruction.
+**Status:** Phase BB1 SHIPPED via PR #44 and production-verified. Everything below BB1 is history,
+not instruction.
 
 **DISPATCH PROTOCOL — one sub-task per `./dispatch-codex.sh` run, one commit
 each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: BB1 — retain non-collection Shopify designer entries as inert bottom-of-list
-> text, test, preview, and publish through an isolated PR.**
+> **ACTIVE SUB-TASK: (none) — BB1 shipped @ main merge `48662f9`.**
+> Log: 2026-07-21 — BB1 coming-soon designer placeholders — dev `2c91251`, PR #44, main
+> `48662f9` — tests:green (11/11 dev; 3/3 isolated deployment branch), check:green,
+> independent review:pass, Cloudflare preview/build:green. Preview verified desktop and 390×844
+> mobile: 33 designers, 32 collection buttons, WRIGHT + DOYLE (FW26) as the sole final inert
+> SPAN with no href/tabindex/catalog action; green pointer-hover rule present; ANCELLM still opened
+> its catalogue. GitHub Pages build/deploy run `29849155659`:green. Production verified with the
+> same 33/32/1 structure, inert click preserving the URL, normal designer catalogue opening, and
+> zero console errors. `DEPLOY-PLAN.md` now records Ben's collection-link/placeholder workflow.
 > Log: 2026-07-21 — BA1 store hours 11 AM–7 PM — dev `5be6ef0`, PR #43, main `9fa965d`
 > — tests:green (9/9) check:green build/deploy:green — Cloudflare preview verified at 11:47 ET
 > with body hours 11/19 and live Spotify track; production verified at 11:49 ET with body hours
