@@ -55,18 +55,17 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 
 ## ACTIVE BRIEF
 
-> **CURRENT TASK (2026-07-21): Phase BB1 — render Shopify designer placeholders without fake
-> catalogues. Live Storefront evidence: Ben already added `wright + doyle (FW26)` under
-> `main-menu → designers`, but it is a SEARCH item with no Collection resource. `menu.ts`
-> currently drops every child without a collection handle, so the site silently omits it. Preserve
-> non-collection items under DESIGNERS only as typed, inert placeholders; keep collection-backed
-> designers clickable. Partition placeholders after all collection designers while preserving
-> Shopify order within each group. Render placeholders with the exact existing bullet typography
-> and green pointer hover, but as non-focusable/non-clickable spans with no URL/stage action and no
-> “coming soon” copy. One shared DOM path must cover desktop and mobile. Categories/Objects remain
-> collection-only. Add regression tests and update the Ben upkeep documentation. Scope: homepage
-> code/tests/docs plus root `DEPLOY-PLAN.md` documentation only; no worker, operations, archive, or
-> preorders changes. Verify preview and production against the real WRIGHT + DOYLE menu item.**
+> **CURRENT TASK (2026-07-21): Phase BC1 — alphabetize the entire Shopify designer list.
+> BB1 correctly preserves non-collection designers as inert spans, but partitions them after every
+> collection-backed designer. Remove that grouping rule: normalize every designer label, then sort
+> the combined clickable and placeholder entries alphabetically by displayed label. Kind must not
+> affect position. Preserve all BB1 semantics: collection designers remain clickable; placeholders
+> remain non-focusable/non-clickable spans with the same typography, bullet, green pointer hover,
+> and no “coming soon” copy. Categories/Objects remain collection-only and unchanged. One shared
+> DOM path must continue to cover desktop and mobile. Update regression coverage and Ben upkeep
+> documentation. Scope: homepage code/tests/docs plus root `DEPLOY-PLAN.md` documentation only; no
+> worker, operations, archive, or preorders changes. Verify preview and production against the real
+> Shopify list, including WRIGHT + DOYLE between WILLIAM FREDERICK and Y.**
 >
 > **PRIOR: AH1 @ ea6beba / AG1 @ 514cf81 — eager loading + onerror retry. Harmless hardening,
 > kept, but they did NOT fix the blanks (see AI diagnosis above).**
@@ -99,15 +98,16 @@ off, so the dispatch's scope rules + Claude's review are the only guardrails.
 > **Phases G–J are SHIPPED** (merged `dev → main` @ `012f918`, live). Do not re-do
 > any of them; their brief text lives in this file's git history + the sections below.
 
-**Status:** Phase BB1 SHIPPED via PR #44 and production-verified. Everything below BB1 is history,
-not instruction.
+**Status:** implementing Phase BC1 directly per operator instruction. Everything below BC1 is
+history, not instruction.
 
 **DISPATCH PROTOCOL — one sub-task per `./dispatch-codex.sh` run, one commit
 each.** Claude reviews the real diff against that sub-task's **Done when** +
 risks before the next dispatch. Before each dispatch, Claude updates the line
 below so Codex has ONE target; everything else in this file is context.
 
-> **ACTIVE SUB-TASK: (none) — BB1 shipped @ main merge `48662f9`.**
+> **ACTIVE SUB-TASK: BC1 — alphabetize all designer entries together regardless of collection
+> status, test, preview, and publish through an isolated PR.**
 > Log: 2026-07-21 — BB1 coming-soon designer placeholders — dev `2c91251`, PR #44, main
 > `48662f9` — tests:green (11/11 dev; 3/3 isolated deployment branch), check:green,
 > independent review:pass, Cloudflare preview/build:green. Preview verified desktop and 390×844
