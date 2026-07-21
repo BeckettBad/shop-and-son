@@ -1,15 +1,17 @@
 import { getMenu, type StorefrontMenuItem } from "./storefront-client";
+import {
+  toCollectionMenuEntries,
+  toDesignerMenuEntries,
+  type LiveHeroCollectionEntry,
+  type LiveHeroMenuEntry,
+} from "./menu-entries";
 
-export interface LiveHeroMenuEntry {
-  label: string;
-  collection: string;
-  collectionLabel: string;
-}
+export type { LiveHeroMenuEntry } from "./menu-entries";
 
 export interface LiveHeroMenu {
-  categories: LiveHeroMenuEntry[];
+  categories: LiveHeroCollectionEntry[];
   designers: LiveHeroMenuEntry[];
-  objects: LiveHeroMenuEntry[];
+  objects: LiveHeroCollectionEntry[];
   clothesShopAll?: string;
   objectsShopAll?: string;
 }
@@ -18,8 +20,8 @@ const MAIN_MENU_HANDLE = "main-menu";
 const CLOTHING_SHOP_ALL_HANDLE = "clothing-1";
 
 const normalizeLabel = (label: string) => label.trim().replace(/\s+/g, " ").toLowerCase();
-const displayLabel = (label: string) => label.trim().replace(/\s+/g, " ").toLocaleUpperCase("en-US");
-const clothingShopAllEntry = (collectionHandle: string): LiveHeroMenuEntry => ({
+const clothingShopAllEntry = (collectionHandle: string): LiveHeroCollectionEntry => ({
+  kind: "collection",
   label: "SHOP ALL",
   collection: collectionHandle,
   collectionLabel: "CLOTHES — SHOP ALL",
@@ -29,23 +31,6 @@ const findMenuItem = (items: StorefrontMenuItem[], label: string, collectionHand
   items.find((item) => {
     if (collectionHandle && item.collectionHandle === collectionHandle) return true;
     return normalizeLabel(item.label) === label;
-  });
-
-const toCollectionEntry = (item: StorefrontMenuItem): LiveHeroMenuEntry | null => {
-  if (!item.collectionHandle) return null;
-
-  const label = displayLabel(item.label);
-  return {
-    label,
-    collection: item.collectionHandle,
-    collectionLabel: label,
-  };
-};
-
-const toCollectionEntries = (items: StorefrontMenuItem[] | undefined) =>
-  (items ?? []).flatMap((item) => {
-    const entry = toCollectionEntry(item);
-    return entry ? [entry] : [];
   });
 
 export async function getLiveHeroMenu(): Promise<LiveHeroMenu | null> {
@@ -60,8 +45,10 @@ export async function getLiveHeroMenu(): Promise<LiveHeroMenu | null> {
   // Shopify admin mapping: main-menu clothing children minus shop all hydrate
   // CLOTHES/CATEGORIES, main-menu designers children hydrate CLOTHES/DESIGNERS,
   // and main-menu objects children hydrate OBJECTS leaves; the parent collection
-  // handles remain the SHOP ALL entries (clothing-1 and house-1).
-  const categoryEntries = toCollectionEntries(clothing.items).filter((entry) => {
+  // handles remain the SHOP ALL entries (clothing-1 and house-1). Designer children
+  // without collections remain visible as inert placeholders at the bottom of that
+  // subgroup; Categories and Objects remain collection-only.
+  const categoryEntries = toCollectionMenuEntries(clothing.items).filter((entry) => {
     const label = normalizeLabel(entry.label);
     return entry.collection !== CLOTHING_SHOP_ALL_HANDLE && label !== "shop all";
   });
@@ -71,8 +58,8 @@ export async function getLiveHeroMenu(): Promise<LiveHeroMenu | null> {
 
   return {
     categories,
-    designers: toCollectionEntries(designers.items),
-    objects: toCollectionEntries(objects.items),
+    designers: toDesignerMenuEntries(designers.items),
+    objects: toCollectionMenuEntries(objects.items),
     clothesShopAll: clothing.collectionHandle,
     objectsShopAll: objects.collectionHandle,
   };

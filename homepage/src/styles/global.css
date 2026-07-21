@@ -872,7 +872,8 @@ body{
   .hero__menu-header:hover,
   .hero__menu-subheader:hover,
   a.hero__menu-link:hover,
-  .hero__menu-link[data-shop-all]:hover{
+  .hero__menu-link[data-shop-all]:hover,
+  .hero__menu-link[data-menu-placeholder]:hover{
     color:var(--neon-green);
   }
   a.hero__menu-link[data-now-playing-menu-item][data-now-playing-live="false"]:hover,
@@ -881,6 +882,9 @@ body{
     text-decoration:none;
     cursor:default;
   }
+}
+.hero__menu-link[data-menu-placeholder]{
+  cursor:default;
 }
 @media(min-width:761px){
   a.hero__menu-link[data-now-playing-menu-item]:hover,
