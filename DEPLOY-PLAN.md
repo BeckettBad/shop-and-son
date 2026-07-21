@@ -108,10 +108,11 @@ Auto-live, NO rebuild, NO code edit, keeps working after cutover once B1 is done
 - Refund/privacy/terms policy edits (fetched live).
 - **New designer: add the designer to Shopify admin -> Online Store -> Navigation ->
   `main-menu` under the `designers` item.** The site hydrates this menu at runtime.
-  A Collection-linked designer is clickable and opens its catalogue. A designer
-  without a Collection remains visible as unclickable text at the bottom of the
-  list; when Ben later changes its link to the real Collection, it automatically
-  becomes clickable. A collection not added to `main-menu` gets no button.
+  All designers are alphabetized together. A Collection-linked designer is clickable
+  and opens its catalogue; a designer without a Collection remains visible in its
+  alphabetical position as unclickable text. When Ben later changes its link to the
+  real Collection, it automatically becomes clickable. A collection not added to
+  `main-menu` gets no button.
 Refreshes within 24h via the nightly 4am ET rebuild (cron in deploy.yml):
 - Baked first-paint snapshot, scoped (within-collection) search handle set.
 Needs a code edit (us):
@@ -186,7 +187,7 @@ Trap for future editors: `content.ts` contains large DEAD sections (`site.nav`,
       API access token ONCE and paste it ONLY into the worker secret (never the repo).
 - [ ] Teach Ben the ONE nav rule: add every designer to Navigation `main-menu`
       (designers submenu). Collection links are clickable; entries without a
-      Collection display as inert bottom-of-list names until linked later.
+      Collection display as inert names in the same alphabetical list until linked.
 - [x] Product hygiene RESOLVED (Ben, 2026-07-10): the headless-only list is POS-only
       inventory. Never draft/delete (breaks POS). Phase AN filters the site to
       Online-Store-published products, so the list is excluded automatically.

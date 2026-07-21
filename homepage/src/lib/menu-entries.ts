@@ -60,5 +60,7 @@ export const toDesignerMenuEntries = (
     if (label) placeholders.push({ kind: "placeholder", label });
   });
 
-  return [...collections, ...placeholders];
+  return [...collections, ...placeholders].sort((a, b) =>
+    a.label.localeCompare(b.label, "en-US", { sensitivity: "base" }),
+  );
 };

@@ -46,8 +46,8 @@ export async function getLiveHeroMenu(): Promise<LiveHeroMenu | null> {
   // CLOTHES/CATEGORIES, main-menu designers children hydrate CLOTHES/DESIGNERS,
   // and main-menu objects children hydrate OBJECTS leaves; the parent collection
   // handles remain the SHOP ALL entries (clothing-1 and house-1). Designer children
-  // without collections remain visible as inert placeholders at the bottom of that
-  // subgroup; Categories and Objects remain collection-only.
+  // without collections remain visible as inert placeholders in the same alphabetical
+  // list; Categories and Objects remain collection-only.
   const categoryEntries = toCollectionMenuEntries(clothing.items).filter((entry) => {
     const label = normalizeLabel(entry.label);
     return entry.collection !== CLOTHING_SHOP_ALL_HANDLE && label !== "shop all";
