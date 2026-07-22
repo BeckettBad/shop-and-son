@@ -1,0 +1,23 @@
+# Local dev vars for the Operations Worker. Copy to .dev.vars and fill in.
+# .dev.vars is gitignored, never commit it. Production values live in Worker
+# secrets (wrangler secret put), never in wrangler.jsonc or this repo.
+# See README.md for what each variable is and where it comes from.
+
+# Dashboard basic auth
+DASHBOARD_USERNAME=
+DASHBOARD_PASSWORD=
+
+# Event collection kill switch ("true" or "false"; wrangler.jsonc ships "false")
+EVENT_COLLECTION_ENABLED=
+
+# ntfy notification token
+NOTIFICATION_API_TOKEN=
+
+# Cloudflare analytics (GraphQL API token and the shopandson.com zone id)
+CLOUDFLARE_ANALYTICS_TOKEN=
+CLOUDFLARE_ZONE_ID=
+
+# Shopify Admin API client credentials for the daily sync
+SHOPIFY_CLIENT_ID=
+SHOPIFY_CLIENT_SECRET=
+SHOPIFY_SHOP_DOMAIN=

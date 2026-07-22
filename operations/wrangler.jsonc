@@ -1,0 +1,36 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "shop-and-son-operations",
+	"main": "src/index.ts",
+	"workers_dev": false,
+	"preview_urls": false,
+	"routes": [
+		{
+			"pattern": "operations.shopandson.com",
+			"custom_domain": true
+		}
+	],
+	"triggers": {
+		"crons": ["*/5 * * * *"]
+	},
+	"compatibility_date": "2026-07-15",
+	"compatibility_flags": [
+		"nodejs_compat",
+		"global_fetch_strictly_public"
+	],
+	"vars": {
+		"EVENT_COLLECTION_ENABLED": "false"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "shop-and-son-operations",
+			"database_id": "1476a980-b0fc-4434-88f8-ea2bbe5437d2",
+			"migrations_dir": "migrations"
+		}
+	],
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1
+	}
+}

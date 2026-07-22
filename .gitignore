@@ -21,6 +21,17 @@ pnpm-debug.log*
 # environment variables
 .env
 .env.production
+operations/.dev.vars
+operations/.dev.vars.*
+!operations/.dev.vars.example
+
+# local Operations Worker state and sensitive D1 exports
+operations/.wrangler/
+operations/backups/
+
+# Python relay bytecode
+__pycache__/
+*.pyc
 
 # macOS-specific files
 .DS_Store
