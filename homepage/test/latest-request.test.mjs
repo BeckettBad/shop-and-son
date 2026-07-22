@@ -32,5 +32,14 @@ test("product telemetry is gated after the awaited response and product exits ca
 
   assert.ok(response >= 0 && response < currencyCheck);
   assert.ok(currencyCheck < render && render < track);
-  assert.ok((heroSource.match(/cancelProductView\(productView\)/g) ?? []).length >= 4);
+  assert.ok((heroSource.match(/cancelProductView\(productView\)/g) ?? []).length >= 5);
+
+  const liveSearchStart = heroSource.indexOf("const updateLiveSearchFromInput = () => {");
+  const liveSearchEnd = heroSource.indexOf("const dropSearchScope = () => {", liveSearchStart);
+  const liveSearchSource = heroSource.slice(liveSearchStart, liveSearchEnd);
+  const liveSearchCancellation = liveSearchSource.indexOf("cancelProductView(productView)");
+  const liveSearchTransition = liveSearchSource.indexOf('transitionToStage("search", renderLiveSearch)');
+
+  assert.ok(liveSearchStart >= 0 && liveSearchEnd > liveSearchStart);
+  assert.ok(liveSearchCancellation >= 0 && liveSearchCancellation < liveSearchTransition);
 });

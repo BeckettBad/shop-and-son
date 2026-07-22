@@ -2279,6 +2279,9 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
       return;
     }
 
+    if (activeStage === "product" && productView) {
+      cancelProductView(productView);
+    }
     transitionToStage("search", renderLiveSearch);
   };
 
