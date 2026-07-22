@@ -63,6 +63,15 @@ async function insertDailyMetrics(
   ]);
 }
 
+async function insertFunnelMetric(date: string, sessions = 10): Promise<void> {
+  await env.DB.prepare(`
+    INSERT INTO daily_funnel_metrics (
+      date, page_views, product_views, cart_adds, checkout_begins,
+      newsletter_signups, distinct_sessions, updated_at
+    ) VALUES (?, ?, ?, ?, ?, 0, ?, ?)
+  `).bind(date, sessions * 2, sessions, Math.floor(sessions / 2), Math.floor(sessions / 4), sessions, `${date}T23:00:00.000Z`).run();
+}
+
 describe("private dashboard", () => {
   beforeEach(async () => {
     await env.DB.batch([
@@ -141,22 +150,21 @@ describe("private dashboard", () => {
   });
 
   it("renders only the approved online growth KPIs on the primary dashboard", async () => {
-    await insertDailyMetrics("2026-07-15", 100, 2, 10_000);
-    await env.DB.prepare(`
-      INSERT INTO daily_funnel_metrics (
-        date, page_views, product_views, cart_adds, checkout_begins,
-        newsletter_signups, distinct_sessions, updated_at
-      ) VALUES ('2026-07-15', 20, 10, 4, 2, 0, 10, '2026-07-16T01:00:00.000Z')
-    `).run();
+    for (let day = 9; day <= 15; day += 1) {
+      const date = `2026-07-${String(day).padStart(2, "0")}`;
+      await insertDailyMetrics(date, 100, 2, 10_000);
+      await insertFunnelMetric(date);
+    }
 
     const { html } = await renderGrowth(7);
 
-    expect(html).toContain('data-metric="sessions" data-current="10"');
-    expect(html).toContain('data-metric="online-orders" data-current="2"');
+    expect(html.match(/class="metric-card"/g)).toHaveLength(7);
+    expect(html).toContain('data-metric="sessions" data-current="70"');
+    expect(html).toContain('data-metric="online-orders" data-current="14"');
     expect(html).toContain('data-metric="estimated-conversion" data-current="20"');
-    expect(html).toContain('data-metric="online-net-sales" data-current="10000"');
-    expect(html).toContain('data-metric="cogs" data-current="4000"');
-    expect(html).toContain('data-metric="gross-profit" data-current="6000"');
+    expect(html).toContain('data-metric="online-net-sales" data-current="70000"');
+    expect(html).not.toContain('data-metric="cogs"');
+    expect(html).toContain('data-metric="gross-profit" data-current="42000"');
     expect(html).toContain('data-metric="gross-margin" data-current="60"');
     expect(html).toContain('data-metric="aov" data-current="5000"');
     expect(html).toContain("Online Store gross profit");
@@ -171,9 +179,35 @@ describe("private dashboard", () => {
       WHERE date = '2026-07-15'
     `).run();
     const { html: incompleteHtml } = await renderGrowth(7);
-    expect(incompleteHtml).toContain('data-metric="cogs" data-availability="unavailable"');
     expect(incompleteHtml).toContain('data-metric="gross-profit" data-availability="unavailable"');
     expect(incompleteHtml).toContain('data-metric="gross-margin" data-availability="unavailable"');
+  });
+
+  it("withholds selected-period commerce totals when any expected Shopify date is missing", async () => {
+    for (let day = 10; day <= 15; day += 1) {
+      await insertDailyMetrics(`2026-07-${String(day).padStart(2, "0")}`, 100, 2, 10_000);
+    }
+
+    const { html } = await renderGrowth(7);
+
+    expect(html).toContain('data-metric="online-orders" data-availability="unavailable"');
+    expect(html).toContain('data-metric="online-net-sales" data-availability="unavailable"');
+    expect(html).toContain('data-metric="gross-profit" data-availability="unavailable"');
+    expect(html).toContain('data-metric="gross-margin" data-availability="unavailable"');
+    expect(html).toContain('data-metric="aov" data-availability="unavailable"');
+  });
+
+  it("withholds selected-period sessions and conversion when any expected funnel date is missing", async () => {
+    for (let day = 9; day <= 15; day += 1) {
+      const date = `2026-07-${String(day).padStart(2, "0")}`;
+      await insertDailyMetrics(date, 100, 2, 10_000);
+      if (day > 9) await insertFunnelMetric(date);
+    }
+
+    const { html } = await renderGrowth(7);
+
+    expect(html).toContain('data-metric="sessions" data-availability="unavailable"');
+    expect(html).toContain('data-metric="estimated-conversion" data-availability="unavailable"');
   });
 
   it("uses plain store-owner language without overstating estimates", async () => {
