@@ -43,10 +43,20 @@ jobs:
           # Now-playing worker base URL. Unset → the MUSIC "now playing" feature
           # stays dormant (site byte-identical). Set as a repo Actions Variable.
           PUBLIC_NOW_PLAYING_URL: ${{ vars.PUBLIC_NOW_PLAYING_URL }}
+          # Privacy-minimized Operations collector. Unset → analytics remains a no-op.
+          PUBLIC_OPERATIONS_EVENTS_URL: ${{ vars.PUBLIC_OPERATIONS_EVENTS_URL }}
         run: |
+          if [ -n "$PUBLIC_OPERATIONS_EVENTS_URL" ] && \
+             [ "$PUBLIC_OPERATIONS_EVENTS_URL" != "https://operations.shopandson.com/v1/events" ]; then
+            echo "PUBLIC_OPERATIONS_EVENTS_URL must equal https://operations.shopandson.com/v1/events" >&2
+            exit 1
+          fi
           cd homepage
           npm ci
+          npm test
+          npx astro check
           npm run build
+          npm run verify:analytics-build
       # The pre-order site is served via homepage/public/preorders (a symlink to the
       # single source at repo-root public/preorders), so `astro build` already emits
       # it to dist/preorders — no separate copy step needed.

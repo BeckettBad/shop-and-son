@@ -6,6 +6,8 @@ import {
   type ProductOption,
   type ProductVariant,
 } from "./storefront-client";
+import { trackEvent } from "./analytics";
+import { createLatestRequestGuard } from "./latest-request";
 
 declare global {
   interface Window {
@@ -23,6 +25,19 @@ const shopifyOrigin = `https://${shopifyDomain}`;
 const shopifyProductUrl = (handle: string) =>
   `${shopifyOrigin}/products/${encodeURIComponent(handle)}`;
 const activeCarouselPreloads = new Set<HTMLImageElement>();
+const productViewRequests = new WeakMap<HTMLElement, ReturnType<typeof createLatestRequestGuard>>();
+
+const requestGuardFor = (container: HTMLElement) => {
+  const existing = productViewRequests.get(container);
+  if (existing) return existing;
+  const guard = createLatestRequestGuard();
+  productViewRequests.set(container, guard);
+  return guard;
+};
+
+export function cancelProductView(container: HTMLElement): void {
+  requestGuardFor(container).cancel();
+}
 
 export interface ProductImageSeed {
   url: string;
@@ -743,6 +758,8 @@ const renderProduct = (container: HTMLElement, product: ProductDetail, options: 
 };
 
 export function mountProductView(container: HTMLElement, handle: string, options: MountProductViewOptions = {}): void {
+  const requestGuard = requestGuardFor(container);
+  const request = requestGuard.begin();
   const init = async () => {
     container.className = "product-detail__state";
     container.textContent = "loading";
@@ -762,12 +779,14 @@ export function mountProductView(container: HTMLElement, handle: string, options
     }
 
     const product = await getProduct(handle);
+    if (!requestGuard.isCurrent(request)) return;
     if (!product || product.onlineStoreUrl === null) {
       renderMessage(container, "this piece is no longer listed");
       return;
     }
 
     renderProduct(container, product, options);
+    trackEvent({ eventType: "product_view", productHandle: handle });
   };
 
   void init();

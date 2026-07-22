@@ -1,4 +1,5 @@
 import { formatMoney, getSizedShopifyImageUrl } from "./catalog";
+import { trackEvent } from "./analytics";
 import { isStorefrontConfigured, storefrontRequest } from "./storefront-client";
 
 declare global {
@@ -436,7 +437,10 @@ export async function addLine(variantId: string, qty = 1): Promise<Cart> {
     return currentCart;
   }
 
-  return handleMutationPayload(result.data?.cartLinesAdd) ?? currentCart;
+  const cart = handleMutationPayload(result.data?.cartLinesAdd);
+  if (!cart) return currentCart;
+  trackEvent({ eventType: "cart_add", quantity, totalQuantity: cart.totalQuantity });
+  return cart;
 }
 
 export async function updateLine(lineId: string, qty: number): Promise<Cart> {
@@ -456,12 +460,20 @@ export async function updateLine(lineId: string, qty: number): Promise<Cart> {
     return currentCart;
   }
 
-  return handleMutationPayload(result.data?.cartLinesUpdate) ?? currentCart;
+  const cart = handleMutationPayload(result.data?.cartLinesUpdate);
+  if (!cart) return currentCart;
+  trackEvent({
+    eventType: "cart_update",
+    quantity: Math.floor(qty),
+    totalQuantity: cart.totalQuantity,
+  });
+  return cart;
 }
 
 export async function removeLine(lineId: string): Promise<Cart> {
   if (!isStorefrontConfigured) return EMPTY_CART;
   if (!lineId) return currentCart;
+  const removedQuantity = currentCart.lines.find((line) => line.id === lineId)?.quantity ?? 0;
 
   const cartId = await ensureCart();
   if (!cartId) return currentCart;
@@ -475,7 +487,10 @@ export async function removeLine(lineId: string): Promise<Cart> {
     return currentCart;
   }
 
-  return handleMutationPayload(result.data?.cartLinesRemove) ?? currentCart;
+  const cart = handleMutationPayload(result.data?.cartLinesRemove);
+  if (!cart) return currentCart;
+  trackEvent({ eventType: "cart_remove", quantity: removedQuantity, totalQuantity: cart.totalQuantity });
+  return cart;
 }
 
 if (hasDocument()) {
