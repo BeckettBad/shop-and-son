@@ -31,12 +31,13 @@ function wholeNumber(value: unknown): number {
   return result;
 }
 
-function decimalNumber(value: unknown): number {
-  if (typeof value !== "string" || !/^-?\d+(?:\.\d+)?$/.test(value)) {
-    throw new Error("Shopify Analytics returned an invalid decimal value");
+function percentageNumber(value: unknown, netSalesMinor: number): number | null {
+  if (value === null && netSalesMinor === 0) return null;
+  if (typeof value !== "string" || !/^-?\d+(?:\.\d+)?%?$/.test(value)) {
+    throw new Error("Shopify Analytics returned an invalid percentage value");
   }
-  const result = Number(value);
-  if (!Number.isFinite(result)) throw new Error("Shopify Analytics decimal exceeded safe storage");
+  const result = Number(value.endsWith("%") ? value.slice(0, -1) : value);
+  if (!Number.isFinite(result)) throw new Error("Shopify Analytics percentage exceeded safe storage");
   return result;
 }
 
@@ -88,7 +89,7 @@ export function normalizeShopifyResponse(
     const netSalesMinor = decimalToMinor(row.net_sales);
     const netSalesWithCostRecordedMinor = decimalToMinor(row.net_sales_with_cost_recorded);
     const netSalesWithoutCostRecordedMinor = decimalToMinor(row.net_sales_without_cost_recorded);
-    decimalNumber(row.gross_margin);
+    percentageNumber(row.gross_margin, netSalesMinor);
     if (grossProfitMinor !== netSalesMinor - cogsMinor) {
       throw new Error("Shopify Analytics returned inconsistent gross profit");
     }
@@ -144,7 +145,7 @@ export async function syncShopifyAnalytics(
   const updatedAt = now().toISOString();
   const shopifyql = `FROM sales
 SHOW orders, net_items_sold, gross_sales, discounts, sales_reversals, net_sales, cost_of_goods_sold, gross_profit, gross_margin, net_sales_with_cost_recorded, net_sales_without_cost_recorded
-WHERE sales_channel = 'Online Store'
+WHERE sales_channel = '& Son Website'
 TIMESERIES day
 SINCE ${options.start} UNTIL ${options.end}
 ORDER BY day ASC
