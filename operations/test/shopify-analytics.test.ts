@@ -115,6 +115,46 @@ describe("Shopify aggregate sales analytics", () => {
     });
   });
 
+  it("accepts signed net item counts on a return-only day", () => {
+    const rows = normalizeShopifyResponse({ data: { shopifyqlQuery: { parseErrors: [], tableData: { columns: [], rows: [{
+      cost_of_goods_sold: "-20.00",
+      day: "2026-07-14",
+      discounts: "0.00",
+      gross_margin: "80.00%",
+      gross_profit: "-80.00",
+      gross_sales: "0.00",
+      net_items_sold: "-1",
+      net_sales: "-100.00",
+      net_sales_with_cost_recorded: "-100.00",
+      net_sales_without_cost_recorded: "0.00",
+      orders: "0",
+      sales_reversals: "-100.00",
+    }] } } } }, "USD", "America/New_York");
+
+    expect(rows[0]).toMatchObject({
+      netSalesMinor: -10_000,
+      orders: 0,
+      unitsSold: -1,
+    });
+  });
+
+  it("rejects negative order counts", () => {
+    expect(() => normalizeShopifyResponse({ data: { shopifyqlQuery: { parseErrors: [], tableData: { columns: [], rows: [{
+      cost_of_goods_sold: "0.00",
+      day: "2026-07-14",
+      discounts: "0.00",
+      gross_margin: null,
+      gross_profit: "0.00",
+      gross_sales: "0.00",
+      net_items_sold: "0",
+      net_sales: "0.00",
+      net_sales_with_cost_recorded: "0.00",
+      net_sales_without_cost_recorded: "0.00",
+      orders: "-1",
+      sales_reversals: "0.00",
+    }] } } } }, "USD", "America/New_York")).toThrow("invalid orders count");
+  });
+
   it("rejects inconsistent Shopify gross profit", () => {
     expect(() => normalizeShopifyResponse({ data: { shopifyqlQuery: { parseErrors: [], tableData: { columns: [], rows: [{
       cost_of_goods_sold: "20.00",
