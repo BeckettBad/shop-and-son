@@ -75,15 +75,15 @@ The shared newsletter/now-playing Worker’s code, bindings, routes, secrets, an
 
 Local analytics candidate verification on 2026-07-22:
 
-- Operations tests: 87/87 passed across 16 files; production and test TypeScript passed.
+- Operations tests: 89/89 passed across 16 files; production and test TypeScript passed.
 - Migration `0004_online_shopify_metrics.sql` applied to a clean local D1; a valid incomplete-coverage row was accepted and an inconsistent coverage row was rejected by its constraint.
 - A pre-migration production D1 export was encrypted with AES-256/PBKDF2 at `operations/backups/operations-20260722T143011Z.sql.enc` (Git-ignored); its random key is stored in the macOS Keychain service `shop-and-son-operations-backup-20260722T143011Z`. Decryption verification passed and the encrypted SHA-256 is `a541deccf21a11a23b42d2b6d6c5c21c66d35505e68966355445fabefd0206fc`.
-- Wrangler dry run passed with the D1 binding and `EVENT_COLLECTION_ENABLED=false`; 125.88 KiB upload, 28.76 KiB gzip.
-- Authenticated loopback checks returned 200 with `no-store` for both dashboard routes. The growth view contained Online Store sales, COGS, gross profit, and anonymous sessions while excluding request, threat, and probe-history vanity/technical panels.
+- Wrangler dry run passed with the D1 binding and `EVENT_COLLECTION_ENABLED=false`; 125.20 KiB upload, 28.72 KiB gzip.
+- Authenticated loopback checks returned 200 with `no-store` for both dashboard routes. The growth view contained the approved seven Online Store growth KPIs while keeping COGS as supporting calculation/coverage data and excluding request, threat, and probe-history vanity/technical panels.
 - Homepage analytics tests passed 11/11 and Astro check reported zero errors. The unchanged Shopify-backed static build remains blocked by upstream HTTP 429 throttling after two bounded attempts; no homepage source change is part of this candidate.
 - Dependency audit reported newly disclosed upstream high-severity advisories in development/build dependencies (`sharp`/Miniflare/Wrangler and Astro's dependency chain). The fixes require breaking dependency upgrades and are not introduced by this analytics diff; they require a separately tested upgrade workstream.
 - Production Shopify capability remains intentionally unproven locally because `.dev.vars` contains placeholders and Cloudflare production secrets are sealed. The first collection-disabled production stage must prove the query and cost coverage before collection activation.
-- The first independent final review found three correctness blockers and one navigation issue. The candidate now preserves the all-channel Shopify scheduler separately, keys Shopify and maintenance work to the latest complete New York date, withholds the formerly UTC-grouped funnel trend, and keeps operations period links inside `/dashboard/operations`; the expanded suite is green and a focused re-review is pending.
+- The first independent final review found three correctness blockers and one navigation issue; those corrections were independently verified. The focused re-review then found missing selected-window coverage gates and an eighth COGS headline card. Regression tests now require every selected Shopify/funnel date before showing totals or conversion, partial financial/funnel charts are withheld, and the growth view contains exactly seven headline cards. The expanded suite is green; a final focused pass is still required before production.
 
 Executed locally on 2026-07-16 without production credentials or network-side changes:
 

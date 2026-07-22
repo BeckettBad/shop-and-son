@@ -564,22 +564,20 @@ export function renderGrowthDashboard(data: DashboardData): string {
   const currentFunnel = data.funnelRows.filter((row) => row.date >= data.funnelPeriodStart).sort((a, b) => a.date.localeCompare(b.date));
   const shopifyComparison = matchedRows(data.onlineShopifyRows, data.periodStart, data.days);
   const funnelComparison = matchedRows(data.funnelRows, data.funnelPeriodStart, data.days);
+  const hasShopifyData = currentShopify.length === data.days;
+  const hasFunnelData = currentFunnel.length === data.days;
   const sessions = sum(currentFunnel, "distinct_sessions");
   const orders = sum(currentShopify, "orders");
   const netSales = sum(currentShopify, "net_sales_minor");
-  const cogs = currentShopify.reduce((total, row) => total + Number(row.cogs_minor ?? 0), 0);
   const grossProfit = currentShopify.reduce((total, row) => total + Number(row.gross_profit_minor ?? 0), 0);
-  const profitDataComplete = currentShopify.length > 0 && currentShopify.every((row) => row.cost_coverage_complete === 1 && row.cogs_minor !== null && row.gross_profit_minor !== null);
-  const conversion = sessions > 0 ? orders / sessions * 100 : null;
+  const profitDataComplete = hasShopifyData && currentShopify.every((row) => row.cost_coverage_complete === 1 && row.cogs_minor !== null && row.gross_profit_minor !== null);
+  const conversion = hasFunnelData && hasShopifyData && sessions > 0 ? orders / sessions * 100 : null;
   const grossMargin = profitDataComplete && netSales > 0 ? grossProfit / netSales * 100 : null;
-  const averageOrderValue = orders > 0 ? Math.round(netSales / orders) : null;
+  const averageOrderValue = hasShopifyData && orders > 0 ? Math.round(netSales / orders) : null;
   const currency = currentShopify.at(-1)?.currency ?? "USD";
   const previousSessions = funnelComparison ? sum(funnelComparison.previous, "distinct_sessions") : undefined;
   const previousOrders = shopifyComparison ? sum(shopifyComparison.previous, "orders") : undefined;
   const previousNetSales = shopifyComparison ? sum(shopifyComparison.previous, "net_sales_minor") : undefined;
-  const previousCogs = shopifyComparison && shopifyComparison.previous.every((row) => row.cost_coverage_complete === 1 && row.cogs_minor !== null)
-    ? shopifyComparison.previous.reduce((total, row) => total + Number(row.cogs_minor), 0)
-    : undefined;
   const previousGrossProfit = shopifyComparison && shopifyComparison.previous.every((row) => row.cost_coverage_complete === 1 && row.gross_profit_minor !== null)
     ? shopifyComparison.previous.reduce((total, row) => total + Number(row.gross_profit_minor), 0)
     : undefined;
@@ -592,19 +590,17 @@ export function renderGrowthDashboard(data: DashboardData): string {
   const previousAov = previousOrders !== undefined && previousOrders > 0 && previousNetSales !== undefined
     ? Math.round(previousNetSales / previousOrders)
     : undefined;
-  const hasShopifyData = currentShopify.length > 0;
-  const hasFunnelData = currentFunnel.length > 0;
   const metricCards = [
     metricCard({ available: hasFunnelData, key: "sessions", label: "Estimated website sessions", current: sessions, previous: previousSessions, display: number(sessions), sparkValues: currentFunnel.map((row) => row.distinct_sessions), note: "Anonymous browser sessions. This is an estimate, not a count of people", unavailableText: "Anonymous website analytics has no complete-day data for this period yet." }),
     metricCard({ available: hasShopifyData, key: "online-orders", label: "Online Store orders", current: orders, previous: previousOrders, display: number(orders), sparkValues: currentShopify.map((row) => row.orders), note: "Completed Online Store orders reported by Shopify", unavailableText: "Online Store order data has not been synced for this period." }),
     metricCard({ available: hasFunnelData && hasShopifyData && conversion !== null, key: "estimated-conversion", label: "Estimated website conversion", current: conversion ?? undefined, previous: previousConversion, display: conversion === null ? "—" : `${conversion.toFixed(1)}%`, sparkValues: currentFunnel.map((row) => row.distinct_sessions), note: "Online Store orders divided by anonymous website sessions; directional because the sources are aggregated independently", unavailableText: "Conversion appears after both anonymous sessions and Online Store orders have complete-day coverage." }),
     metricCard({ available: hasShopifyData, key: "online-net-sales", label: "Online Store net sales", current: netSales, previous: previousNetSales, display: money(netSales, currency), sparkValues: currentShopify.map((row) => row.net_sales_minor), note: "Shopify Online Store sales after discounts, returns, and recorded reversals", unavailableText: "Online Store sales data has not been synced for this period." }),
-    metricCard({ available: profitDataComplete, key: "cogs", label: "Online Store product cost", current: profitDataComplete ? cogs : undefined, previous: previousCogs, display: profitDataComplete ? money(cogs, currency) : "—", sparkValues: profitDataComplete ? currentShopify.map((row) => Number(row.cogs_minor)) : [], note: "Shopify cost of goods sold for Online Store sales", unavailableText: "Product cost is hidden because one or more selected days lacks complete Shopify cost coverage." }),
+
     metricCard({ available: profitDataComplete, key: "gross-profit", label: "Online Store gross profit", current: profitDataComplete ? grossProfit : undefined, previous: previousGrossProfit, display: profitDataComplete ? money(grossProfit, currency) : "—", sparkValues: profitDataComplete ? currentShopify.map((row) => Number(row.gross_profit_minor)) : [], note: "Online Store net sales minus Shopify product cost. This is not final business profit", unavailableText: "Gross profit is hidden because one or more selected days lacks complete Shopify product-cost coverage." }),
     metricCard({ available: grossMargin !== null, key: "gross-margin", label: "Gross margin", current: grossMargin ?? undefined, previous: previousMargin, display: grossMargin === null ? "—" : `${grossMargin.toFixed(1)}%`, sparkValues: grossMargin === null ? [] : currentShopify.map((row) => row.net_sales_minor > 0 && row.gross_profit_minor !== null ? row.gross_profit_minor / row.net_sales_minor * 100 : 0), note: "Online Store gross profit divided by Online Store net sales", unavailableText: "Gross margin requires complete product-cost coverage and positive net sales." }),
     metricCard({ available: hasShopifyData, key: "aov", label: "Average order value", current: averageOrderValue ?? undefined, previous: previousAov, display: averageOrderValue === null ? "—" : money(averageOrderValue, currency), sparkValues: currentShopify.map((row) => row.orders > 0 ? Math.round(row.net_sales_minor / row.orders) : 0), note: "Online Store net sales divided by Online Store orders", unavailableText: "Average order value appears after Online Store sales data is synced." }),
   ].join("");
-  const performanceRows = currentShopify.map((row) => ({
+  const performanceRows = (hasShopifyData ? currentShopify : []).map((row) => ({
     ...row,
     gross_profit: Number(row.gross_profit_minor ?? 0) / 100,
     net_sales: row.net_sales_minor / 100,
@@ -621,7 +617,7 @@ export function renderGrowthDashboard(data: DashboardData): string {
 <section class="hero" aria-labelledby="dashboard-title"><div class="hero-copy"><span class="eyebrow">Online growth · Last ${data.days} complete days</span><h1 id="dashboard-title">The numbers that explain whether the website is attracting shoppers and producing profitable Online Store sales.</h1><p>Shopify is authoritative for orders, sales, product cost, and gross profit. Anonymous storefront events provide directional funnel estimates.</p></div><div class="hero-status"><strong>${profitDataComplete ? "Financial data is ready" : "Check data coverage"}</strong><span>${profitDataComplete ? "Selected Shopify days have complete recorded cost coverage" : "Profit stays hidden until Shopify confirms complete product-cost coverage"}</span></div></section>
 <section class="section" aria-labelledby="summary-title"><div class="section-heading"><div><span class="eyebrow">Decision metrics</span><h2 id="summary-title">Online Store performance</h2><p>Only complete stored days are included. Comparisons appear only when every current day has a matching prior-period day.</p></div></div><div class="metrics-grid">${metricCards}</div></section>
 <section class="section" aria-labelledby="performance-title"><div class="section-heading"><div><span class="eyebrow">Financial trend</span><h2 id="performance-title">Net sales and gross profit by day</h2><p>Online Store only. Gross profit is shown only when Shopify reports complete product-cost coverage.</p></div></div><figure class="chart-card" aria-labelledby="financial-chart-title financial-chart-caption"><div class="chart-heading"><div><h3 id="financial-chart-title">Daily financial performance</h3><p>USD, after discounts and recorded returns</p></div></div>${lineChart(performanceRows, profitDataComplete ? [{ field: "net_sales", label: "Net sales", color: "#1f5a43" }, { field: "gross_profit", label: "Gross profit", color: "#bd6339" }] : [{ field: "net_sales", label: "Net sales", color: "#1f5a43" }], "Online Store net sales and gross profit by day")}<figcaption id="financial-chart-caption">Gross profit equals Online Store net sales minus Shopify product cost; it excludes payment fees, shipping subsidy, advertising, payroll, rent, and other operating expenses.</figcaption></figure></section>
-${funnelSection(currentFunnel, data.funnelSessions, data.funnelTrendRows, data.funnelEndDate)}
+${funnelSection(hasFunnelData ? currentFunnel : [], hasFunnelData ? data.funnelSessions : null, data.funnelTrendRows, data.funnelEndDate)}
 ${integrationMarkup}
 <section class="methodology" aria-label="How these numbers work"><article><strong>Shopify settles commerce</strong><p>Orders, net sales, product cost, and gross profit include only Shopify's Online Store sales channel.</p></article><article><strong>Sessions are anonymous estimates</strong><p>A session-scoped random identifier measures funnel steps without names, email addresses, customer profiles, or fingerprinting.</p></article><article><strong>Coverage gates calculations</strong><p>Profit and matched comparisons are hidden rather than guessed when costs or complete-day source coverage are missing.</p></article></section>
 <footer><span>Private · aggregate-only analytics · <a href="/dashboard/operations?days=${data.days}">Technical operations</a></span><span>Generated ${escapeHtml(data.now.toISOString())}</span></footer>
