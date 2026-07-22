@@ -22,8 +22,9 @@ function record(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function wholeNumber(value: unknown): number {
-  if (typeof value !== "string" || !/^\d+$/.test(value)) {
+function wholeNumber(value: unknown, allowNegative = false): number {
+  const pattern = allowNegative ? /^-?\d+$/ : /^\d+$/;
+  if (typeof value !== "string" || !pattern.test(value)) {
     throw new Error("Shopify Analytics returned an invalid count");
   }
   const result = Number(value);
@@ -109,7 +110,7 @@ export function normalizeShopifyResponse(
       orders: wholeNumber(row.orders),
       salesReversalsMinor: decimalToMinor(row.sales_reversals),
       timezone,
-      unitsSold: wholeNumber(row.net_items_sold),
+      unitsSold: wholeNumber(row.net_items_sold, true),
     };
   });
 }
