@@ -22,7 +22,7 @@ describe("Shopify aggregate sales analytics", () => {
               cost_of_goods_sold: "45.10",
               day: "2026-07-14",
               discounts: "-10.05",
-              gross_margin: "62.4167",
+              gross_margin: "62.4167%",
               gross_profit: "74.90",
               gross_sales: "150.10",
               net_sales: "120.00",
@@ -89,6 +89,29 @@ describe("Shopify aggregate sales analytics", () => {
       costCoverageComplete: false,
       grossProfitMinor: null,
       netSalesMinor: 10_000,
+    });
+  });
+
+  it("accepts an unavailable gross-margin percentage only for a zero-net-sales day", () => {
+    const rows = normalizeShopifyResponse({ data: { shopifyqlQuery: { parseErrors: [], tableData: { columns: [], rows: [{
+      cost_of_goods_sold: "0.00",
+      day: "2026-07-14",
+      discounts: "0.00",
+      gross_margin: null,
+      gross_profit: "0.00",
+      gross_sales: "0.00",
+      net_items_sold: "0",
+      net_sales: "0.00",
+      net_sales_with_cost_recorded: "0.00",
+      net_sales_without_cost_recorded: "0.00",
+      orders: "0",
+      sales_reversals: "0.00",
+    }] } } } }, "USD", "America/New_York");
+
+    expect(rows[0]).toMatchObject({
+      costCoverageComplete: true,
+      grossProfitMinor: 0,
+      netSalesMinor: 0,
     });
   });
 
