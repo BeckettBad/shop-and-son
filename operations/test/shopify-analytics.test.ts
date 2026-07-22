@@ -152,7 +152,7 @@ describe("Shopify aggregate sales analytics", () => {
       net_sales_without_cost_recorded: "0.00",
       orders: "-1",
       sales_reversals: "0.00",
-    }] } } } }, "USD", "America/New_York")).toThrow("invalid count");
+    }] } } } }, "USD", "America/New_York")).toThrow("invalid orders count");
   });
 
   it("rejects inconsistent Shopify gross profit", () => {

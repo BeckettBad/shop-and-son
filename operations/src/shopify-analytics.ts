@@ -22,10 +22,10 @@ function record(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function wholeNumber(value: unknown, allowNegative = false): number {
+function wholeNumber(value: unknown, label: string, allowNegative = false): number {
   const pattern = allowNegative ? /^-?\d+$/ : /^\d+$/;
   if (typeof value !== "string" || !pattern.test(value)) {
-    throw new Error("Shopify Analytics returned an invalid count");
+    throw new Error(`Shopify Analytics returned an invalid ${label} count`);
   }
   const result = Number(value);
   if (!Number.isSafeInteger(result)) throw new Error("Shopify Analytics count exceeded safe storage");
@@ -42,9 +42,9 @@ function percentageNumber(value: unknown, netSalesMinor: number): number | null 
   return result;
 }
 
-export function decimalToMinor(value: unknown): number {
+export function decimalToMinor(value: unknown, label = "money"): number {
   if (typeof value !== "string" || !/^-?\d+(?:\.\d{1,2})?$/.test(value)) {
-    throw new Error("Shopify Analytics returned an invalid money value");
+    throw new Error(`Shopify Analytics returned an invalid ${label} money value`);
   }
   const negative = value.startsWith("-");
   const unsigned = negative ? value.slice(1) : value;
@@ -85,11 +85,11 @@ export function normalizeShopifyResponse(
     if (typeof row.day !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(row.day)) {
       throw new Error("Shopify Analytics returned an invalid date");
     }
-    const cogsMinor = decimalToMinor(row.cost_of_goods_sold);
-    const grossProfitMinor = decimalToMinor(row.gross_profit);
-    const netSalesMinor = decimalToMinor(row.net_sales);
-    const netSalesWithCostRecordedMinor = decimalToMinor(row.net_sales_with_cost_recorded);
-    const netSalesWithoutCostRecordedMinor = decimalToMinor(row.net_sales_without_cost_recorded);
+    const cogsMinor = decimalToMinor(row.cost_of_goods_sold, "cost of goods sold");
+    const grossProfitMinor = decimalToMinor(row.gross_profit, "gross profit");
+    const netSalesMinor = decimalToMinor(row.net_sales, "net sales");
+    const netSalesWithCostRecordedMinor = decimalToMinor(row.net_sales_with_cost_recorded, "net sales with cost recorded");
+    const netSalesWithoutCostRecordedMinor = decimalToMinor(row.net_sales_without_cost_recorded, "net sales without cost recorded");
     percentageNumber(row.gross_margin, netSalesMinor);
     if (grossProfitMinor !== netSalesMinor - cogsMinor) {
       throw new Error("Shopify Analytics returned inconsistent gross profit");
@@ -101,16 +101,16 @@ export function normalizeShopifyResponse(
       costCoverageComplete,
       currency,
       date: row.day,
-      discountsMinor: decimalToMinor(row.discounts),
+      discountsMinor: decimalToMinor(row.discounts, "discounts"),
       grossProfitMinor: costCoverageComplete ? grossProfitMinor : null,
-      grossSalesMinor: decimalToMinor(row.gross_sales),
+      grossSalesMinor: decimalToMinor(row.gross_sales, "gross sales"),
       netSalesMinor,
       netSalesWithCostRecordedMinor,
       netSalesWithoutCostRecordedMinor,
-      orders: wholeNumber(row.orders),
-      salesReversalsMinor: decimalToMinor(row.sales_reversals),
+      orders: wholeNumber(row.orders, "orders"),
+      salesReversalsMinor: decimalToMinor(row.sales_reversals, "sales reversals"),
       timezone,
-      unitsSold: wholeNumber(row.net_items_sold, true),
+      unitsSold: wholeNumber(row.net_items_sold, "net items sold", true),
     };
   });
 }
