@@ -145,7 +145,7 @@ export async function syncShopifyAnalytics(
   const updatedAt = now().toISOString();
   const shopifyql = `FROM sales
 SHOW orders, net_items_sold, gross_sales, discounts, sales_reversals, net_sales, cost_of_goods_sold, gross_profit, gross_margin, net_sales_with_cost_recorded, net_sales_without_cost_recorded
-WHERE sales_channel = 'Online Store'
+WHERE sales_channel = '& Son Website'
 TIMESERIES day
 SINCE ${options.start} UNTIL ${options.end}
 ORDER BY day ASC

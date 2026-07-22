@@ -202,7 +202,7 @@ describe("Shopify aggregate sales analytics", () => {
     expect(request.variables.query).toContain("cost_of_goods_sold, gross_profit");
     expect(request.variables.query).toContain("gross_margin");
     expect(request.variables.query).toContain("net_sales_with_cost_recorded, net_sales_without_cost_recorded");
-    expect(request.variables.query).toContain("WHERE sales_channel = 'Online Store'");
+    expect(request.variables.query).toContain("WHERE sales_channel = '& Son Website'");
     expect(request.variables.query).toContain("WITH CURRENCY 'USD', TIMEZONE 'America/New_York'");
     const metric = await env.DB.prepare(`
       SELECT date, orders, net_sales_minor,

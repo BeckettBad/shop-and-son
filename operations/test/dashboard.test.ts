@@ -167,7 +167,9 @@ describe("private dashboard", () => {
     expect(html).toContain('data-metric="gross-profit" data-current="42000"');
     expect(html).toContain('data-metric="gross-margin" data-current="60"');
     expect(html).toContain('data-metric="aov" data-current="5000"');
-    expect(html).toContain("Online Store gross profit");
+    expect(html).toContain("Website gross profit");
+    expect(html).toContain("&amp; Son Website");
+    expect(html).not.toContain("Online Store");
     expect(html).toContain("Estimated website conversion");
     expect(html).not.toContain("Website requests");
     expect(html).not.toContain(">Threats<");
