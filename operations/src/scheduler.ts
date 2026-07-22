@@ -1,13 +1,16 @@
 import { syncCloudflareAnalytics } from "./cloudflare-analytics";
 import { runScheduledChecks } from "./health";
 import { runDailyMaintenance } from "./maintenance";
+import { calendarDateInTimeZone, shiftCalendarDate } from "./reporting-time";
+import { syncAllChannelShopifyAnalytics } from "./shopify-legacy-analytics";
 import { syncShopifyAnalytics } from "./shopify-analytics";
 
 interface SchedulerDependencies {
   cloudflare: (env: Env, start: string, end: string, now: Date) => Promise<void>;
   health: (env: Env) => Promise<void>;
   maintenance: (env: Env, now: Date) => Promise<void>;
-  shopify: (env: Env, start: string, end: string, now: Date) => Promise<void>;
+  shopifyAll: (env: Env, start: string, end: string, now: Date) => Promise<void>;
+  shopifyOnline: (env: Env, start: string, end: string, now: Date) => Promise<void>;
 }
 
 const JOB_LEASE_MS = 15 * 60_000;
@@ -26,7 +29,17 @@ const defaults: SchedulerDependencies = {
   }),
   health: (env) => runScheduledChecks(env.DB),
   maintenance: (env, now) => runDailyMaintenance(env.DB, now),
-  shopify: (env, start, end, now) => syncShopifyAnalytics(env.DB, {
+  shopifyAll: (env, start, end, now) => syncAllChannelShopifyAnalytics(env.DB, {
+    clientId: env.SHOPIFY_CLIENT_ID,
+    clientSecret: env.SHOPIFY_CLIENT_SECRET,
+    currency: "USD",
+    end,
+    now: () => now,
+    shopDomain: env.SHOPIFY_SHOP_DOMAIN,
+    start,
+    timezone: "America/New_York",
+  }),
+  shopifyOnline: (env, start, end, now) => syncShopifyAnalytics(env.DB, {
     clientId: env.SHOPIFY_CLIENT_ID,
     clientSecret: env.SHOPIFY_CLIENT_SECRET,
     currency: "USD",
@@ -80,18 +93,22 @@ export async function runScheduledOperations(
   now: Date = new Date(),
   dependencies: SchedulerDependencies = defaults,
 ): Promise<void> {
-  const runDate = dateOffset(now, 0);
-  const end = dateOffset(now, -1);
-  const start = dateOffset(now, -90);
+  const utcRunDate = dateOffset(now, 0);
+  const cloudflareEnd = dateOffset(now, -1);
+  const cloudflareStart = dateOffset(now, -90);
+  const shopifyEnd = shiftCalendarDate(calendarDateInTimeZone(now, "America/New_York"), -1);
+  const shopifyStart = shiftCalendarDate(shopifyEnd, -89);
 
   const results = await Promise.allSettled([
     runOncePerDate(env.DB, "health", now.toISOString(), now, () =>
       dependencies.health(env)),
-    runOncePerDate(env.DB, "cloudflare_analytics", runDate, now, () =>
-      dependencies.cloudflare(env, start, end, now)),
-    runOncePerDate(env.DB, "shopify_analytics", runDate, now, () =>
-      dependencies.shopify(env, start, end, now)),
-    runOncePerDate(env.DB, "maintenance", runDate, now, () =>
+    runOncePerDate(env.DB, "cloudflare_analytics", utcRunDate, now, () =>
+      dependencies.cloudflare(env, cloudflareStart, cloudflareEnd, now)),
+    runOncePerDate(env.DB, "shopify_all_channel_analytics", shopifyEnd, now, () =>
+      dependencies.shopifyAll(env, shopifyStart, shopifyEnd, now)),
+    runOncePerDate(env.DB, "shopify_online_analytics", shopifyEnd, now, () =>
+      dependencies.shopifyOnline(env, shopifyStart, shopifyEnd, now)),
+    runOncePerDate(env.DB, "maintenance", shopifyEnd, now, () =>
       dependencies.maintenance(env, now)),
   ]);
   const failure = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
