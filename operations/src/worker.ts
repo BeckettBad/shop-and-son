@@ -17,7 +17,7 @@ export function createWorker(runOperations: ScheduledOperationsRunner = runSched
         return handleNotificationApi(request, env.DB, env.NOTIFICATION_API_TOKEN);
       }
 
-      if (url.pathname === "/dashboard") {
+      if (url.pathname === "/dashboard" || url.pathname === "/dashboard/operations") {
         return handleDashboardRequest(
           request,
           env.DB,

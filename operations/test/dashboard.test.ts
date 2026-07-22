@@ -10,6 +10,19 @@ function authorization(username = "operator", password = "strong-password"): str
 
 async function render(days = 30): Promise<{ html: string; response: Response }> {
   const response = await handleDashboardRequest(
+    new Request(`https://operations.test/dashboard/operations?days=${days}`, {
+      headers: { Authorization: authorization() },
+    }),
+    env.DB,
+    "operator",
+    "strong-password",
+    () => NOW,
+  );
+  return { html: await response.text(), response };
+}
+
+async function renderGrowth(days = 30): Promise<{ html: string; response: Response }> {
+  const response = await handleDashboardRequest(
     new Request(`https://operations.test/dashboard?days=${days}`, {
       headers: { Authorization: authorization() },
     }),
@@ -40,6 +53,13 @@ async function insertDailyMetrics(
         discounts_minor, sales_reversals_minor, net_sales_minor, updated_at
       ) VALUES (?, 'USD', 'America/New_York', ?, ?, ?, -500, -1000, ?, ?)
     `).bind(date, orders, orders + 1, netSalesMinor + 1500, netSalesMinor, `${date}T23:00:00.000Z`),
+    env.DB.prepare(`
+      INSERT INTO daily_online_shopify_metrics (
+        date, currency, timezone, orders, net_sales_minor, cogs_minor,
+        gross_profit_minor, net_sales_with_cost_recorded_minor,
+        net_sales_without_cost_recorded_minor, cost_coverage_complete, updated_at
+      ) VALUES (?, 'USD', 'America/New_York', ?, ?, ?, ?, ?, 0, 1, ?)
+    `).bind(date, orders, netSalesMinor, Math.round(netSalesMinor * 0.4), Math.round(netSalesMinor * 0.6), netSalesMinor, `${date}T23:00:00.000Z`),
   ]);
 }
 
@@ -50,6 +70,7 @@ describe("private dashboard", () => {
       env.DB.prepare("DELETE FROM daily_funnel_metrics"),
       env.DB.prepare("DELETE FROM daily_cloudflare_metrics"),
       env.DB.prepare("DELETE FROM daily_shopify_metrics"),
+      env.DB.prepare("DELETE FROM daily_online_shopify_metrics"),
       env.DB.prepare("DELETE FROM integration_state"),
       env.DB.prepare("DELETE FROM notifications"),
       env.DB.prepare("DELETE FROM incidents"),
@@ -117,6 +138,42 @@ describe("private dashboard", () => {
     expect(html).toContain("Compared with the same 7 available dates in the previous period");
     expect(html).toContain("$700.00");
     expect(html).toContain("$50.00");
+  });
+
+  it("renders only the approved online growth KPIs on the primary dashboard", async () => {
+    await insertDailyMetrics("2026-07-15", 100, 2, 10_000);
+    await env.DB.prepare(`
+      INSERT INTO daily_funnel_metrics (
+        date, page_views, product_views, cart_adds, checkout_begins,
+        newsletter_signups, distinct_sessions, updated_at
+      ) VALUES ('2026-07-15', 20, 10, 4, 2, 0, 10, '2026-07-16T01:00:00.000Z')
+    `).run();
+
+    const { html } = await renderGrowth(7);
+
+    expect(html).toContain('data-metric="sessions" data-current="10"');
+    expect(html).toContain('data-metric="online-orders" data-current="2"');
+    expect(html).toContain('data-metric="estimated-conversion" data-current="20"');
+    expect(html).toContain('data-metric="online-net-sales" data-current="10000"');
+    expect(html).toContain('data-metric="cogs" data-current="4000"');
+    expect(html).toContain('data-metric="gross-profit" data-current="6000"');
+    expect(html).toContain('data-metric="gross-margin" data-current="60"');
+    expect(html).toContain('data-metric="aov" data-current="5000"');
+    expect(html).toContain("Online Store gross profit");
+    expect(html).toContain("Estimated website conversion");
+    expect(html).not.toContain("Website requests");
+    expect(html).not.toContain(">Threats<");
+    expect(html).not.toContain("Health check history");
+
+    await env.DB.prepare(`
+      UPDATE daily_online_shopify_metrics
+      SET cogs_minor = NULL, gross_profit_minor = NULL, cost_coverage_complete = 0
+      WHERE date = '2026-07-15'
+    `).run();
+    const { html: incompleteHtml } = await renderGrowth(7);
+    expect(incompleteHtml).toContain('data-metric="cogs" data-availability="unavailable"');
+    expect(incompleteHtml).toContain('data-metric="gross-profit" data-availability="unavailable"');
+    expect(incompleteHtml).toContain('data-metric="gross-margin" data-availability="unavailable"');
   });
 
   it("uses plain store-owner language without overstating estimates", async () => {
@@ -280,7 +337,7 @@ describe("private dashboard", () => {
     expect(html).toContain("anonymous browser sessions that completed each step in order");
   });
 
-  it("aligns funnel counts and cohorts to the latest complete UTC day", async () => {
+  it("aligns funnel counts and cohorts to the latest complete New York day", async () => {
     await env.DB.prepare(`
       INSERT INTO daily_funnel_metrics (
         date, page_views, product_views, cart_adds, checkout_begins,
@@ -300,8 +357,8 @@ describe("private dashboard", () => {
 
     expect(html).toContain("1 of 1 anonymous product-view sessions continued to cart");
     expect(html).toContain("Data through Jul 15, 2026");
-    expect(html).toContain("Anonymous sessions that moved from product view to cart and from cart to checkout, grouped by first product-view day: stored daily values");
-    expect(html).toContain("<td>2026-07-15</td><td>100</td><td>0</td>");
+    expect(html).not.toContain("grouped by first product-view day: stored daily values");
+    expect(html).toContain("<td>2026-07-15</td><td>2</td><td>4</td>");
     expect(html).not.toContain("private-session-complete-day");
     expect(html).not.toContain("private-session-current-day");
     expect(html).not.toContain("private-product-handle");
@@ -330,7 +387,7 @@ describe("private dashboard", () => {
     const { html } = await render(days);
 
     expect(html).toContain(`Last ${days} days`);
-    expect(html).toContain(`href="/dashboard?days=${days}" aria-current="page"`);
+    expect(html).toContain(`href="/dashboard/operations?days=${days}" aria-current="page"`);
     expect(html).toContain('<meta name="viewport" content="width=device-width,initial-scale=1">');
     expect(html).toContain("@media (max-width:760px)");
   });
@@ -375,7 +432,7 @@ describe("private dashboard", () => {
     expect(html).not.toContain("before-cutoff-probe");
   });
 
-  it.each([7, 30, 90])("uses exactly %i complete UTC days for funnel counts and cohorts", async (days) => {
+  it.each([7, 30, 90])("uses exactly %i complete New York days for funnel counts and cohorts", async (days) => {
     const end = new Date(NOW.getTime() - 86_400_000);
     const start = new Date(end.getTime() - (days - 1) * 86_400_000);
     const before = new Date(start.getTime() - 86_400_000);
@@ -423,7 +480,7 @@ describe("private dashboard", () => {
   it("falls back to the 30-day period for unsupported day counts", async () => {
     const { html } = await render(14);
     expect(html).toContain("Last 30 days");
-    expect(html).toContain('href="/dashboard?days=30" aria-current="page"');
+    expect(html).toContain('href="/dashboard/operations?days=30" aria-current="page"');
   });
 
   it("renders accessible real-data charts without external assets or scripts", async () => {

@@ -1,26 +1,31 @@
+import { calendarDateInTimeZone, shiftCalendarDate, zonedMidnightUtc } from "./reporting-time";
+
+const DAY_MS = 86_400_000;
+const REPORTING_TIMEZONE = "America/New_York";
+
 function isoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
 export async function runDailyMaintenance(db: D1Database, now: Date): Promise<void> {
-  const end = new Date(now.getTime() - 86_400_000);
-  const start = new Date(end.getTime() - 89 * 86_400_000);
-  const cutoff = new Date(now.getTime() - 90 * 86_400_000).toISOString();
-  const rateLimitCutoff = new Date(now.getTime() - 2 * 86_400_000).toISOString();
-  const startDate = isoDate(start);
-  const endDate = isoDate(end);
-  const funnelCutoff = `${startDate}T00:00:00.000Z`;
+  const latestCompleteDate = shiftCalendarDate(calendarDateInTimeZone(now, REPORTING_TIMEZONE), -1);
+  const oldestDate = shiftCalendarDate(latestCompleteDate, -89);
+  const cutoff = new Date(now.getTime() - 90 * DAY_MS).toISOString();
+  const rateLimitCutoff = new Date(now.getTime() - 2 * DAY_MS).toISOString();
+  const funnelCutoff = zonedMidnightUtc(oldestDate, REPORTING_TIMEZONE).toISOString();
   const runDate = isoDate(now);
   const updatedAt = now.toISOString();
-
-  await db.batch([
-    db.prepare(`
+  const aggregateStatements = Array.from({ length: 90 }, (_, offset) => {
+    const date = shiftCalendarDate(oldestDate, offset);
+    const start = zonedMidnightUtc(date, REPORTING_TIMEZONE).toISOString();
+    const end = zonedMidnightUtc(shiftCalendarDate(date, 1), REPORTING_TIMEZONE).toISOString();
+    return db.prepare(`
       INSERT INTO daily_funnel_metrics (
         date, page_views, product_views, cart_adds, cart_updates, cart_removes,
         checkout_begins, newsletter_signups, distinct_sessions, updated_at
       )
       SELECT
-        substr(occurred_at, 1, 10),
+        ?,
         SUM(CASE WHEN event_type = 'page_view' THEN 1 ELSE 0 END),
         SUM(CASE WHEN event_type = 'product_view' THEN 1 ELSE 0 END),
         SUM(CASE WHEN event_type = 'cart_add' THEN 1 ELSE 0 END),
@@ -31,8 +36,8 @@ export async function runDailyMaintenance(db: D1Database, now: Date): Promise<vo
         COUNT(DISTINCT session_id),
         ?
       FROM funnel_events
-      WHERE substr(occurred_at, 1, 10) BETWEEN ? AND ?
-      GROUP BY substr(occurred_at, 1, 10)
+      WHERE occurred_at >= ? AND occurred_at < ?
+      HAVING COUNT(*) > 0
       ON CONFLICT(date) DO UPDATE SET
         page_views = excluded.page_views,
         product_views = excluded.product_views,
@@ -43,7 +48,11 @@ export async function runDailyMaintenance(db: D1Database, now: Date): Promise<vo
         newsletter_signups = excluded.newsletter_signups,
         distinct_sessions = excluded.distinct_sessions,
         updated_at = excluded.updated_at
-    `).bind(updatedAt, startDate, endDate),
+    `).bind(date, updatedAt, start, end);
+  });
+
+  await db.batch([
+    ...aggregateStatements,
     db.prepare(`
       INSERT OR IGNORE INTO notifications (incident_id, kind, created_at, dedupe_key)
       SELECT id, 'reminder', ?, 'reminder:' || id || ':' || ?

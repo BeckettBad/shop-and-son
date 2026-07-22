@@ -1,6 +1,6 @@
 # Shop & Sons Operations State
 
-Last updated: 2026-07-20 (sync facts corrected by a root governance session; no operational change)
+Last updated: 2026-07-22 (Online Store growth analytics candidate under review; production unchanged)
 
 ## Control
 
@@ -31,8 +31,9 @@ Last updated: 2026-07-20 (sync facts corrected by a root governance session; no 
 
 ## Active work
 
-- No active file owner after this handoff. Local changes are limited to the plain-language dashboard renderer, its tests, and this state record.
-- Remaining manual gates are collection enablement, live storefront publication, push/merge, and unexpected destructive or materially permission-expanding work.
+- The current session owns the Operations analytics candidate on `dev`. Production is still unchanged while final independent review completes.
+- The candidate adds a separate Online Store-only daily table, exact COGS/gross-profit values with cost-coverage gating, a focused `/dashboard`, a preserved `/dashboard/operations`, and New York reporting-day funnel aggregation. It deliberately does not reinterpret historical all-channel rows.
+- Beckett approved the D1 migration, Worker publication, existing storefront instrumentation, and anonymous collector enablement. Collection remains disabled during the first deployment stage so the Shopify provider contract can be proven using Cloudflare's sealed production secrets before event activation.
 
 ## Blockers and decisions needed
 
@@ -71,6 +72,18 @@ The shared newsletter/now-playing Worker’s code, bindings, routes, secrets, an
 - Primary deeper files: `PRODUCTION-READINESS.md`, `src/worker.ts`, `src/events.ts`, `src/health-repository.ts`, `src/scheduler.ts`, `scripts/notification_relay.py`, and `../.github/workflows/deploy.yml` (repository-relative path is `.github/workflows/deploy.yml`).
 
 ## Verification record
+
+Local analytics candidate verification on 2026-07-22:
+
+- Operations tests: 87/87 passed across 16 files; production and test TypeScript passed.
+- Migration `0004_online_shopify_metrics.sql` applied to a clean local D1; a valid incomplete-coverage row was accepted and an inconsistent coverage row was rejected by its constraint.
+- A pre-migration production D1 export was encrypted with AES-256/PBKDF2 at `operations/backups/operations-20260722T143011Z.sql.enc` (Git-ignored); its random key is stored in the macOS Keychain service `shop-and-son-operations-backup-20260722T143011Z`. Decryption verification passed and the encrypted SHA-256 is `a541deccf21a11a23b42d2b6d6c5c21c66d35505e68966355445fabefd0206fc`.
+- Wrangler dry run passed with the D1 binding and `EVENT_COLLECTION_ENABLED=false`; 125.88 KiB upload, 28.76 KiB gzip.
+- Authenticated loopback checks returned 200 with `no-store` for both dashboard routes. The growth view contained Online Store sales, COGS, gross profit, and anonymous sessions while excluding request, threat, and probe-history vanity/technical panels.
+- Homepage analytics tests passed 11/11 and Astro check reported zero errors. The unchanged Shopify-backed static build remains blocked by upstream HTTP 429 throttling after two bounded attempts; no homepage source change is part of this candidate.
+- Dependency audit reported newly disclosed upstream high-severity advisories in development/build dependencies (`sharp`/Miniflare/Wrangler and Astro's dependency chain). The fixes require breaking dependency upgrades and are not introduced by this analytics diff; they require a separately tested upgrade workstream.
+- Production Shopify capability remains intentionally unproven locally because `.dev.vars` contains placeholders and Cloudflare production secrets are sealed. The first collection-disabled production stage must prove the query and cost coverage before collection activation.
+- The first independent final review found three correctness blockers and one navigation issue. The candidate now preserves the all-channel Shopify scheduler separately, keys Shopify and maintenance work to the latest complete New York date, withholds the formerly UTC-grouped funnel trend, and keeps operations period links inside `/dashboard/operations`; the expanded suite is green and a focused re-review is pending.
 
 Executed locally on 2026-07-16 without production credentials or network-side changes:
 

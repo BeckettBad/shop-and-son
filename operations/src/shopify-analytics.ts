@@ -1,9 +1,14 @@
 export interface DailyShopifyMetric {
+  cogsMinor: number | null;
+  costCoverageComplete: boolean;
   currency: string;
   date: string;
   discountsMinor: number;
+  grossProfitMinor: number | null;
   grossSalesMinor: number;
   netSalesMinor: number;
+  netSalesWithCostRecordedMinor: number;
+  netSalesWithoutCostRecordedMinor: number;
   orders: number;
   salesReversalsMinor: number;
   timezone: string;
@@ -23,6 +28,15 @@ function wholeNumber(value: unknown): number {
   }
   const result = Number(value);
   if (!Number.isSafeInteger(result)) throw new Error("Shopify Analytics count exceeded safe storage");
+  return result;
+}
+
+function decimalNumber(value: unknown): number {
+  if (typeof value !== "string" || !/^-?\d+(?:\.\d+)?$/.test(value)) {
+    throw new Error("Shopify Analytics returned an invalid decimal value");
+  }
+  const result = Number(value);
+  if (!Number.isFinite(result)) throw new Error("Shopify Analytics decimal exceeded safe storage");
   return result;
 }
 
@@ -69,12 +83,28 @@ export function normalizeShopifyResponse(
     if (typeof row.day !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(row.day)) {
       throw new Error("Shopify Analytics returned an invalid date");
     }
+    const cogsMinor = decimalToMinor(row.cost_of_goods_sold);
+    const grossProfitMinor = decimalToMinor(row.gross_profit);
+    const netSalesMinor = decimalToMinor(row.net_sales);
+    const netSalesWithCostRecordedMinor = decimalToMinor(row.net_sales_with_cost_recorded);
+    const netSalesWithoutCostRecordedMinor = decimalToMinor(row.net_sales_without_cost_recorded);
+    decimalNumber(row.gross_margin);
+    if (grossProfitMinor !== netSalesMinor - cogsMinor) {
+      throw new Error("Shopify Analytics returned inconsistent gross profit");
+    }
+    const costCoverageComplete = netSalesWithoutCostRecordedMinor === 0
+      && netSalesWithCostRecordedMinor === netSalesMinor;
     return {
+      cogsMinor: costCoverageComplete ? cogsMinor : null,
+      costCoverageComplete,
       currency,
       date: row.day,
       discountsMinor: decimalToMinor(row.discounts),
+      grossProfitMinor: costCoverageComplete ? grossProfitMinor : null,
       grossSalesMinor: decimalToMinor(row.gross_sales),
-      netSalesMinor: decimalToMinor(row.net_sales),
+      netSalesMinor,
+      netSalesWithCostRecordedMinor,
+      netSalesWithoutCostRecordedMinor,
       orders: wholeNumber(row.orders),
       salesReversalsMinor: decimalToMinor(row.sales_reversals),
       timezone,
@@ -113,7 +143,8 @@ export async function syncShopifyAnalytics(
   const now = options.now ?? (() => new Date());
   const updatedAt = now().toISOString();
   const shopifyql = `FROM sales
-SHOW orders, net_items_sold, gross_sales, discounts, sales_reversals, net_sales
+SHOW orders, net_items_sold, gross_sales, discounts, sales_reversals, net_sales, cost_of_goods_sold, gross_profit, gross_margin, net_sales_with_cost_recorded, net_sales_without_cost_recorded
+WHERE sales_channel = 'Online Store'
 TIMESERIES day
 SINCE ${options.start} UNTIL ${options.end}
 ORDER BY day ASC
@@ -168,35 +199,38 @@ WITH CURRENCY '${options.currency}', TIMEZONE '${options.timezone}'`;
 
     const metrics = normalizeShopifyResponse(await response.json(), options.currency, options.timezone);
     const statements = metrics.map((metric) => db.prepare(`
-      INSERT INTO daily_shopify_metrics (
-        date, currency, timezone, orders, units_sold, gross_sales_minor,
-        discounts_minor, sales_reversals_minor, net_sales_minor, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO daily_online_shopify_metrics (
+        date, currency, timezone, orders, net_sales_minor, cogs_minor,
+        gross_profit_minor, net_sales_with_cost_recorded_minor,
+        net_sales_without_cost_recorded_minor, cost_coverage_complete, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(date) DO UPDATE SET
         currency = excluded.currency,
         timezone = excluded.timezone,
         orders = excluded.orders,
-        units_sold = excluded.units_sold,
-        gross_sales_minor = excluded.gross_sales_minor,
-        discounts_minor = excluded.discounts_minor,
-        sales_reversals_minor = excluded.sales_reversals_minor,
         net_sales_minor = excluded.net_sales_minor,
+        cogs_minor = excluded.cogs_minor,
+        gross_profit_minor = excluded.gross_profit_minor,
+        net_sales_with_cost_recorded_minor = excluded.net_sales_with_cost_recorded_minor,
+        net_sales_without_cost_recorded_minor = excluded.net_sales_without_cost_recorded_minor,
+        cost_coverage_complete = excluded.cost_coverage_complete,
         updated_at = excluded.updated_at
     `).bind(
       metric.date,
       metric.currency,
       metric.timezone,
       metric.orders,
-      metric.unitsSold,
-      metric.grossSalesMinor,
-      metric.discountsMinor,
-      metric.salesReversalsMinor,
       metric.netSalesMinor,
+      metric.cogsMinor,
+      metric.grossProfitMinor,
+      metric.netSalesWithCostRecordedMinor,
+      metric.netSalesWithoutCostRecordedMinor,
+      metric.costCoverageComplete ? 1 : 0,
       updatedAt,
     ));
     statements.push(db.prepare(`
       INSERT INTO integration_state (integration, last_success_at, last_error, updated_at)
-      VALUES ('shopify_analytics', ?, NULL, ?)
+      VALUES ('shopify_online_analytics', ?, NULL, ?)
       ON CONFLICT(integration) DO UPDATE SET
         last_success_at = excluded.last_success_at,
         last_error = NULL,
@@ -207,7 +241,7 @@ WITH CURRENCY '${options.currency}', TIMEZONE '${options.timezone}'`;
     const detail = error instanceof Error ? error.message.slice(0, 500) : "Unknown Shopify Analytics error";
     await db.prepare(`
       INSERT INTO integration_state (integration, last_error, updated_at)
-      VALUES ('shopify_analytics', ?, ?)
+      VALUES ('shopify_online_analytics', ?, ?)
       ON CONFLICT(integration) DO UPDATE SET
         last_error = excluded.last_error,
         updated_at = excluded.updated_at

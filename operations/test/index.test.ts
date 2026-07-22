@@ -58,7 +58,7 @@ describe("operations worker", () => {
       body: JSON.stringify({
         eventId: "0194f1e5-7f4a-7000-8000-000000000010",
         eventType: "page_view",
-        occurredAt: "2026-07-16T10:30:00.000Z",
+        occurredAt: new Date().toISOString(),
         pageKind: "landing",
         sessionId: "0194f1e5-7f4a-7000-8000-000000000011",
       }),

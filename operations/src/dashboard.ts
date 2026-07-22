@@ -1,6 +1,8 @@
 import { hasValidBasicCredentials } from "./auth";
+import { calendarDateInTimeZone, shiftCalendarDate, zonedMidnightUtc } from "./reporting-time";
 import {
-  renderDashboard,
+  renderGrowthDashboard,
+  renderOperationsDashboard,
   type CloudflareRow,
   type FunnelRow,
   type FunnelSessions,
@@ -21,6 +23,7 @@ const SECURITY_HEADERS = {
 };
 
 const DAY_MS = 86_400_000;
+const REPORTING_TIMEZONE = "America/New_York";
 
 export async function handleDashboardRequest(
   request: Request,
@@ -43,18 +46,19 @@ export async function handleDashboardRequest(
   const generatedAt = now();
   const requestedDays = Number(new URL(request.url).searchParams.get("days"));
   const days = requestedDays === 7 || requestedDays === 90 ? requestedDays : 30;
-  const aggregateEnd = new Date(generatedAt.getTime() - DAY_MS);
-  const periodStart = new Date(aggregateEnd.getTime() - (days - 1) * DAY_MS).toISOString().slice(0, 10);
-  const priorStart = new Date(aggregateEnd.getTime() - (days * 2 - 1) * DAY_MS).toISOString().slice(0, 10);
-  const endDate = aggregateEnd.toISOString().slice(0, 10);
+  const endDate = shiftCalendarDate(calendarDateInTimeZone(generatedAt, REPORTING_TIMEZONE), -1);
+  const periodStart = shiftCalendarDate(endDate, -(days - 1));
+  const priorStart = shiftCalendarDate(endDate, -(days * 2 - 1));
   const funnelEndDate = endDate;
   const funnelPeriodStart = periodStart;
-  const funnelEndTimestamp = `${funnelEndDate}T23:59:59.999Z`;
-  const funnelPeriodStartTimestamp = `${funnelPeriodStart}T00:00:00.000Z`;
+  const funnelEndTimestamp = new Date(
+    zonedMidnightUtc(shiftCalendarDate(funnelEndDate, 1), REPORTING_TIMEZONE).getTime() - 1,
+  ).toISOString();
+  const funnelPeriodStartTimestamp = zonedMidnightUtc(funnelPeriodStart, REPORTING_TIMEZONE).toISOString();
   const probePeriodStartTimestamp = `${new Date(generatedAt.getTime() - (days - 1) * DAY_MS).toISOString().slice(0, 10)}T00:00:00.000Z`;
   const generatedTimestamp = generatedAt.toISOString();
 
-  const [states, incidents, probes, funnel, funnelSessions, funnelTrend, cloudflare, shopify, integrations] = await Promise.all([
+  const [states, incidents, probes, funnel, funnelSessions, funnelTrend, cloudflare, shopify, onlineShopify, integrations] = await Promise.all([
     db.prepare(`
       SELECT target, status, consecutive_failures, latest_detail, updated_at
       FROM target_states ORDER BY target
@@ -100,39 +104,7 @@ export async function handleDashboardRequest(
         (SELECT COUNT(*) FROM cart_sessions) AS cart_sessions,
         (SELECT COUNT(*) FROM checkout_sessions) AS checkout_sessions
     `).bind(funnelPeriodStartTimestamp, funnelEndTimestamp, funnelEndTimestamp, funnelEndTimestamp).first<FunnelSessions>(),
-    db.prepare(`
-      WITH product_sessions AS (
-        SELECT session_id, MIN(occurred_at) AS first_product_at
-        FROM funnel_events
-        WHERE occurred_at >= ? AND occurred_at <= ? AND event_type = 'product_view'
-        GROUP BY session_id
-      ), cart_sessions AS (
-        SELECT events.session_id, MIN(events.occurred_at) AS first_cart_at
-        FROM funnel_events AS events
-        JOIN product_sessions AS products ON products.session_id = events.session_id
-        WHERE events.occurred_at >= products.first_product_at
-          AND events.occurred_at <= ?
-          AND events.event_type IN ('cart_add', 'cart_update', 'cart_remove')
-        GROUP BY events.session_id
-      ), checkout_sessions AS (
-        SELECT DISTINCT events.session_id
-        FROM funnel_events AS events
-        JOIN cart_sessions AS carts ON carts.session_id = events.session_id
-        WHERE events.occurred_at >= carts.first_cart_at
-          AND events.occurred_at <= ?
-          AND events.event_type = 'checkout_begin'
-      )
-      SELECT
-        SUBSTR(products.first_product_at, 1, 10) AS date,
-        COUNT(DISTINCT products.session_id) AS product_sessions,
-        COUNT(DISTINCT carts.session_id) AS cart_sessions,
-        COUNT(DISTINCT checkouts.session_id) AS checkout_sessions
-      FROM product_sessions AS products
-      LEFT JOIN cart_sessions AS carts ON carts.session_id = products.session_id
-      LEFT JOIN checkout_sessions AS checkouts ON checkouts.session_id = products.session_id
-      GROUP BY SUBSTR(products.first_product_at, 1, 10)
-      ORDER BY date
-    `).bind(funnelPeriodStartTimestamp, funnelEndTimestamp, funnelEndTimestamp, funnelEndTimestamp).all<FunnelTrendRow>(),
+    Promise.resolve({ results: [] as FunnelTrendRow[] }),
     db.prepare(`
       SELECT date, requests, page_views, unique_ips, threats, status_4xx, status_5xx
       FROM daily_cloudflare_metrics WHERE date >= ? AND date <= ? ORDER BY date DESC
@@ -143,12 +115,17 @@ export async function handleDashboardRequest(
       FROM daily_shopify_metrics WHERE date >= ? AND date <= ? ORDER BY date DESC
     `).bind(priorStart, endDate).all<ShopifyRow>(),
     db.prepare(`
+      SELECT date, currency, orders, net_sales_minor, cogs_minor,
+             gross_profit_minor, cost_coverage_complete
+      FROM daily_online_shopify_metrics WHERE date >= ? AND date <= ? ORDER BY date DESC
+    `).bind(priorStart, endDate).all<ShopifyRow>(),
+    db.prepare(`
       SELECT integration, last_success_at, last_error
       FROM integration_state ORDER BY integration
     `).all<IntegrationRow>(),
   ]);
 
-  const html = renderDashboard({
+  const dashboardData = {
     cloudflareRows: cloudflare.results,
     days,
     funnelEndDate,
@@ -159,11 +136,15 @@ export async function handleDashboardRequest(
     incidents: incidents.results,
     integrations: integrations.results,
     now: generatedAt,
+    onlineShopifyRows: onlineShopify.results,
     periodStart,
     probes: probes.results,
     shopifyRows: shopify.results,
     states: states.results,
-  });
+  };
+  const html = new URL(request.url).pathname === "/dashboard/operations"
+    ? renderOperationsDashboard(dashboardData)
+    : renderGrowthDashboard(dashboardData);
 
   return new Response(html, {
     headers: { ...SECURITY_HEADERS, "Content-Type": "text/html; charset=utf-8" },

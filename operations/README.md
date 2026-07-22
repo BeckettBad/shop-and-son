@@ -35,7 +35,7 @@ Completion of the local phase requires all documented local checks to pass, inde
 - `AGENTS.md` and `STATE.md` define local operating rules and the durable handoff.
 - D1 migrations live in `migrations/`. Raw funnel events, health probes, and delivered notifications have 90-day retention; daily aggregates remain.
 
-The Worker runs every five minutes. Health checks run every tick. Cloudflare sync, Shopify sync, funnel rollup, reminders, and retention run once per UTC date using leased D1 job claims. Failed jobs remove their claim, and abandoned incomplete claims become retryable after the lease expires.
+The Worker runs every five minutes. Health checks run every tick. Cloudflare sync runs once per UTC date. The preserved all-channel Shopify sync, the separate Online Store Shopify sync, funnel rollup, reminders, and retention run once for each latest complete `America/New_York` reporting date. All scheduled work uses leased D1 job claims; failed jobs remove their claim, and abandoned incomplete claims become retryable after the lease expires.
 
 ## Privacy boundary
 
@@ -188,11 +188,17 @@ Beckett authorized routine, reversible production completion on 2026-07-16. The 
 ## Dashboard
 
 - URL: `https://<operations-worker-host>/dashboard`
+- Primary purpose: focused Online Store growth and gross-profit reporting
+- Technical operations URL: `https://<operations-worker-host>/dashboard/operations`
 - Windows: 7, 30, or 90 days
 - Authentication: HTTPS Basic auth using `DASHBOARD_USERNAME` and `DASHBOARD_PASSWORD`
 - Defense in depth: Cloudflare Access should be required in production
 - Responses use `no-store`, deny framing, disable MIME sniffing, suppress referrers, and use a restrictive CSP
 - Database-originated text is HTML-escaped
+
+The primary dashboard uses a dedicated `daily_online_shopify_metrics` table so historical all-channel totals can never be mixed with Online Store totals. ShopifyQL filters `sales_channel = 'Online Store'` and supplies authoritative orders, net sales, COGS, and gross profit. Gross profit and margin are hidden when any selected day has incomplete Shopify product-cost coverage. Gross margin is calculated from period totals, never by averaging daily percentages. Anonymous website sessions and funnel steps are aggregate, directional signals and are not customer profiles or exact people counts. Reporting windows use complete `America/New_York` days.
+
+The primary dashboard contains Online Store orders, net sales, product cost, gross profit, gross margin, AOV, anonymous sessions, estimated aggregate conversion, and the ordered shopper funnel. Cloudflare requests, threat/status totals, probes, incidents, and raw technical tables remain only on the separately authenticated technical operations page.
 
 Use a generated high-entropy dashboard password, not a reused personal password.
 

@@ -32,8 +32,11 @@ export interface CloudflareRow {
 }
 
 export interface ShopifyRow {
+  cogs_minor: number | null;
+  cost_coverage_complete: number;
   date: string;
   currency: string;
+  gross_profit_minor: number | null;
   orders: number;
   units_sold: number;
   gross_sales_minor: number;
@@ -83,6 +86,7 @@ interface DashboardData {
   incidents: IncidentRow[];
   integrations: IntegrationRow[];
   now: Date;
+  onlineShopifyRows: ShopifyRow[];
   periodStart: string;
   probes: ProbeRow[];
   shopifyRows: ShopifyRow[];
@@ -102,6 +106,7 @@ const TARGETS = [
 const INTEGRATIONS = [
   { key: "cloudflare_analytics", label: "Cloudflare traffic", description: "Daily website traffic and estimated visitor totals" },
   { key: "shopify_analytics", label: "Shopify sales", description: "Daily order and sales totals from Shopify" },
+  { key: "shopify_online_analytics", label: "Shopify Online Store", description: "Online Store net sales, product cost, and gross profit" },
 ] as const;
 
 function escapeHtml(value: unknown): string {
@@ -431,9 +436,13 @@ function incidentTimeline(incidents: IncidentRow[], now: Date): string {
   return `<section class="section" aria-labelledby="incidents-title"><div class="section-heading"><div><span class="eyebrow">Service history</span><h2 id="incidents-title">Recent service issues</h2><p>Open issues and resolved issues show when a problem started, when it ended, and how long it lasted.</p></div></div><div class="timeline">${items}</div></section>`;
 }
 
-function integrationFreshness(integrations: IntegrationRow[], now: Date): string {
+function integrationFreshness(
+  integrations: IntegrationRow[],
+  now: Date,
+  definitions: readonly { key: string; label: string; description: string }[] = INTEGRATIONS,
+): string {
   const byName = new Map(integrations.map((row) => [row.integration, row]));
-  const cards = INTEGRATIONS.map((integration) => {
+  const cards = definitions.map((integration) => {
     const row = byName.get(integration.key);
     const state = integrationState(row, now);
     const waiting = row?.last_success_at
@@ -469,7 +478,7 @@ function funnelSection(rows: FunnelRow[], sessions: FunnelSessions | null, trend
     cart_conversion: row.product_sessions > 0 ? Math.min(100, row.cart_sessions / row.product_sessions * 100) : 0,
     checkout_conversion: row.cart_sessions > 0 ? Math.min(100, row.checkout_sessions / row.cart_sessions * 100) : 0,
   }));
-  return `<section class="section" aria-labelledby="funnel-title"><div class="section-heading"><div><span class="eyebrow">Shopping activity</span><h2 id="funnel-title">Shopper journey</h2><p>These event counts are estimates of browsing activity, not confirmed purchases. Percentages count anonymous browser sessions that completed each step in order and cannot exceed 100%. Data through ${escapeHtml(formatDate(throughDate))} uses complete UTC days.</p></div></div><div class="funnel-layout"><div class="funnel-bars">${stages.map(([label, value]) => `<div class="funnel-row"><div><span>${label}</span><strong>${number(value)}</strong></div><span class="funnel-track"><i style="width:${(value / maximum * 100).toFixed(1)}%"></i></span></div>`).join("")}</div><div class="conversion-cards"><article><span>Product view to cart</span><strong>${percent(cartSessions, productSessions)}</strong><p>${number(cartSessions)} of ${number(productSessions)} anonymous product-view sessions continued to cart</p></article><article><span>Cart to checkout</span><strong>${percent(checkoutSessions, cartSessions)}</strong><p>${number(checkoutSessions)} of ${number(cartSessions)} anonymous cart sessions continued to checkout in order</p></article></div></div><figure class="chart-card compact" aria-labelledby="conversion-chart-title conversion-chart-caption"><div class="chart-heading"><div><h3 id="conversion-chart-title">Shopping step trend</h3><p>Daily groups based on each session's first product view</p></div></div>${lineChart(trendRows, [{ field: "cart_conversion", label: "Product view to cart", color: "#26634a" }, { field: "checkout_conversion", label: "Cart to checkout", color: "#c66a3d" }], "Anonymous sessions that moved from product view to cart and from cart to checkout, grouped by first product-view day")}<figcaption id="conversion-chart-caption">The percentage scale starts at zero. A session counts only when its steps happened in order during the selected period.</figcaption></figure></section>`;
+  return `<section class="section" aria-labelledby="funnel-title"><div class="section-heading"><div><span class="eyebrow">Shopping activity</span><h2 id="funnel-title">Shopper journey</h2><p>These event counts are estimates of browsing activity, not confirmed purchases. Percentages count anonymous browser sessions that completed each step in order and cannot exceed 100%. Data through ${escapeHtml(formatDate(throughDate))} uses complete New York reporting days.</p></div></div><div class="funnel-layout"><div class="funnel-bars">${stages.map(([label, value]) => `<div class="funnel-row"><div><span>${label}</span><strong>${number(value)}</strong></div><span class="funnel-track"><i style="width:${(value / maximum * 100).toFixed(1)}%"></i></span></div>`).join("")}</div><div class="conversion-cards"><article><span>Product view to cart</span><strong>${percent(cartSessions, productSessions)}</strong><p>${number(cartSessions)} of ${number(productSessions)} anonymous product-view sessions continued to cart</p></article><article><span>Cart to checkout</span><strong>${percent(checkoutSessions, cartSessions)}</strong><p>${number(checkoutSessions)} of ${number(cartSessions)} anonymous cart sessions continued to checkout in order</p></article></div></div><figure class="chart-card compact" aria-labelledby="conversion-chart-title conversion-chart-caption"><div class="chart-heading"><div><h3 id="conversion-chart-title">Shopping step trend</h3><p>Daily groups based on each session's first product view</p></div></div>${lineChart(trendRows, [{ field: "cart_conversion", label: "Product view to cart", color: "#26634a" }, { field: "checkout_conversion", label: "Cart to checkout", color: "#c66a3d" }], "Anonymous sessions that moved from product view to cart and from cart to checkout, grouped by first product-view day")}<figcaption id="conversion-chart-caption">The percentage scale starts at zero. A session counts only when its steps happened in order during the selected period.</figcaption></figure></section>`;
 }
 
 const CSS = `
@@ -482,7 +491,7 @@ const CSS = `
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 `;
 
-export function renderDashboard(data: DashboardData): string {
+export function renderOperationsDashboard(data: DashboardData): string {
   const currentCloudflare = data.cloudflareRows.filter((row) => row.date >= data.periodStart).sort((a, b) => a.date.localeCompare(b.date));
   const currentShopify = data.shopifyRows.filter((row) => row.date >= data.periodStart).sort((a, b) => a.date.localeCompare(b.date));
   const currentFunnel = data.funnelRows.filter((row) => row.date >= data.funnelPeriodStart).sort((a, b) => a.date.localeCompare(b.date));
@@ -527,7 +536,7 @@ export function renderDashboard(data: DashboardData): string {
   const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Shop &amp; Sons Operations</title><style>${CSS}</style></head><body><main>
 <header class="masthead"><div class="brand"><span class="monogram" aria-hidden="true">&amp;S</span><div class="brand-copy"><span>Private dashboard</span><strong>Shop &amp; Sons Operations</strong></div></div><div class="report-meta"><strong>Last ${data.days} days</strong><span>Generated ${escapeHtml(formatTimestamp(data.now.toISOString()))}</span></div></header>
-<nav class="period-nav" aria-label="Reporting period">${[7, 30, 90].map((period) => `<a href="/dashboard?days=${period}"${period === data.days ? ' aria-current="page"' : ""}>${period} days</a>`).join("")}</nav>
+<nav class="period-nav" aria-label="Reporting period">${[7, 30, 90].map((period) => `<a href="/dashboard/operations?days=${period}"${period === data.days ? ' aria-current="page"' : ""}>${period} days</a>`).join("")}</nav>
 <section class="hero" aria-labelledby="dashboard-title"><div class="hero-copy"><span class="eyebrow">Store overview · Last ${data.days} days</span><h1 id="dashboard-title">See how the store is selling, how shoppers move toward checkout, and whether key services are working.</h1><p>Uses stored daily totals and anonymous storefront events. No customer profiles or third-party dashboard tools.</p></div><div class="hero-status"><span class="status-orb ${health.overall}" aria-hidden="true"></span><strong>${escapeHtml(overallText)}</strong><span>Health checks are considered current for 15 minutes</span></div></section>
 <section class="section" aria-labelledby="summary-title"><div class="section-heading"><div><span class="eyebrow">Store totals</span><h2 id="summary-title">Key store numbers</h2><p>Totals for the selected period. A comparison appears only when each available day has a matching date in the previous period.</p></div></div><div class="metrics-grid">${metricCards}</div></section>
 <section class="section" aria-labelledby="growth-title"><div class="section-heading"><div><span class="eyebrow">Daily store totals</span><h2 id="growth-title">Daily store trends</h2><p>Each chart uses completed days already saved. Missing dates stay blank, and charts show zero so rises and drops are not visually exaggerated.</p></div></div><div class="chart-grid"><figure class="chart-card" aria-labelledby="traffic-chart-title traffic-chart-caption"><div class="chart-heading"><div><h3 id="traffic-chart-title">Website traffic</h3><p>Website requests, page views, and estimated visitors by day</p></div></div>${lineChart(currentCloudflare, [{ field: "requests", label: "Website requests", color: "#1f5a43" }, { field: "page_views", label: "Page views", color: "#bd6339" }, { field: "unique_ips", label: "Estimated visitors", color: "#7a6b9b" }], "Website requests, page views, and estimated visitors by day")}<figcaption id="traffic-chart-caption">Estimated visitors are daily Cloudflare estimates, not exact people or a count of distinct visitors across the full period. The same visitor can be counted again on another day.</figcaption></figure><div class="chart-stack"><figure class="chart-card" aria-labelledby="orders-chart-title orders-chart-caption"><div class="chart-heading"><div><h3 id="orders-chart-title">Orders</h3><p>Completed Shopify orders by day</p></div></div>${barChart(currentShopify, "orders", "Completed Shopify orders by day", "#1f5a43")}<figcaption id="orders-chart-caption">Shopify is the sales record for confirmed order counts.</figcaption></figure><figure class="chart-card" aria-labelledby="aov-chart-title aov-chart-caption"><div class="chart-heading"><div><h3 id="aov-chart-title">Average spent per order</h3><p>Sales after discounts and refunds divided by orders each day</p></div></div>${lineChart(salesChartRows, [{ field: "aov", label: "Average spent per order", color: "#7a6b9b" }], "Average spent per order by day")}<figcaption id="aov-chart-caption">A day with no orders is shown at zero. The selected period has no average until at least one order is recorded.</figcaption></figure></div></div><figure class="chart-card compact" aria-labelledby="sales-chart-title sales-chart-caption"><div class="chart-heading"><div><h3 id="sales-chart-title">Sales before and after adjustments</h3><p>Daily Shopify sales in ${escapeHtml(currency)}</p></div></div>${lineChart(salesChartRows, [{ field: "gross_sales", label: "Before discounts and refunds", color: "#bd6339" }, { field: "net_sales", label: "After discounts and refunds", color: "#1f5a43" }], "Sales before and after discounts, refunds, and other recorded reversals by day")}<figcaption id="sales-chart-caption">Amounts come from Shopify's stored daily totals. The chart includes zero and shows negative days below zero when refunds or other reversals exceed sales.</figcaption></figure></section>
@@ -544,8 +553,77 @@ ${funnelSection(currentFunnel, data.funnelSessions, data.funnelTrendRows, data.f
 <div class="detail-group"><h3>Website traffic by day</h3>${table("Daily Cloudflare website traffic", ["Date", "Website requests", "Page views", "Estimated visitors", "4xx responses", "5xx responses", "Threats"], currentCloudflare.slice().reverse().map((row) => [row.date, row.requests, row.page_views, row.unique_ips, row.status_4xx, row.status_5xx, row.threats]), "No Cloudflare traffic data has been recorded. It will appear after the next successful daily Cloudflare update.")}</div>
 <div class="detail-group"><h3>Shopify sales by day</h3>${table("Daily Shopify sales totals", ["Date", "Orders", "Net items sold", "Sales before discounts and refunds", "Discounts", "Refunds and other reversals", "Sales after discounts and refunds", "Average spent per order"], currentShopify.slice().reverse().map((row) => [row.date, row.orders, row.units_sold, money(row.gross_sales_minor, row.currency), money(row.discounts_minor, row.currency), money(row.sales_reversals_minor, row.currency), money(row.net_sales_minor, row.currency), row.orders > 0 ? money(Math.round(row.net_sales_minor / row.orders), row.currency) : "—"]), "No Shopify sales data has been recorded. It will appear after the next successful daily Shopify update.")}</div>
 <div class="detail-group"><h3>Data update history</h3>${table("Cloudflare and Shopify data updates", ["Data source", "Status", "Last successful update", "Most recent problem"], INTEGRATIONS.map((integration) => { const row = data.integrations.find((item) => item.integration === integration.key); return [integration.label, stateLabel(integrationState(row, data.now)), row?.last_success_at ?? "Not yet", row?.last_error ?? "—"]; }))}</div></section>
-<section class="methodology" aria-label="How these numbers work"><article><strong>Visitor numbers are estimates</strong><p>Cloudflare estimates visitors from daily unique IP addresses. This is not an exact count of people, and the same visitor can be counted again on another day.</p></article><article><strong>Daily cutoffs differ</strong><p>Cloudflare and shopper-journey days end at midnight UTC. Shopify days end at midnight in New York, so daily totals may not line up exactly.</p></article><article><strong>Shopify is the sales record</strong><p>Use Shopify totals for confirmed orders and sales. Net items sold subtracts returned items. Returned items reduce this number. Anonymous storefront events show browsing steps before checkout and are estimates, not confirmed purchases.</p></article></section>
+<section class="methodology" aria-label="How these numbers work"><article><strong>Visitor numbers are estimates</strong><p>Cloudflare estimates visitors from daily unique IP addresses. This is not an exact count of people, and the same visitor can be counted again on another day.</p></article><article><strong>Reporting boundaries are explicit</strong><p>Shopper-journey and Shopify days end at midnight in New York. Cloudflare's technical traffic day remains UTC and is shown only in this operations view.</p></article><article><strong>Shopify is the sales record</strong><p>Use Shopify totals for confirmed orders and sales. Net items sold subtracts returned items. Returned items reduce this number. Anonymous storefront events show browsing steps before checkout and are estimates, not confirmed purchases.</p></article></section>
 <footer><span>Private · built on the server · no third-party dashboard tools</span><span>Generated ${escapeHtml(data.now.toISOString())}</span></footer>
 </main></body></html>`;
   return html;
+}
+
+export function renderGrowthDashboard(data: DashboardData): string {
+  const currentShopify = data.onlineShopifyRows.filter((row) => row.date >= data.periodStart).sort((a, b) => a.date.localeCompare(b.date));
+  const currentFunnel = data.funnelRows.filter((row) => row.date >= data.funnelPeriodStart).sort((a, b) => a.date.localeCompare(b.date));
+  const shopifyComparison = matchedRows(data.onlineShopifyRows, data.periodStart, data.days);
+  const funnelComparison = matchedRows(data.funnelRows, data.funnelPeriodStart, data.days);
+  const sessions = sum(currentFunnel, "distinct_sessions");
+  const orders = sum(currentShopify, "orders");
+  const netSales = sum(currentShopify, "net_sales_minor");
+  const cogs = currentShopify.reduce((total, row) => total + Number(row.cogs_minor ?? 0), 0);
+  const grossProfit = currentShopify.reduce((total, row) => total + Number(row.gross_profit_minor ?? 0), 0);
+  const profitDataComplete = currentShopify.length > 0 && currentShopify.every((row) => row.cost_coverage_complete === 1 && row.cogs_minor !== null && row.gross_profit_minor !== null);
+  const conversion = sessions > 0 ? orders / sessions * 100 : null;
+  const grossMargin = profitDataComplete && netSales > 0 ? grossProfit / netSales * 100 : null;
+  const averageOrderValue = orders > 0 ? Math.round(netSales / orders) : null;
+  const currency = currentShopify.at(-1)?.currency ?? "USD";
+  const previousSessions = funnelComparison ? sum(funnelComparison.previous, "distinct_sessions") : undefined;
+  const previousOrders = shopifyComparison ? sum(shopifyComparison.previous, "orders") : undefined;
+  const previousNetSales = shopifyComparison ? sum(shopifyComparison.previous, "net_sales_minor") : undefined;
+  const previousCogs = shopifyComparison && shopifyComparison.previous.every((row) => row.cost_coverage_complete === 1 && row.cogs_minor !== null)
+    ? shopifyComparison.previous.reduce((total, row) => total + Number(row.cogs_minor), 0)
+    : undefined;
+  const previousGrossProfit = shopifyComparison && shopifyComparison.previous.every((row) => row.cost_coverage_complete === 1 && row.gross_profit_minor !== null)
+    ? shopifyComparison.previous.reduce((total, row) => total + Number(row.gross_profit_minor), 0)
+    : undefined;
+  const previousConversion = previousSessions !== undefined && previousSessions > 0 && previousOrders !== undefined
+    ? previousOrders / previousSessions * 100
+    : undefined;
+  const previousMargin = previousGrossProfit !== undefined && previousNetSales !== undefined && previousNetSales > 0
+    ? previousGrossProfit / previousNetSales * 100
+    : undefined;
+  const previousAov = previousOrders !== undefined && previousOrders > 0 && previousNetSales !== undefined
+    ? Math.round(previousNetSales / previousOrders)
+    : undefined;
+  const hasShopifyData = currentShopify.length > 0;
+  const hasFunnelData = currentFunnel.length > 0;
+  const metricCards = [
+    metricCard({ available: hasFunnelData, key: "sessions", label: "Estimated website sessions", current: sessions, previous: previousSessions, display: number(sessions), sparkValues: currentFunnel.map((row) => row.distinct_sessions), note: "Anonymous browser sessions. This is an estimate, not a count of people", unavailableText: "Anonymous website analytics has no complete-day data for this period yet." }),
+    metricCard({ available: hasShopifyData, key: "online-orders", label: "Online Store orders", current: orders, previous: previousOrders, display: number(orders), sparkValues: currentShopify.map((row) => row.orders), note: "Completed Online Store orders reported by Shopify", unavailableText: "Online Store order data has not been synced for this period." }),
+    metricCard({ available: hasFunnelData && hasShopifyData && conversion !== null, key: "estimated-conversion", label: "Estimated website conversion", current: conversion ?? undefined, previous: previousConversion, display: conversion === null ? "—" : `${conversion.toFixed(1)}%`, sparkValues: currentFunnel.map((row) => row.distinct_sessions), note: "Online Store orders divided by anonymous website sessions; directional because the sources are aggregated independently", unavailableText: "Conversion appears after both anonymous sessions and Online Store orders have complete-day coverage." }),
+    metricCard({ available: hasShopifyData, key: "online-net-sales", label: "Online Store net sales", current: netSales, previous: previousNetSales, display: money(netSales, currency), sparkValues: currentShopify.map((row) => row.net_sales_minor), note: "Shopify Online Store sales after discounts, returns, and recorded reversals", unavailableText: "Online Store sales data has not been synced for this period." }),
+    metricCard({ available: profitDataComplete, key: "cogs", label: "Online Store product cost", current: profitDataComplete ? cogs : undefined, previous: previousCogs, display: profitDataComplete ? money(cogs, currency) : "—", sparkValues: profitDataComplete ? currentShopify.map((row) => Number(row.cogs_minor)) : [], note: "Shopify cost of goods sold for Online Store sales", unavailableText: "Product cost is hidden because one or more selected days lacks complete Shopify cost coverage." }),
+    metricCard({ available: profitDataComplete, key: "gross-profit", label: "Online Store gross profit", current: profitDataComplete ? grossProfit : undefined, previous: previousGrossProfit, display: profitDataComplete ? money(grossProfit, currency) : "—", sparkValues: profitDataComplete ? currentShopify.map((row) => Number(row.gross_profit_minor)) : [], note: "Online Store net sales minus Shopify product cost. This is not final business profit", unavailableText: "Gross profit is hidden because one or more selected days lacks complete Shopify product-cost coverage." }),
+    metricCard({ available: grossMargin !== null, key: "gross-margin", label: "Gross margin", current: grossMargin ?? undefined, previous: previousMargin, display: grossMargin === null ? "—" : `${grossMargin.toFixed(1)}%`, sparkValues: grossMargin === null ? [] : currentShopify.map((row) => row.net_sales_minor > 0 && row.gross_profit_minor !== null ? row.gross_profit_minor / row.net_sales_minor * 100 : 0), note: "Online Store gross profit divided by Online Store net sales", unavailableText: "Gross margin requires complete product-cost coverage and positive net sales." }),
+    metricCard({ available: hasShopifyData, key: "aov", label: "Average order value", current: averageOrderValue ?? undefined, previous: previousAov, display: averageOrderValue === null ? "—" : money(averageOrderValue, currency), sparkValues: currentShopify.map((row) => row.orders > 0 ? Math.round(row.net_sales_minor / row.orders) : 0), note: "Online Store net sales divided by Online Store orders", unavailableText: "Average order value appears after Online Store sales data is synced." }),
+  ].join("");
+  const performanceRows = currentShopify.map((row) => ({
+    ...row,
+    gross_profit: Number(row.gross_profit_minor ?? 0) / 100,
+    net_sales: row.net_sales_minor / 100,
+  }));
+  const integrationMarkup = integrationFreshness(
+    data.integrations,
+    data.now,
+    INTEGRATIONS.filter((integration) => integration.key === "shopify_online_analytics"),
+  );
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Shop &amp; Sons Growth</title><style>${CSS}</style></head><body><main>
+<header class="masthead"><div class="brand"><span class="monogram" aria-hidden="true">&amp;S</span><div class="brand-copy"><span>Private dashboard</span><strong>Shop &amp; Sons Growth</strong></div></div><div class="report-meta"><strong>Last ${data.days} complete days</strong><span>Generated ${escapeHtml(formatTimestamp(data.now.toISOString()))}</span></div></header>
+<nav class="period-nav" aria-label="Reporting period">${[7, 30, 90].map((period) => `<a href="/dashboard?days=${period}"${period === data.days ? ' aria-current="page"' : ""}>${period} days</a>`).join("")}</nav>
+<section class="hero" aria-labelledby="dashboard-title"><div class="hero-copy"><span class="eyebrow">Online growth · Last ${data.days} complete days</span><h1 id="dashboard-title">The numbers that explain whether the website is attracting shoppers and producing profitable Online Store sales.</h1><p>Shopify is authoritative for orders, sales, product cost, and gross profit. Anonymous storefront events provide directional funnel estimates.</p></div><div class="hero-status"><strong>${profitDataComplete ? "Financial data is ready" : "Check data coverage"}</strong><span>${profitDataComplete ? "Selected Shopify days have complete recorded cost coverage" : "Profit stays hidden until Shopify confirms complete product-cost coverage"}</span></div></section>
+<section class="section" aria-labelledby="summary-title"><div class="section-heading"><div><span class="eyebrow">Decision metrics</span><h2 id="summary-title">Online Store performance</h2><p>Only complete stored days are included. Comparisons appear only when every current day has a matching prior-period day.</p></div></div><div class="metrics-grid">${metricCards}</div></section>
+<section class="section" aria-labelledby="performance-title"><div class="section-heading"><div><span class="eyebrow">Financial trend</span><h2 id="performance-title">Net sales and gross profit by day</h2><p>Online Store only. Gross profit is shown only when Shopify reports complete product-cost coverage.</p></div></div><figure class="chart-card" aria-labelledby="financial-chart-title financial-chart-caption"><div class="chart-heading"><div><h3 id="financial-chart-title">Daily financial performance</h3><p>USD, after discounts and recorded returns</p></div></div>${lineChart(performanceRows, profitDataComplete ? [{ field: "net_sales", label: "Net sales", color: "#1f5a43" }, { field: "gross_profit", label: "Gross profit", color: "#bd6339" }] : [{ field: "net_sales", label: "Net sales", color: "#1f5a43" }], "Online Store net sales and gross profit by day")}<figcaption id="financial-chart-caption">Gross profit equals Online Store net sales minus Shopify product cost; it excludes payment fees, shipping subsidy, advertising, payroll, rent, and other operating expenses.</figcaption></figure></section>
+${funnelSection(currentFunnel, data.funnelSessions, data.funnelTrendRows, data.funnelEndDate)}
+${integrationMarkup}
+<section class="methodology" aria-label="How these numbers work"><article><strong>Shopify settles commerce</strong><p>Orders, net sales, product cost, and gross profit include only Shopify's Online Store sales channel.</p></article><article><strong>Sessions are anonymous estimates</strong><p>A session-scoped random identifier measures funnel steps without names, email addresses, customer profiles, or fingerprinting.</p></article><article><strong>Coverage gates calculations</strong><p>Profit and matched comparisons are hidden rather than guessed when costs or complete-day source coverage are missing.</p></article></section>
+<footer><span>Private · aggregate-only analytics · <a href="/dashboard/operations?days=${data.days}">Technical operations</a></span><span>Generated ${escapeHtml(data.now.toISOString())}</span></footer>
+</main></body></html>`;
 }
