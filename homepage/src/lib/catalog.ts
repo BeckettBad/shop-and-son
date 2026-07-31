@@ -1,8 +1,11 @@
+import { findLowestOnSaleVariant } from "./sale-pricing";
+
 export interface CatalogProduct {
   handle: string;
   title: string;
   vendor: string;
   price: string;
+  compareAtPrice?: string;
   url: string;
   available: boolean;
   onlineStoreUrl?: string | null;
@@ -25,6 +28,7 @@ interface ShopifyProduct {
 
 interface ShopifyVariant {
   price?: string;
+  compare_at_price?: string;
   available?: boolean;
 }
 
@@ -88,6 +92,14 @@ export const getShopifyImageSrcset = (src: string | undefined): string | undefin
 
 const mapProduct = (product: ShopifyProduct): CatalogProduct => {
   const handle = product.handle ?? "";
+  const saleVariant = findLowestOnSaleVariant(
+    (product.variants ?? []).map((variant) => ({
+      variant,
+      price: variant.price ?? "",
+      compareAtPrice: variant.compare_at_price,
+    })),
+  );
+  const variant = saleVariant?.variant ?? product.variants?.[0];
   const imageSrc = product.images?.[0]?.src;
   const imageWidth = product.images?.[0]?.width;
   const imageHeight = product.images?.[0]?.height;
@@ -97,7 +109,8 @@ const mapProduct = (product: ShopifyProduct): CatalogProduct => {
     handle,
     title: product.title ?? "",
     vendor: product.vendor ?? "",
-    price: formatMoney(product.variants?.[0]?.price),
+    price: formatMoney(variant?.price),
+    compareAtPrice: saleVariant ? formatMoney(variant?.compare_at_price) : undefined,
     available: product.variants?.some((variant) => variant.available) ?? false,
     image: getSizedShopifyImageUrl(imageSrc, 1100),
     imageSrcset: getShopifyImageSrcset(imageSrc),
