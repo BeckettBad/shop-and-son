@@ -39,6 +39,22 @@ const setText = (element: HTMLElement, value: string) => {
   element.textContent = value;
 };
 
+const renderProductPrice = (element: HTMLElement, variant: ProductVariant | undefined) => {
+  const currentPrice = document.createElement("span");
+  currentPrice.className = "product-detail__current-price";
+  currentPrice.textContent = variant?.price ?? "";
+
+  if (!variant?.compareAtPrice) {
+    element.replaceChildren(currentPrice);
+    return;
+  }
+
+  const compareAt = document.createElement("s");
+  compareAt.className = "product-detail__compare-at-price";
+  compareAt.textContent = variant.compareAtPrice;
+  element.replaceChildren(currentPrice, compareAt);
+};
+
 const renderHomeLink = () => {
   const link = document.createElement("a");
   link.className = "product-detail__home-link";
@@ -689,6 +705,11 @@ const renderProduct = (container: HTMLElement, product: ProductDetail, options: 
   setValuesFromVariant(selectedValues, initialVariant);
 
   const gallery = renderProductGallery(product, options.seedImage);
+  const sale = document.createElement("span");
+  sale.className = "product-detail__sale";
+  sale.textContent = "SALE";
+  const saleAnchor = gallery.querySelector<HTMLElement>(".product-detail__carousel") ?? gallery;
+  saleAnchor.append(sale);
 
   const detail = document.createElement("section");
   detail.className = "product-detail__panel";
@@ -723,7 +744,8 @@ const renderProduct = (container: HTMLElement, product: ProductDetail, options: 
     const variant = isSingleVariantProduct(product)
       ? initialVariant
       : resolveVariant(product.variants, selectedValues);
-    price.textContent = variant?.price ?? initialVariant?.price ?? "";
+    renderProductPrice(price, variant ?? initialVariant);
+    sale.hidden = !Boolean((variant ?? initialVariant)?.compareAtPrice);
     const selector = renderVariantSelector(product, selectedValues, (option, value) => {
       selectedValues.set(optionKey(option.name), value);
       renderControls();

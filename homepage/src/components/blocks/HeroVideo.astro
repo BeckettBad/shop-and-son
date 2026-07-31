@@ -388,6 +388,7 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
     title: string;
     vendor: string;
     price: string;
+    compareAtPrice?: string;
     url: string;
     available: boolean;
     onlineStoreUrl?: string | null;
@@ -1655,6 +1656,7 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
     card.href = getProductHref(product.handle);
     card.style.setProperty("--card-aspect", String(getCardAspect(product.imageAspect)));
     card.classList.toggle("is-sold-out", product.available === false);
+    card.classList.toggle("is-on-sale", Boolean(product.compareAtPrice));
 
     const media = document.createElement("span");
     media.className = "product-card__media";
@@ -1691,6 +1693,12 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
       soldOut.textContent = "sold out";
       media.append(soldOut);
     }
+    if (product.compareAtPrice) {
+      const sale = document.createElement("span");
+      sale.className = "product-card__sale";
+      sale.textContent = "SALE";
+      media.append(sale);
+    }
 
     const body = document.createElement("span");
     body.className = "product-card__body";
@@ -1705,7 +1713,16 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
 
     const price = document.createElement("span");
     price.className = "product-card__price";
-    price.textContent = product.price;
+    const currentPrice = document.createElement("span");
+    currentPrice.className = "product-card__current-price";
+    currentPrice.textContent = product.price;
+    price.append(currentPrice);
+    if (product.compareAtPrice) {
+      const compareAt = document.createElement("s");
+      compareAt.className = "product-card__compare-at-price";
+      compareAt.textContent = product.compareAtPrice;
+      price.append(compareAt);
+    }
 
     body.append(title, vendor, price);
     card.append(media, body);
@@ -2297,6 +2314,7 @@ const sectionVideoPriorityAttrs: Record<string, string> = { fetchpriority: "low"
       title: product.title,
       vendor: product.vendor,
       price: product.price,
+      compareAtPrice: product.compareAtPrice,
       available: product.available,
       image: getImageCompareKey(product.image),
       imageAspect: getCardAspect(product.imageAspect),

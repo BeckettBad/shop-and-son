@@ -4,6 +4,7 @@ import {
   getSizedShopifyImageUrl,
   type CatalogProduct,
 } from "./catalog";
+import { findLowestOnSaleVariant } from "./sale-pricing";
 
 const STOREFRONT_API_VERSION = "2025-01";
 const STOREFRONT_TIMEOUT_MS = 10_000;
@@ -48,6 +49,12 @@ interface StorefrontCollectionProduct {
   priceRange: {
     minVariantPrice: Money;
   };
+  variants: {
+    nodes: {
+      price: Money;
+      compareAtPrice: Money | null;
+    }[];
+  };
 }
 
 type StorefrontPredictiveSearchProduct = StorefrontCollectionProduct;
@@ -83,6 +90,7 @@ export interface ProductVariant {
   title: string;
   availableForSale: boolean;
   price: string;
+  compareAtPrice?: string;
   selectedOptions: {
     name: string;
     value: string;
@@ -129,13 +137,18 @@ function getProductUrl(handle: string): string {
 function mapCatalogProduct(product: StorefrontCollectionProduct): CatalogProduct {
   const imageWidth = product.featuredImage?.width;
   const imageHeight = product.featuredImage?.height;
-  const money = product.priceRange.minVariantPrice;
+  const saleVariant = findLowestOnSaleVariant(product.variants.nodes);
+  const money = saleVariant?.price ?? product.priceRange.minVariantPrice;
+  const compareAtMoney = saleVariant?.compareAtPrice;
 
   return {
     handle: product.handle,
     title: product.title,
     vendor: product.vendor,
     price: formatMoney(money.amount, money.currencyCode),
+    compareAtPrice: compareAtMoney
+      ? formatMoney(compareAtMoney.amount, compareAtMoney.currencyCode)
+      : undefined,
     url: getProductUrl(product.handle),
     available: product.availableForSale,
     onlineStoreUrl: product.onlineStoreUrl,
@@ -293,6 +306,18 @@ const COLLECTION_QUERY = /* GraphQL */ `
               currencyCode
             }
           }
+          variants(first: 100) {
+            nodes {
+              price {
+                amount
+                currencyCode
+              }
+              compareAtPrice {
+                amount
+                currencyCode
+              }
+            }
+          }
         }
       }
     }
@@ -361,6 +386,18 @@ const PRODUCT_SEARCH_QUERY = /* GraphQL */ `
           minVariantPrice {
             amount
             currencyCode
+          }
+        }
+        variants(first: 100) {
+          nodes {
+            price {
+              amount
+              currencyCode
+            }
+            compareAtPrice {
+              amount
+              currencyCode
+            }
           }
         }
       }
@@ -443,6 +480,18 @@ const PREDICTIVE_SEARCH_QUERY = /* GraphQL */ `
             currencyCode
           }
         }
+        variants(first: 100) {
+          nodes {
+            price {
+              amount
+              currencyCode
+            }
+            compareAtPrice {
+              amount
+              currencyCode
+            }
+          }
+        }
       }
     }
   }
@@ -499,6 +548,10 @@ const PRODUCT_QUERY = /* GraphQL */ `
             amount
             currencyCode
           }
+          compareAtPrice {
+            amount
+            currencyCode
+          }
           selectedOptions {
             name
             value
@@ -528,6 +581,7 @@ interface ProductQueryData {
         title: string;
         availableForSale: boolean;
         price: Money;
+        compareAtPrice: Money | null;
         selectedOptions: {
           name: string;
           value: string;
@@ -560,6 +614,12 @@ async function fetchProduct(handle: string): Promise<ProductDetail | null> {
         title: variant.title,
         availableForSale: variant.availableForSale,
         price: formatMoney(variant.price.amount, variant.price.currencyCode),
+        compareAtPrice: findLowestOnSaleVariant([variant])
+          ? formatMoney(
+              variant.compareAtPrice?.amount,
+              variant.compareAtPrice?.currencyCode,
+            )
+          : undefined,
         selectedOptions: variant.selectedOptions,
       })),
     };
