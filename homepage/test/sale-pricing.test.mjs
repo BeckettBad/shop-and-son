@@ -94,6 +94,11 @@ test("sale presentation is shared by product cards and variant-aware product det
     styles,
     /body\.is-product-lightbox-open \.product-detail__sale\s*\{[^}]*visibility:hidden;/s,
   );
+  assert.match(
+    styles,
+    /\.product-detail__sale\[hidden\]\s*\{[^}]*display:none;/s,
+    "regular PDP variants must keep their SALE badge out of layout",
+  );
   assert.match(styles, /\.product-card__compare-at-price[^}]*text-decoration:line-through/s);
   assert.match(styles, /\.product-detail__compare-at-price[^}]*text-decoration:line-through/s);
 });

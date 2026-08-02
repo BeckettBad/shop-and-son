@@ -800,6 +800,7 @@ body{
   font-family:"Courier New",Courier,monospace;
   font-size:11px; line-height:1; letter-spacing:.08em; text-transform:uppercase;
 }
+.product-detail__sale[hidden]{display:none;}
 body.is-product-lightbox-open .product-detail__sale{
   opacity:0; visibility:hidden;
 }
